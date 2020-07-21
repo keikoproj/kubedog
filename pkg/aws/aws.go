@@ -21,14 +21,11 @@ type Client struct {
 
 func (c *Client) AnASGNamed(name string) error {
 
-	sess, err := GetAWSCredentials()
-	if err != nil {
-		return errors.Errorf("Failed getting AWS credentials: %v", err)
+	if c.ASClient == nil {
+		return errors.Errorf("Unable to get ASG %v: The AS client was not found, use the method GetAWSCredsAndClients", name)
 	}
 
-	ASC := autoscaling.New(sess)
-
-	out, err := ASC.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{
+	out, err := c.ASClient.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{
 		AutoScalingGroupNames: []*string{aws.String(name)},
 	})
 	if err != nil {
@@ -39,7 +36,6 @@ func (c *Client) AnASGNamed(name string) error {
 	log.Infof("[KUBEDOG] Auto Scaling group: %v", arn)
 
 	c.LaunchConfigName = aws.StringValue(out.AutoScalingGroups[0].LaunchConfigurationName)
-	c.ASClient = ASC
 	c.AsgName = name
 
 	return nil
@@ -48,7 +44,7 @@ func (c *Client) AnASGNamed(name string) error {
 func (c *Client) ScaleCurrentASG(desiredMin, desiredMax int64) error {
 
 	if c.ASClient == nil {
-		return errors.Errorf("Unable to scale currrent ASG, no ASG client found in kubedog.Test.AwsContext")
+		return errors.Errorf("Unable to scale currrent ASG: The AS client was not found, use the method GetAWSCredsAndClients")
 	}
 
 	_, err := c.ASClient.UpdateAutoScalingGroup(&autoscaling.UpdateAutoScalingGroupInput{
@@ -73,7 +69,7 @@ func (c *Client) UpdateFieldOfCurrentASG(field, value string) error {
 	)
 
 	if c.ASClient == nil {
-		return errors.Errorf("The ASG client was not found, use the method AnASGNamed")
+		return errors.Errorf("Unable to update current ASG: The AS client was not found, use the method GetAWSCredsAndClients")
 	}
 
 	if field == "LaunchConfigurationName" {
@@ -119,7 +115,7 @@ func (c *Client) UpdateFieldOfCurrentASG(field, value string) error {
 	return nil
 }
 
-func GetAWSCredentials() (*session.Session, error) {
+func (c *Client) GetAWSCredsAndClients() error {
 	var (
 		sess     *session.Session
 		identity *sts.GetCallerIdentityOutput
@@ -127,17 +123,19 @@ func GetAWSCredentials() (*session.Session, error) {
 	)
 
 	if sess, err = session.NewSession(); err != nil {
-		return nil, err
+		return err
 	}
 
 	svc := sts.New(sess)
 
 	if identity, err = svc.GetCallerIdentity(&sts.GetCallerIdentityInput{}); err != nil {
-		return nil, err
+		return err
 	}
 
 	arn := aws.StringValue(identity.Arn)
 	log.Infof("[KUBEDOG] Credentials: %v", arn)
 
-	return sess, nil
+	c.ASClient = autoscaling.New(sess)
+
+	return nil
 }

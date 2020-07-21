@@ -45,7 +45,7 @@ const (
 	DefaultWaiterRetries  = 40
 )
 
-func (kc *Client) AnEKSCluster() error {
+func (kc *Client) AKubernetesCluster() error {
 	var (
 		home, _        = os.UserHomeDir()
 		kubeconfigPath = filepath.Join(home, ".kube", "config")
@@ -365,7 +365,7 @@ func (kc *Client) DeleteAllCRs() error {
 	// TODO: only delete if the resources exist
 
 	// Getting context
-	err := kc.AnEKSCluster()
+	err := kc.AKubernetesCluster()
 	if err != nil {
 		return errors.Errorf("Failed getting the kubernetes client: %v", err)
 	}

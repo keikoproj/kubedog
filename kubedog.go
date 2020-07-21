@@ -34,7 +34,7 @@ func (kdt *Test) Run() {
 	// TODO: define default step hooks if any
 
 	// Kubernetes related steps
-	kdt.scenarioContext.Step(`^an EKS cluster$`, kdt.KubeContext.AnEKSCluster)
+	kdt.scenarioContext.Step(`^a Kubernetes cluster$`, kdt.KubeContext.AKubernetesCluster)
 	kdt.scenarioContext.Step(`^I (create|submit|delete) the custom resource ([^"]*)$`, kdt.KubeContext.ResourceOperation)
 	kdt.scenarioContext.Step(`^the custom resource ([^"]*) should be (created|deleted)$`, kdt.KubeContext.ResourceShouldBe)
 	kdt.scenarioContext.Step(`^the custom resource ([^"]*) should converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
@@ -43,6 +43,7 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^I update a custom resource ([^"]*) with ([^"]*) set to ([^"]*)$`, kdt.KubeContext.UpdateResourceWithField)
 	kdt.scenarioContext.Step(`^(\d+) nodes with selector ([^"]*) should be (found|ready)$`, kdt.KubeContext.NodesWithSelectorShouldBe)
 	// AWS related steps
+	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
 	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
 	kdt.scenarioContext.Step(`^I update the current Auto Scaling Group with ([^"]*) set to ([^"]*)$`, kdt.AwsContext.UpdateFieldOfCurrentASG)
 	kdt.scenarioContext.Step(`the current Auto Scaling Group is scaled to \(min, max\) = \((\d+), (\d+)\)$`, kdt.AwsContext.ScaleCurrentASG)
