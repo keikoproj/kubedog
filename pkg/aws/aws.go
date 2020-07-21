@@ -28,7 +28,6 @@ func (c *Client) AnASGNamed(name string) error {
 
 	ASC := autoscaling.New(sess)
 
-	// Simple call to check valid client
 	out, err := ASC.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{
 		AutoScalingGroupNames: []*string{aws.String(name)},
 	})
@@ -36,10 +35,10 @@ func (c *Client) AnASGNamed(name string) error {
 		return errors.Errorf("Failed describing the ASG %v: %v", name, err)
 	}
 
-	arn := *out.AutoScalingGroups[0].AutoScalingGroupARN
-	log.Infof("BDD >> Auto Scaling group: %v", arn)
+	arn := aws.StringValue(out.AutoScalingGroups[0].AutoScalingGroupARN)
+	log.Infof("[KUBEDOG] Auto Scaling group: %v", arn)
 
-	c.LaunchConfigName = *out.AutoScalingGroups[0].LaunchConfigurationName
+	c.LaunchConfigName = aws.StringValue(out.AutoScalingGroups[0].LaunchConfigurationName)
 	c.ASClient = ASC
 	c.AsgName = name
 
@@ -138,7 +137,7 @@ func GetAWSCredentials() (*session.Session, error) {
 	}
 
 	arn := aws.StringValue(identity.Arn)
-	log.Infof("BDD >> Credentials: %v", arn)
+	log.Infof("[KUBEDOG] Credentials: %v", arn)
 
 	return sess, nil
 }

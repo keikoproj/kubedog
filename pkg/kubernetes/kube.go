@@ -56,7 +56,7 @@ func (kc *Client) AnEKSCluster() error {
 	}
 
 	if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
-		return errors.Errorf("BDD >> expected kubeconfig to exist for create operation, '%v'", kubeconfigPath)
+		return errors.Errorf("[KUBEDOG] expected kubeconfig to exist for create operation, '%v'", kubeconfigPath)
 	}
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
@@ -96,9 +96,8 @@ func (kc *Client) AnEKSCluster() error {
 func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
 
 	resourcePath := filepath.Join("templates", resourceFileName)
-	args := util.NewTemplateArguments()
 
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, args)
+	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
 		return err
 	}
@@ -132,9 +131,9 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 		exists  bool
 		counter int
 	)
+
 	resourcePath := filepath.Join("templates", resourceFileName)
-	args := util.NewTemplateArguments()
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, args)
+	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
 		return err
 	}
@@ -144,26 +143,26 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 		if counter >= DefaultWaiterRetries {
 			return errors.New("waiter timed out waiting for resource state")
 		}
-		log.Infof("BDD >> waiting for resource %v/%v to become %v", resource.GetNamespace(), resource.GetName(), state)
+		log.Infof("[KUBEDOG] waiting for resource %v/%v to become %v", resource.GetNamespace(), resource.GetName(), state)
 
 		_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(resource.GetName(), metav1.GetOptions{})
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
 				return err
 			}
-			log.Infof("BDD >> %v/%v is not found: %v", resource.GetNamespace(), resource.GetName(), err)
+			log.Infof("[KUBEDOG] %v/%v is not found: %v", resource.GetNamespace(), resource.GetName(), err)
 			exists = false
 		}
 
 		switch state {
 		case ResourceStateDeleted:
 			if !exists {
-				log.Infof("BDD >> %v/%v is deleted", resource.GetNamespace(), resource.GetName())
+				log.Infof("[KUBEDOG] %v/%v is deleted", resource.GetNamespace(), resource.GetName())
 				return nil
 			}
 		case ResourceStateCreated:
 			if exists {
-				log.Infof("BDD >> %v/%v is created", resource.GetNamespace(), resource.GetName())
+				log.Infof("[KUBEDOG] %v/%v is created", resource.GetNamespace(), resource.GetName())
 				return nil
 			}
 		}
@@ -183,8 +182,7 @@ func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector st
 	)
 
 	resourcePath := filepath.Join("templates", resourceFileName)
-	args := util.NewTemplateArguments()
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, args)
+	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
 		return err
 	}
@@ -194,7 +192,7 @@ func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector st
 			return errors.New("waiter timed out waiting for resource")
 		}
 
-		log.Infof("BDD >> waiting for resource %v/%v to converge to %v=%v", resource.GetNamespace(), resource.GetName(), key, value)
+		log.Infof("[KUBEDOG] waiting for resource %v/%v to converge to %v=%v", resource.GetNamespace(), resource.GetName(), key, value)
 		cr, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(resource.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -222,8 +220,7 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 	)
 
 	resourcePath := filepath.Join("templates", resourceFileName)
-	args := util.NewTemplateArguments()
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, args)
+	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
 		return err
 	}
@@ -232,7 +229,7 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 		if counter >= DefaultWaiterRetries {
 			return errors.New("waiter timed out waiting for resource state")
 		}
-		log.Infof("BDD >> waiting for resource %v/%v to meet condition %v=%v", resource.GetGenerateName(), resource.GetName(), cType, expectedStatus)
+		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", resource.GetGenerateName(), resource.GetName(), cType, expectedStatus)
 		cr, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetGenerateName()).Get(resource.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -288,7 +285,7 @@ func (kc *Client) NodesWithSelectorShouldBe(nodeCount int, selector, state strin
 			return errors.New("waiter timed out waiting for nodes")
 		}
 
-		log.Infof("BDD >> waiting for %v nodes to be %v with selector %v", nodeCount, state, selector)
+		log.Infof("[KUBEDOG] waiting for %v nodes to be %v with selector %v", nodeCount, state, selector)
 		nodes, err := kc.KubeInterface.CoreV1().Nodes().List(opts)
 		if err != nil {
 			return err
@@ -297,7 +294,7 @@ func (kc *Client) NodesWithSelectorShouldBe(nodeCount int, selector, state strin
 		switch state {
 		case NodeStateFound:
 			if len(nodes.Items) == nodeCount {
-				log.Infof("BDD >> found %v nodes", nodeCount)
+				log.Infof("[KUBEDOG] found %v nodes", nodeCount)
 				found = true
 			}
 		case NodeStateReady:
@@ -307,7 +304,7 @@ func (kc *Client) NodesWithSelectorShouldBe(nodeCount int, selector, state strin
 				}
 			}
 			if conditionNodes == nodeCount {
-				log.Infof("BDD >> found %v ready nodes", nodeCount)
+				log.Infof("[KUBEDOG] found %v ready nodes", nodeCount)
 				found = true
 			}
 		}
@@ -330,8 +327,7 @@ func (kc *Client) UpdateResourceWithField(resourceFilename, key string, value st
 	)
 
 	resourcePath := filepath.Join("templates", resourceFilename)
-	args := util.NewTemplateArguments()
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, args)
+	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
 		return err
 	}
@@ -380,15 +376,13 @@ func (kc *Client) DeleteAllCRs() error {
 			return nil
 		}
 
-		args := util.NewTemplateArguments()
-
-		gvr, resource, err := util.GetResourceFromYaml(path, kc.DiscoveryInterface, args)
+		gvr, resource, err := util.GetResourceFromYaml(path, kc.DiscoveryInterface)
 		if err != nil {
 			return err
 		}
 
 		kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(resource.GetName(), &metav1.DeleteOptions{})
-		log.Infof("BDD >> submitted deletion for %v/%v", resource.GetNamespace(), resource.GetName())
+		log.Infof("[KUBEDOG] submitted deletion for %v/%v", resource.GetNamespace(), resource.GetName())
 		return nil
 	}
 
@@ -401,9 +395,7 @@ func (kc *Client) DeleteAllCRs() error {
 			return nil
 		}
 
-		args := util.NewTemplateArguments()
-
-		gvr, resource, err := util.GetResourceFromYaml(path, kc.DiscoveryInterface, args)
+		gvr, resource, err := util.GetResourceFromYaml(path, kc.DiscoveryInterface)
 		if err != nil {
 			return err
 		}
@@ -412,11 +404,11 @@ func (kc *Client) DeleteAllCRs() error {
 			if counter >= DefaultWaiterRetries {
 				return errors.New("waiter timed out waiting for deletion")
 			}
-			log.Infof("BDD >> waiting for resource deletion of %v/%v", resource.GetNamespace(), resource.GetName())
+			log.Infof("[KUBEDOG] waiting for resource deletion of %v/%v", resource.GetNamespace(), resource.GetName())
 			_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(resource.GetName(), metav1.GetOptions{})
 			if err != nil {
 				if kerrors.IsNotFound(err) {
-					log.Infof("BDD >> resource %v/%v is deleted", resource.GetNamespace(), resource.GetName())
+					log.Infof("[KUBEDOG] resource %v/%v is deleted", resource.GetNamespace(), resource.GetName())
 					break
 				}
 			}

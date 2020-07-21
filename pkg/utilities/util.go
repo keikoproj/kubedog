@@ -80,11 +80,6 @@ func DeleteEmpty(s []string) []string {
 // find the corresponding GVR (available in *meta.RESTMapping) for gvk
 func FindGVR(gvk *schema.GroupVersionKind, dc discovery.DiscoveryInterface) (*meta.RESTMapping, error) {
 
-	// DiscoveryClient queries API server about the resources
-	/*dc, err := discovery.NewDiscoveryClientForConfig(cfg)
-	if err != nil {
-		return nil, err
-	}*/
 	CachedDiscoveryInterface := memory.NewMemCacheClient(dc)
 	DeferredDiscoveryRESTMapper := restmapper.NewDeferredDiscoveryRESTMapper(CachedDiscoveryInterface)
 	RESTMapping, err := DeferredDiscoveryRESTMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
@@ -96,7 +91,7 @@ func FindGVR(gvk *schema.GroupVersionKind, dc discovery.DiscoveryInterface) (*me
 	return RESTMapping, nil
 }
 
-func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface, args *TemplateArguments) (*meta.RESTMapping, *unstructured.Unstructured, error) {
+func GetResourceFromTemplatedYaml(path string, dc discovery.DiscoveryInterface, args *TemplateArguments) (*meta.RESTMapping, *unstructured.Unstructured, error) {
 	resource := &unstructured.Unstructured{}
 
 	d, err := ioutil.ReadFile(path)
@@ -117,6 +112,31 @@ func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface, args *Tem
 	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 
 	_, gvk, err := dec.Decode(renderBuffer.Bytes(), nil, resource)
+
+	if err != nil {
+		return nil, resource, err
+	}
+
+	gvr, err := FindGVR(gvk, dc)
+	if err != nil {
+		return nil, resource, err
+	}
+
+	return gvr, resource, nil
+}
+
+func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface) (*meta.RESTMapping, *unstructured.Unstructured, error) {
+	resource := &unstructured.Unstructured{}
+
+	d, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, resource, err
+	}
+
+	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+
+	_, gvk, err := dec.Decode(d, nil, resource)
+
 	if err != nil {
 		return nil, resource, err
 	}
