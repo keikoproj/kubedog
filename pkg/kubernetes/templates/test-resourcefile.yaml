@@ -1,0 +1,7 @@
+apiVersion: someGroup.apiVersion/SomeVersion
+kind: SomeKind
+metadata:
+  name: someResource
+  namespace: someTestNamespace
+  labels:
+    someTestKey: someTestValue

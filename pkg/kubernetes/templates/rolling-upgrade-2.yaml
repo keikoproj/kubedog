@@ -1,0 +1,23 @@
+apiVersion: upgrademgr.keikoproj.io/v1alpha1
+kind: RollingUpgrade
+metadata:
+  name: test-rollup-3
+  namespace: kube-system
+spec:
+  asgName: eks-agaro-test-k8s-ppd-instance-manager-nodes
+  nodeIntervalSeconds: 90
+  postDrain: {}
+  postDrainDelaySeconds: 30
+  postDrainScript: |
+    echo "Hello, postDrain!"
+  postDrainWaitScript: |
+    echo "Hello, postDrainWait!"
+  postTerminate: {}
+  postTerminateScript: |
+    echo "Hello, postTerminate!"
+  preDrain: {}
+  strategy:
+    mode: eager
+    drainTimeout: 600
+    type: randomUpdate
+    maxUnavailable: 1
