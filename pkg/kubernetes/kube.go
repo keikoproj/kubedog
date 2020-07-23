@@ -26,7 +26,7 @@ type Client struct {
 	KubeInterface      kubernetes.Interface
 	DynamicInterface   dynamic.Interface
 	DiscoveryInterface discovery.DiscoveryInterface
-	//RESTConfig         *rest.Config
+	FilesPath          string
 }
 
 const (
@@ -94,8 +94,11 @@ func (kc *Client) AKubernetesCluster() error {
 
 // Operations supported: create, submit, delete
 func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
-
-	resourcePath := filepath.Join("templates", resourceFileName)
+	var resourcePath string
+	if kc.FilesPath == "" {
+		resourcePath = filepath.Join("templates", resourceFileName)
+	}
+	resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
 
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
@@ -128,11 +131,16 @@ func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
 // States supported: created and deleted
 func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 	var (
-		exists  bool
-		counter int
+		exists       bool
+		counter      int
+		resourcePath string
 	)
 
-	resourcePath := filepath.Join("templates", resourceFileName)
+	if kc.FilesPath == "" {
+		resourcePath = filepath.Join("templates", resourceFileName)
+	}
+	resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
+
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
 		return err
@@ -174,14 +182,19 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 // Selector in the form <key>=<value>
 func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector string) error {
 	var (
-		counter  int
-		split    = util.DeleteEmpty(strings.Split(selector, "="))
-		key      = split[0]
-		keySlice = util.DeleteEmpty(strings.Split(key, "."))
-		value    = split[1]
+		counter      int
+		split        = util.DeleteEmpty(strings.Split(selector, "="))
+		key          = split[0]
+		keySlice     = util.DeleteEmpty(strings.Split(key, "."))
+		value        = split[1]
+		resourcePath string
 	)
 
-	resourcePath := filepath.Join("templates", resourceFileName)
+	if kc.FilesPath == "" {
+		resourcePath = filepath.Join("templates", resourceFileName)
+	}
+	resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
+
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
 		return err
@@ -217,9 +230,14 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 	var (
 		counter        int
 		expectedStatus = strings.Title(status)
+		resourcePath   string
 	)
 
-	resourcePath := filepath.Join("templates", resourceFileName)
+	if kc.FilesPath == "" {
+		resourcePath = filepath.Join("templates", resourceFileName)
+	}
+	resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
+
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
 		return err
@@ -229,8 +247,8 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 		if counter >= DefaultWaiterRetries {
 			return errors.New("waiter timed out waiting for resource state")
 		}
-		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", resource.GetGenerateName(), resource.GetName(), cType, expectedStatus)
-		cr, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetGenerateName()).Get(resource.GetName(), metav1.GetOptions{})
+		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", resource.GetNamespace(), resource.GetName(), cType, expectedStatus)
+		cr, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(resource.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -319,14 +337,19 @@ func (kc *Client) NodesWithSelectorShouldBe(nodeCount int, selector, state strin
 	return nil
 }
 
-func (kc *Client) UpdateResourceWithField(resourceFilename, key string, value string) error {
+func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value string) error {
 	var (
 		keySlice     = util.DeleteEmpty(strings.Split(key, "."))
 		overrideType bool
 		intValue     int64
+		resourcePath string
 	)
 
-	resourcePath := filepath.Join("templates", resourceFilename)
+	if kc.FilesPath == "" {
+		resourcePath = filepath.Join("templates", resourceFileName)
+	}
+	resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
+
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
 		return err
@@ -358,11 +381,15 @@ func (kc *Client) UpdateResourceWithField(resourceFilename, key string, value st
 }
 
 /*
-Deletes all the Custom Resources present in the templates folder.
-Meant to be use in the before/after suite/scenario/step hooks
+Deletes all the testing resources. Meant to be use in the before/after suite/scenario/step hooks
 */
-func (kc *Client) DeleteAllCRs() error {
+func (kc *Client) DeleteAllTestResources() error {
 	// TODO: only delete if the resources exist
+	var resourcePath string
+	if kc.FilesPath == "" {
+		resourcePath = "templates"
+	}
+	resourcePath = kc.FilesPath
 
 	// Getting context
 	err := kc.AKubernetesCluster()
@@ -418,11 +445,11 @@ func (kc *Client) DeleteAllCRs() error {
 		return nil
 	}
 
-	if err := filepath.Walk("templates", deleteFn); err != nil {
+	if err := filepath.Walk(resourcePath, deleteFn); err != nil {
 		return err
 	}
 
-	if err := filepath.Walk("templates", waitFn); err != nil {
+	if err := filepath.Walk(resourcePath, waitFn); err != nil {
 		return err
 	}
 
