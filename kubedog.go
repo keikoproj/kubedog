@@ -22,7 +22,6 @@ const (
 )
 
 func (kdt *Test) Run() {
-
 	// TODO: define default suite hooks if any, check that the suite context was set
 
 	if kdt.scenarioContext == nil {
@@ -57,4 +56,8 @@ func (kdt *Test) SetTestSuite(testSuite *godog.TestSuiteContext) {
 func (kdt *Test) SetScenario(scenario *godog.ScenarioContext) {
 
 	kdt.scenarioContext = scenario
+}
+
+func (kdt *Test) SetTestFilesPath(testFilesPath string) {
+	kdt.KubeContext.FilesPath = testFilesPath
 }
