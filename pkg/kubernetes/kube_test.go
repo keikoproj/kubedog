@@ -51,7 +51,10 @@ func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 		},
 	})
 
-	kc := Client{KubeInterface: fakeClient}
+	kc := Client{
+		KubeInterface: fakeClient,
+		FilesPath:     "../../test/templates",
+	}
 
 	err := kc.NodesWithSelectorShouldBe(1, testReadySelector, NodeStateReady)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
@@ -83,6 +86,7 @@ func TestPostitiveResourceOperation(t *testing.T) {
 	kc := Client{
 		DynamicInterface:   fakeDynamicClient,
 		DiscoveryInterface: &fakeDiscovery,
+		FilesPath:          "../../test/templates",
 	}
 
 	// TODO: test resource already created and already deleted
@@ -124,6 +128,7 @@ func TestPostitiveResourceShouldBe(t *testing.T) {
 	kc := Client{
 		DynamicInterface:   fakeDynamicClient,
 		DiscoveryInterface: &fakeDiscovery,
+		FilesPath:          "../../test/templates",
 	}
 
 	err = kc.ResourceShouldBe(fileName, ResourceStateCreated)
@@ -171,6 +176,7 @@ func TestPostitiveResourceShouldConvergeToSelector(t *testing.T) {
 	kc := Client{
 		DynamicInterface:   fakeDynamicClient,
 		DiscoveryInterface: &fakeDiscovery,
+		FilesPath:          "../../test/templates",
 	}
 
 	err = kc.ResourceShouldConvergeToSelector(fileName, selector)
@@ -210,6 +216,7 @@ func TestPostitiveResourceConditionShouldBe(t *testing.T) {
 	kc := Client{
 		DynamicInterface:   fakeDynamicClient,
 		DiscoveryInterface: &fakeDiscovery,
+		FilesPath:          "../../test/templates",
 	}
 
 	err = kc.ResourceConditionShouldBe(fileName, testConditionType, testConditionStatus)
@@ -255,6 +262,7 @@ func TestPostitiveUpdateResourceWithField(t *testing.T) {
 	kc := Client{
 		DynamicInterface:   fakeDynamicClient,
 		DiscoveryInterface: &fakeDiscovery,
+		FilesPath:          "../../test/templates",
 	}
 
 	err = kc.UpdateResourceWithField(fileName, testUpdateKeyChain, testUpdateValue)
@@ -268,7 +276,7 @@ func TestPostitiveUpdateResourceWithField(t *testing.T) {
 
 func resourceFromYaml(resourceFileName string) (*unstructured.Unstructured, error) {
 
-	resourcePath := filepath.Join("templates", resourceFileName)
+	resourcePath := filepath.Join("../../test/templates", resourceFileName)
 	d, err := ioutil.ReadFile(resourcePath)
 	if err != nil {
 		return nil, err
