@@ -229,8 +229,8 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 		if counter >= DefaultWaiterRetries {
 			return errors.New("waiter timed out waiting for resource state")
 		}
-		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", resource.GetGenerateName(), resource.GetName(), cType, expectedStatus)
-		cr, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetGenerateName()).Get(resource.GetName(), metav1.GetOptions{})
+		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", resource.GetNamespace(), resource.GetName(), cType, expectedStatus)
+		cr, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(resource.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -361,7 +361,7 @@ func (kc *Client) UpdateResourceWithField(resourceFilename, key string, value st
 Deletes all the Custom Resources present in the templates folder.
 Meant to be use in the before/after suite/scenario/step hooks
 */
-func (kc *Client) DeleteAllCRs() error {
+func (kc *Client) DeleteAllTestResources() error {
 	// TODO: only delete if the resources exist
 
 	// Getting context

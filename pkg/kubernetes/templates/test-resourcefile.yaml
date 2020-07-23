@@ -5,3 +5,7 @@ metadata:
   namespace: someTestNamespace
   labels:
     someTestKey: someTestValue
+status:
+  conditions:
+    - type: someConditionType
+      status: "True"
