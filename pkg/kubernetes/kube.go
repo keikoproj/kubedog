@@ -95,10 +95,12 @@ func (kc *Client) AKubernetesCluster() error {
 // Operations supported: create, submit, delete
 func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
 	var resourcePath string
-	if kc.FilesPath == "" {
+
+	if kc.FilesPath != "" {
+		resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
+	} else {
 		resourcePath = filepath.Join("templates", resourceFileName)
 	}
-	resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
 
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
@@ -136,10 +138,11 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 		resourcePath string
 	)
 
-	if kc.FilesPath == "" {
+	if kc.FilesPath != "" {
+		resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
+	} else {
 		resourcePath = filepath.Join("templates", resourceFileName)
 	}
-	resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
 
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
@@ -190,10 +193,11 @@ func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector st
 		resourcePath string
 	)
 
-	if kc.FilesPath == "" {
+	if kc.FilesPath != "" {
+		resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
+	} else {
 		resourcePath = filepath.Join("templates", resourceFileName)
 	}
-	resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
 
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
@@ -233,10 +237,11 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 		resourcePath   string
 	)
 
-	if kc.FilesPath == "" {
+	if kc.FilesPath != "" {
+		resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
+	} else {
 		resourcePath = filepath.Join("templates", resourceFileName)
 	}
-	resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
 
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
@@ -345,10 +350,11 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 		resourcePath string
 	)
 
-	if kc.FilesPath == "" {
+	if kc.FilesPath != "" {
+		resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
+	} else {
 		resourcePath = filepath.Join("templates", resourceFileName)
 	}
-	resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
 
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
 	if err != nil {
@@ -386,10 +392,11 @@ Deletes all the testing resources. Meant to be use in the before/after suite/sce
 func (kc *Client) DeleteAllTestResources() error {
 	// TODO: only delete if the resources exist
 	var resourcePath string
-	if kc.FilesPath == "" {
+	if kc.FilesPath != "" {
+		resourcePath = kc.FilesPath
+	} else {
 		resourcePath = "templates"
 	}
-	resourcePath = kc.FilesPath
 
 	// Getting context
 	err := kc.AKubernetesCluster()
