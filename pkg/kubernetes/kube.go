@@ -9,7 +9,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	util "github.com/keikoproj/kubedog/pkg/utilities"
+	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -87,7 +87,6 @@ func (kc *Client) AKubernetesCluster() error {
 	kc.KubeInterface = client
 	kc.DynamicInterface = dynClient
 	kc.DiscoveryInterface = discoveryClient
-	//kc.RESTConfig = config
 
 	return nil
 }

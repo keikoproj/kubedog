@@ -34,12 +34,12 @@ func (kdt *Test) Run() {
 
 	// Kubernetes related steps
 	kdt.scenarioContext.Step(`^a Kubernetes cluster$`, kdt.KubeContext.AKubernetesCluster)
-	kdt.scenarioContext.Step(`^I (create|submit|delete) the custom resource ([^"]*)$`, kdt.KubeContext.ResourceOperation)
-	kdt.scenarioContext.Step(`^the custom resource ([^"]*) should be (created|deleted)$`, kdt.KubeContext.ResourceShouldBe)
-	kdt.scenarioContext.Step(`^the custom resource ([^"]*) should converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
-	kdt.scenarioContext.Step(`^the custom resource ([^"]*) converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
-	kdt.scenarioContext.Step(`^the custom resource ([^"]*) condition ([^"]*) should be (true|false)$`, kdt.KubeContext.ResourceConditionShouldBe)
-	kdt.scenarioContext.Step(`^I update a custom resource ([^"]*) with ([^"]*) set to ([^"]*)$`, kdt.KubeContext.UpdateResourceWithField)
+	kdt.scenarioContext.Step(`^I (create|submit|delete) the resource ([^"]*)$`, kdt.KubeContext.ResourceOperation)
+	kdt.scenarioContext.Step(`^the resource ([^"]*) should be (created|deleted)$`, kdt.KubeContext.ResourceShouldBe)
+	kdt.scenarioContext.Step(`^the resource ([^"]*) should converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
+	kdt.scenarioContext.Step(`^the resource ([^"]*) converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
+	kdt.scenarioContext.Step(`^the resource ([^"]*) condition ([^"]*) should be (true|false)$`, kdt.KubeContext.ResourceConditionShouldBe)
+	kdt.scenarioContext.Step(`^I update a resource ([^"]*) with ([^"]*) set to ([^"]*)$`, kdt.KubeContext.UpdateResourceWithField)
 	kdt.scenarioContext.Step(`^(\d+) nodes with selector ([^"]*) should be (found|ready)$`, kdt.KubeContext.NodesWithSelectorShouldBe)
 	// AWS related steps
 	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
