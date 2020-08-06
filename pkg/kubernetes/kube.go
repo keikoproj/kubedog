@@ -12,6 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//Package kube provides steps implementations related to Kubernetes.
 package kube
 
 import (
@@ -60,7 +61,7 @@ const (
 )
 
 /*
-Sets the Kubernetes clients given a valid kube config file in ~/.kube or the path set in the environment variable KUBECONFIG
+AKubernetesCluster sets the Kubernetes clients given a valid kube config file in ~/.kube or the path set in the environment variable KUBECONFIG.
 */
 func (kc *Client) AKubernetesCluster() error {
 	var (
@@ -109,7 +110,7 @@ func (kc *Client) AKubernetesCluster() error {
 }
 
 /*
-Performs the given operation on the resource defined in resourceFileName. The operation could be “create”, “submit” or “delete”
+ResourceOperation performs the given operation on the resource defined in resourceFileName. The operation could be “create”, “submit” or “delete”.
 */
 func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
 	var resourcePath string
@@ -149,7 +150,7 @@ func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
 }
 
 /*
-Checks if the resource defined in resourceFileName is in the desired state. It retries every 30 seconds for a total of 40 times. The state could be “created” or “deleted”
+ResourceShouldBe checks if the resource defined in resourceFileName is in the desired state. It retries every 30 seconds for a total of 40 times. The state could be “created” or “deleted”.
 */
 func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 	var (
@@ -203,7 +204,7 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 }
 
 /*
-Checks if the resource defined in resourceFileName has the desired selector. It retries every 30 seconds for a total of 40 times. Selector in the form <keys>=<value>
+ResourceShouldConvergeToSelector checks if the resource defined in resourceFileName has the desired selector. It retries every 30 seconds for a total of 40 times. Selector in the form <keys>=<value>.
 */
 func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector string) error {
 	var (
@@ -253,7 +254,7 @@ func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector st
 }
 
 /*
-Checks that the resource defined in resourceFileName has the condition of type cType in the desired status. It retries every 30 seconds for a total of 40 times
+ResourceConditionShouldBe checks that the resource defined in resourceFileName has the condition of type cType in the desired status. It retries every 30 seconds for a total of 40 times.
 */
 func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status string) error {
 	var (
@@ -315,7 +316,7 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 }
 
 /*
-Checks that n amount of nodes with the given selector are in the desired state. It retries every 30 seconds for a total of 40 times. Selector in the form <key>=<value>, the state can be "ready" or "found"
+NodesWithSelectorShouldBe checks that n amount of nodes with the given selector are in the desired state. It retries every 30 seconds for a total of 40 times. Selector in the form <key>=<value>, the state can be "ready" or "found".
 */
 func (kc *Client) NodesWithSelectorShouldBe(n int, selector, state string) error {
 	var (
@@ -370,7 +371,7 @@ func (kc *Client) NodesWithSelectorShouldBe(n int, selector, state string) error
 }
 
 /*
-Given keys and a desired value, it updates the field of the resource defined in resourceFileName
+UpdateResourceWithField it updates the field found in the key of the resource defined in resourceFileName with value.
 */
 func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value string) error {
 	var (
@@ -417,7 +418,7 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 }
 
 /*
-Deletes all the resources defined by yaml files in the path given by FilesPath, if FilesPath is empty, it will look for the files in ./templates. Meant to be use in the before/after suite/scenario/step hooks
+DeleteAllTestResources deletes all the resources defined by yaml files in the path given by FilesPath, if FilesPath is empty, it will look for the files in ./templates. Meant to be use in the before/after suite/scenario/step hooks
 */
 func (kc *Client) DeleteAllTestResources() error {
 	// TODO: only delete if the resources exist
