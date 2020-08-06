@@ -64,7 +64,6 @@ AWS related steps: methods can be found in AwsContext
 4.	<GK> the current Auto Scaling Group is scaled to (min, max) = (<min size>, <max size>)
 	Method: ScaleCurrentASG
 */
-
 func (kdt *Test) Run() {
 	// TODO: define default suite hooks if any, check that the suite context was set
 
