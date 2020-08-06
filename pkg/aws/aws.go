@@ -12,6 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//Package aws provides steps implementations related to AWS.
 package aws
 
 import (
@@ -34,7 +35,7 @@ type Client struct {
 }
 
 /*
-Given a valid ASG name, it updates the current ASG defined by AsgName and LaunchConfigName
+AnASGNamed updates the current ASG to be used by the other ASG related steps.
 */
 func (c *Client) AnASGNamed(name string) error {
 
@@ -59,7 +60,7 @@ func (c *Client) AnASGNamed(name string) error {
 }
 
 /*
-Scales the max and min size of the current ASG
+ScaleCurrentASG scales the max and min size of the current ASG.
 */
 func (c *Client) ScaleCurrentASG(desiredMin, desiredMax int64) error {
 
@@ -80,7 +81,7 @@ func (c *Client) ScaleCurrentASG(desiredMin, desiredMax int64) error {
 }
 
 /*
-Updates the current ASG. Fields/parameters supported: LaunchConfigurationName, MinSize, DesiredCapacity and MaxSize
+UpdateFieldOfCurrentASG updates the current ASG. Fields/parameters supported: LaunchConfigurationName, MinSize, DesiredCapacity and MaxSize.
 */
 func (c *Client) UpdateFieldOfCurrentASG(field, value string) error {
 	var (
@@ -136,7 +137,7 @@ func (c *Client) UpdateFieldOfCurrentASG(field, value string) error {
 }
 
 /*
-Checks if there is a valid credential available and uses it to update the AS Client
+GetAWSCredsAndClients checks if there is a valid credential available and uses it to update the AS Client.
 */
 func (c *Client) GetAWSCredsAndClients() error {
 	var (
