@@ -1,3 +1,17 @@
+/*
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package kubedog
 
 import (
@@ -20,6 +34,36 @@ const (
 	testSucceededStatus int = 0
 	testFailedStatus    int = 1
 )
+
+/*
+Contains the step definitions with the following syntax, where GK stands for Gherkin keyword and words in brackets ([]) are optional:
+
+Kubernetes related steps: methods can be found in KubeContext
+1. 	<GK> a Kubernetes cluster
+	Method: AKubernetesCluster
+2.	<GK> I <operation> the resource <filename>.yaml
+	Method: ResourceOperation
+3.	<GK> the resource <filename> should be <state>
+	Method: ResourceShouldBe
+4.	<GK> the resource <filename> [should] converge to selector <complete key>=<value>
+	Method: ResourceShouldConvergeToSelector
+5.	<GK> the resource <filename> condition <condition type> should be (true|false)
+	Method: ResourceConditionShouldBe
+6.	<GK> I update a resource <filename> with <complete key> set to <value>
+	Method: UpdateResourceWithField
+7.	<GK>  <number of> nodes with selector <complete key>=<value> should be (found|ready)
+	Method: NodesWithSelectorShouldBe
+
+AWS related steps: methods can be found in AwsContext
+1.	<GK> valid AWS Credentials
+	Method: GetAWSCredsAndClients
+2.	<GK> an Auto Scaling Group named <name>
+	Method: AnASGNamed
+3.	<GK> I update the current Auto Scaling Group with <field> set to <value>
+	Method: UpdateFieldOfCurrentASG
+4.	<GK> the current Auto Scaling Group is scaled to (min, max) = (<min size>, <max size>)
+	Method: ScaleCurrentASG
+*/
 
 func (kdt *Test) Run() {
 	// TODO: define default suite hooks if any, check that the suite context was set
@@ -48,16 +92,25 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`the current Auto Scaling Group is scaled to \(min, max\) = \((\d+), (\d+)\)$`, kdt.AwsContext.ScaleCurrentASG)
 }
 
+/*
+Sets the TestSuiteContext, should be use in the InitializeTestSuite function required by godog
+*/
 func (kdt *Test) SetTestSuite(testSuite *godog.TestSuiteContext) {
 
 	kdt.suiteContext = testSuite
 }
 
+/*
+Sets the ScenarioContext, should be use in the InitializeScenario function required by godog
+*/
 func (kdt *Test) SetScenario(scenario *godog.ScenarioContext) {
 
 	kdt.scenarioContext = scenario
 }
 
+/*
+Sets the path for the test files. If SetTestFilesPath was not used, the methods that operate with/on files will look for them in ./templates by default
+*/
 func (kdt *Test) SetTestFilesPath(testFilesPath string) {
 	kdt.KubeContext.FilesPath = testFilesPath
 }
