@@ -9,7 +9,7 @@ on:
 jobs:
 
   build:
-    name: Unit Tests
+    name: Lint and Unit Tests
     runs-on: ubuntu-latest
     steps:
 
@@ -29,6 +29,12 @@ jobs:
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             dep ensure
         fi
+    
+    - name: Golangci-lint
+      uses: golangci/golangci-lint-action@v1
+      with:
+        # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
+        version: v1.29
 
     - name: Test
       run: go test -v ./...

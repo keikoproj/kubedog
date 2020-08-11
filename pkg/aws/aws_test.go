@@ -95,8 +95,6 @@ func TestNegativeUpdateFieldOfCurrentASG(t *testing.T) {
 	g.Expect(err).Should(gomega.HaveOccurred())
 	err = ASC.UpdateFieldOfCurrentASG("MaxSize", someNumber)
 	g.Expect(err).Should(gomega.HaveOccurred())
-	//REMOVE - BREAKING TO TEST CI
-	g.Expect(false).Should(gomega.BeTrue())
 }
 
 func TestPositiveScaleCurrentASG(t *testing.T) {
