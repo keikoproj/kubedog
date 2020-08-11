@@ -37,7 +37,7 @@ const (
 
 /*
 Run contains the steps definition, should be called in the InitializeScenario function required by godog.
-Check https://github.com/keikoproj/kubedog/blob/master/docs/syntax.md for syntax details.
+Check https://github.com/keikoproj/kubedog/blob/master/docs/syntax.md for steps syntax details.
 */
 func (kdt *Test) Run() {
 	// TODO: define default suite hooks if any, check that the suite context was set
