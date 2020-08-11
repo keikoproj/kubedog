@@ -9,7 +9,7 @@ on:
 jobs:
 
   build:
-    name: Unit Tests
+    name: Unit Tests and Codecov
     runs-on: ubuntu-latest
     steps:
 
