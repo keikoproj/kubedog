@@ -26,4 +26,15 @@ jobs:
       run: go get -v -t -d ./...
 
     - name: Test
-      run: go test -v ./...
+      run: |
+        go fmt ./...
+        go vet ./...
+        go test -v ./pkg/... -coverprofile coverage.txt
+    
+    - name: Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        file: ./coverage.txt # optional
+        flags: unittests # optional
+        name: codecov-umbrella # optional
+        fail_ci_if_error: true # optional (default = false)
