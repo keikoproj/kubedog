@@ -58,7 +58,7 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^the resource ([^"]*) converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
 	kdt.scenarioContext.Step(`^the resource ([^"]*) condition ([^"]*) should be (true|false)$`, kdt.KubeContext.ResourceConditionShouldBe)
 	kdt.scenarioContext.Step(`^I update a resource ([^"]*) with ([^"]*) set to ([^"]*)$`, kdt.KubeContext.UpdateResourceWithField)
-	kdt.scenarioContext.Step(`^(\d+) nodes with selector ([^"]*) should be (found|ready)$`, kdt.KubeContext.NodesWithSelectorShouldBe)
+	kdt.scenarioContext.Step(`^(\d+) node\(s\) with selector ([^"]*) should be (found|ready)$`, kdt.KubeContext.NodesWithSelectorShouldBe)
 	// AWS related steps
 	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
 	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
