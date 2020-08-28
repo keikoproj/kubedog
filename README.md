@@ -8,9 +8,11 @@ The library has a one and only purpose – it saves you from the hassle of imple
 
 ## Example:
 
-Let's use [Upgrade Manager BDD](https://github.com/keikoproj/upgrade-manager/tree/master/test-bdd) to easily show how to setup Kubedog around Godog. The example below assumes you know how Godog works. Some idea of what [Upgrade Manager](https://github.com/keikoproj/upgrade-manager) is, would help, but it is not necessary. 
+Let's use [Upgrade Manager functional test](https://github.com/keikoproj/upgrade-manager/tree/master/test-bdd) to easily show how to setup Kubedog around Godog. The example below assumes you know how Godog works. Some idea of what [Upgrade Manager](https://github.com/keikoproj/upgrade-manager) is, would help, but it is not necessary. 
 
 Let’s jump right into it:
+
+### Step 1: the feature file
 
 First we need the `*.feature` file defining the desired behavior. You can define this file as you would normally do when using Godog, but utilizing [Kubedog syntax](https://github.com/keikoproj/kubedog/blob/master/docs/syntax.md). As mentioned, you can also redefine the steps and use custom syntax. 
 
@@ -34,6 +36,9 @@ Feature: UM's RollingUpgrade Create
     When the resource rolling-upgrade.yaml converge to selector .status.currentStatus=completed
     Then 1 node(s) with selector bdd-test=postUpgrade-label should be ready
 ```
+### Step 2: setting Kubedog around Godog
+
+#### Minimum required setup
 
 We would need the functions `InitializeTestSuite` and `InitializeScenario` in the `*_test.go` file as required by Godog. We have to pass the suite and scenario context pointers with the methods `SetTestSuite` and `SetScenario` of `kubedog.Test` and call the `Run` method:
 
@@ -50,7 +55,9 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 }
 ```
 
-Again, kubedog is a simple wrapper - if you want to take advantage of the hooks, you can do so by defining your own functions or calling kubedog’s functions/methods.
+#### Before and After Suite, Scenario and Step hooks
+
+Again, kubedog is a simple wrapper – if you want to take advantage of the hooks, you can do so by defining your own functions or calling kubedog’s functions/methods.
 
 ``` go
 func InitializeTestSuite(ctx *godog.TestSuiteContext) {
@@ -88,6 +95,8 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 	t.Run()
 }
 ```
+
+#### Custom steps definition
 
 You are welcome to define new steps and pass kubedog's methods or define your own functions:
 
@@ -129,10 +138,16 @@ func theRequiredInitialSettings() error {
 }
 ```
 
-We can also set up [`go test` compatibility](https://github.com/keikoproj/upgrade-manager/blob/master/test-bdd/main_test.go#L15), as explained in Godog’s repository.
+#### Golang test
+
+We can also set up [`go test` compatibility](https://github.com/keikoproj/upgrade-manager/blob/master/test-bdd/main_test.go#L15), as explained in [Godog’s repository](https://github.com/cucumber/godog#running-godog-with-go-test).
 
 ## Resources:
+
 - [Steps syntax](https://github.com/keikoproj/kubedog/blob/master/docs/syntax.md)
+
+#### GoDocs
+
 - [Kubedog](https://godoc.org/github.com/keikoproj/kubedog)
-- [Kubernetes related methods](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes)
-- [AWS related methods](https://godoc.org/github.com/keikoproj/kubedog/pkg/aws)
+- [Kube](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes)
+- [AWS](https://godoc.org/github.com/keikoproj/kubedog/pkg/aws)
