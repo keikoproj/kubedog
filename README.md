@@ -4,11 +4,11 @@
 
 This is a simple wrapper of [Godog]( https://github.com/cucumber/godog) v0.10.0 with some predefined steps and their implementations. It is limited to [Kubernetes](https://kubernetes.io/) and [AWS](https://aws.amazon.com/), more precisely, it targets the [functional testing](https://cucumber.io/docs/bdd/) of Kubernetes components working in AWS. Additionally, you can take advantage of Godog’s before and after suite, scenario and step hooks and call Kubedog’s functions and methods from there. 
 
-The library has one and only purpose – save you from the hassle of implementing common/basic steps and hooks with the compromise of using predefined syntax. Of course, you could always redefine the steps using custom syntax and pass the corresponding kubedog methods.
+The library has a one and only purpose – it saves you from the hassle of implementing common/basic steps and hooks with the compromise of using predefined syntax. Of course, you could always redefine the steps using custom syntax and pass the corresponding kubedog methods.
 
 ## Example:
 
-Let's use [Upgrade Manager BDD](https://github.com/keikoproj/upgrade-manager/tree/master/test-bdd) to easily show how to setup Kubedog around Godog. The example below assumes you know how Godog works. Some idea of what [Upgrade Manager](https://github.com/keikoproj/upgrade-manager) is, would help, but is not necessary. 
+Let's use [Upgrade Manager BDD](https://github.com/keikoproj/upgrade-manager/tree/master/test-bdd) to easily show how to setup Kubedog around Godog. The example below assumes you know how Godog works. Some idea of what [Upgrade Manager](https://github.com/keikoproj/upgrade-manager) is, would help, but it is not necessary. 
 
 Let’s jump right into it:
 
@@ -35,7 +35,7 @@ Feature: UM's RollingUpgrade Create
     Then 1 node(s) with selector bdd-test=postUpgrade-label should be ready
 ```
 
-We would need the functions `InitializeTestSuite` and `InitializeScenario` in the `*_test.go` file as required by Godog. Within each one of them, we have to pass the suite and scenario context pointers with the methods `SetTestSuite` and `SetScenario` of `kubedog.Test` and call the `Run` method:
+We would need the functions `InitializeTestSuite` and `InitializeScenario` in the `*_test.go` file as required by Godog. We have to pass the suite and scenario context pointers with the methods `SetTestSuite` and `SetScenario` of `kubedog.Test` and call the `Run` method:
 
 ``` go
 var t kubedog.Test
@@ -50,7 +50,7 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 }
 ```
 
-Again, kubedog is a simple wrapper, so If you want to take advantage of the hooks, you can do so by defining your own functions or calling kubedog’s functions/methods.
+Again, kubedog is a simple wrapper - if you want to take advantage of the hooks, you can do so by defining your own functions or calling kubedog’s functions/methods.
 
 ``` go
 func InitializeTestSuite(ctx *godog.TestSuiteContext) {
