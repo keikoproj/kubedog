@@ -88,9 +88,7 @@ func InitializeTestSuite(ctx *godog.TestSuiteContext) {
 ```
 	t.SetTestSuite(ctx)
 }
-```
 
-```
 func InitializeScenario(ctx *godog.ScenarioContext) {
 ```
 ``` go
@@ -108,18 +106,21 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 
 You are welcome to define new steps and pass kubedog's methods or define your own functions:
 
-``` go
+```
 func InitializeScenario(ctx *godog.ScenarioContext) {
 	ctx.AfterStep(func(s *godog.Step, err error) {
 		time.Sleep(time.Second * 5)
 	})
-
+```
+``` go
 	ctx.Step(`^the current Auto Scaling Group has the required initial settings$`, theRequiredInitialSettings)
-
+```
+```
 	t.SetScenario(ctx)
 	t.Run()
 }
-
+```
+``` go
 func theRequiredInitialSettings() error {
 	// Making sure the ASG has the pre-test launch config and 1 node with correct config
 	err := t.AwsContext.UpdateFieldOfCurrentASG("LaunchConfigurationName", "upgrade-eks-nightly-LC-preUpgrade")
