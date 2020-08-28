@@ -59,8 +59,10 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 
 Again, kubedog is a simple wrapper – if you want to take advantage of the hooks, you can do so by defining your own functions or calling kubedog’s functions/methods.
 
-``` go
+```
 func InitializeTestSuite(ctx *godog.TestSuiteContext) {
+```
+``` go
 	ctx.BeforeSuite(func() {
 		log.Info("BDD >> trying to delete any existing test RollingUpgrade")
 		err := t.KubeContext.DeleteAllTestResources()
@@ -82,15 +84,21 @@ func InitializeTestSuite(ctx *godog.TestSuiteContext) {
 			log.Errorf("Failed deleting the test resources: %v", err)
 		}
 	})
-
+```
+```
 	t.SetTestSuite(ctx)
 }
+```
 
+```
 func InitializeScenario(ctx *godog.ScenarioContext) {
+```
+``` go
 	ctx.AfterStep(func(s *godog.Step, err error) {
 		time.Sleep(time.Second * 5)
 	})
-
+```
+```
 	t.SetScenario(ctx)
 	t.Run()
 }
