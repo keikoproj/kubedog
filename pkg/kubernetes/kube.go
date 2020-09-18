@@ -42,6 +42,7 @@ type Client struct {
 	DynamicInterface   dynamic.Interface
 	DiscoveryInterface discovery.DiscoveryInterface
 	FilesPath          string
+	TemplateArguments  interface{}
 }
 
 const (
@@ -121,7 +122,7 @@ func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
 		resourcePath = filepath.Join("templates", resourceFileName)
 	}
 
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
+	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
 	}
@@ -165,7 +166,7 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 		resourcePath = filepath.Join("templates", resourceFileName)
 	}
 
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
+	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
 	}
@@ -222,7 +223,7 @@ func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector st
 		resourcePath = filepath.Join("templates", resourceFileName)
 	}
 
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
+	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
 	}
@@ -269,7 +270,7 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 		resourcePath = filepath.Join("templates", resourceFileName)
 	}
 
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
+	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
 	}
@@ -387,7 +388,7 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 		resourcePath = filepath.Join("templates", resourceFileName)
 	}
 
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface)
+	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
 	}
@@ -441,7 +442,7 @@ func (kc *Client) DeleteAllTestResources() error {
 			return nil
 		}
 
-		gvr, resource, err := util.GetResourceFromYaml(path, kc.DiscoveryInterface)
+		gvr, resource, err := util.GetResourceFromYaml(path, kc.DiscoveryInterface, kc.TemplateArguments)
 		if err != nil {
 			return err
 		}
@@ -460,7 +461,7 @@ func (kc *Client) DeleteAllTestResources() error {
 			return nil
 		}
 
-		gvr, resource, err := util.GetResourceFromYaml(path, kc.DiscoveryInterface)
+		gvr, resource, err := util.GetResourceFromYaml(path, kc.DiscoveryInterface, kc.TemplateArguments)
 		if err != nil {
 			return err
 		}

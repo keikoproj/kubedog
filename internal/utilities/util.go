@@ -15,10 +15,12 @@ limitations under the License.
 package util
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"text/template"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -80,7 +82,7 @@ func FindGVR(gvk *schema.GroupVersionKind, dc discovery.DiscoveryInterface) (*me
 	return RESTMapping, nil
 }
 
-func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface) (*meta.RESTMapping, *unstructured.Unstructured, error) {
+func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface, args interface{}) (*meta.RESTMapping, *unstructured.Unstructured, error) {
 	resource := &unstructured.Unstructured{}
 
 	d, err := ioutil.ReadFile(path)
@@ -88,9 +90,19 @@ func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface) (*meta.RE
 		return nil, resource, err
 	}
 
+	template, err := template.New("InstanceGroup").Parse(string(d))
+	if err != nil {
+		return nil, resource, err
+	}
+
+	var renderBuffer bytes.Buffer
+	err = template.Execute(&renderBuffer, &args)
+	if err != nil {
+		return nil, resource, err
+	}
 	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 
-	_, gvk, err := dec.Decode(d, nil, resource)
+	_, gvk, err := dec.Decode(renderBuffer.Bytes(), nil, resource)
 
 	if err != nil {
 		return nil, resource, err
