@@ -90,7 +90,7 @@ func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface, args inte
 		return nil, resource, err
 	}
 
-	template, err := template.New("InstanceGroup").Parse(string(d))
+	template, err := template.New("Resource").Parse(string(d))
 	if err != nil {
 		return nil, resource, err
 	}
