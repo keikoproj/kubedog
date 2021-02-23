@@ -26,6 +26,7 @@ import (
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/pkg/errors"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -492,5 +493,37 @@ func (kc *Client) DeleteAllTestResources() error {
 		return err
 	}
 
+	return nil
+}
+
+/*
+DeploymentInNamespace check if deployment in the related namespace
+*/
+func (kc *Client) DeploymentInNamespace(name, ns string) error {
+	_, err := kc.KubeInterface.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+/*
+ScaleDeployment scale up/down for the deployment
+ */
+func (kc *Client) ScaleDeployment(name, ns string, replica int32) error {
+	scale := &autoscalingv1.Scale{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: ns,
+		},
+		Spec: autoscalingv1.ScaleSpec{
+			Replicas: replica,
+		},
+	}
+
+	_, err := kc.KubeInterface.AppsV1().Deployments(ns).UpdateScale(name, scale)
+	if err != nil {
+		return err
+	}
 	return nil
 }

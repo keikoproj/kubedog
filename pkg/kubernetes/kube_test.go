@@ -21,7 +21,8 @@ import (
 
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	v1 "k8s.io/api/core/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -286,6 +287,71 @@ func TestPostitiveUpdateResourceWithField(t *testing.T) {
 	g.Expect(found).To(gomega.BeTrue())
 	g.Expect(expectedLabelValue).To(gomega.Equal(testUpdateValue))
 	// TODO: negative test
+}
+
+func TestDeploymentInNamespace(t *testing.T) {
+	var (
+		err            error
+		g              = gomega.NewWithT(t)
+		fakeKubeClient = fake.NewSimpleClientset()
+		namespace      = "test_ns"
+		deployName     = "test_deploy"
+	)
+
+	kc := Client{
+		KubeInterface: fakeKubeClient,
+	}
+
+	_, _ = kc.KubeInterface.CoreV1().Namespaces().Create(&v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+		Status: v1.NamespaceStatus{Phase: v1.NamespaceActive},
+	})
+
+	_, _ = kc.KubeInterface.AppsV1().Deployments(namespace).Create(&appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: deployName,
+		},
+	})
+
+	err = kc.DeploymentInNamespace(deployName, namespace)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+}
+
+func TestScaleDeployment(t *testing.T) {
+	var (
+		err            error
+		g              = gomega.NewWithT(t)
+		fakeKubeClient = fake.NewSimpleClientset()
+		namespace      = "test_ns"
+		deployName     = "test_deploy"
+		replicaCount   = int32(1)
+	)
+
+	kc := Client{
+		KubeInterface: fakeKubeClient,
+	}
+
+	_, _ = kc.KubeInterface.CoreV1().Namespaces().Create(&v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+		Status: v1.NamespaceStatus{Phase: v1.NamespaceActive},
+	})
+
+	_, _ = kc.KubeInterface.AppsV1().Deployments(namespace).Create(&appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: deployName,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicaCount,
+		},
+	})
+	err = kc.ScaleDeployment(deployName, namespace, 2)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	s, _ := kc.KubeInterface.AppsV1().Deployments(namespace).GetScale(deployName, metav1.GetOptions{})
+	g.Expect(s.Spec.Replicas).To(gomega.Equal(int32(2)))
 }
 
 func resourceFromYaml(resourceFileName string) (*unstructured.Unstructured, error) {
