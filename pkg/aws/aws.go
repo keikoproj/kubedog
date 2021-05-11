@@ -61,7 +61,7 @@ func (c *Client) AnASGNamed(name string) error {
 		return errors.Errorf("No ASG found by the name: '%s'", name)
 	default:
 		// Not likely to happen. Here in case something inherently wrong with AWS/API
-		return errors.Errorf("DescribeAutoScalingGroups returned more than 1 ASG with the name '%s': %v", name, ASGs)
+		return errors.Errorf("DescribeAutoScalingGroups returned %d ASGs with the name '%s': %v", len(ASGs), name, ASGs)
 	}
 }
 
