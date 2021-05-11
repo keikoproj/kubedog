@@ -38,7 +38,6 @@ type Client struct {
 AnASGNamed updates the current ASG to be used by the other ASG related steps.
 */
 func (c *Client) AnASGNamed(name string) error {
-
 	if c.ASClient == nil {
 		return errors.Errorf("Unable to get ASG %v: The AS client was not found, use the method GetAWSCredsAndClients", name)
 	}
@@ -50,13 +49,20 @@ func (c *Client) AnASGNamed(name string) error {
 		return errors.Errorf("Failed describing the ASG %v: %v", name, err)
 	}
 
-	arn := aws.StringValue(out.AutoScalingGroups[0].AutoScalingGroupARN)
-	log.Infof("[KUBEDOG] Auto Scaling group: %v", arn)
-
-	c.LaunchConfigName = aws.StringValue(out.AutoScalingGroups[0].LaunchConfigurationName)
-	c.AsgName = name
-
-	return nil
+	ASGs := out.AutoScalingGroups
+	switch len(ASGs) {
+	case 1:
+		arn := aws.StringValue(ASGs[0].AutoScalingGroupARN)
+		log.Infof("[KUBEDOG] Auto Scaling group: %v", arn)
+		c.LaunchConfigName = aws.StringValue(ASGs[0].LaunchConfigurationName)
+		c.AsgName = name
+		return nil
+	case 0:
+		return errors.Errorf("No ASG found by the name: '%s'", name)
+	default:
+		// Not likely to happen. Here in case something inherently wrong with AWS/API
+		return errors.Errorf("DescribeAutoScalingGroups returned more than 1 ASG with the name '%s': %v", name, ASGs)
+	}
 }
 
 /*
