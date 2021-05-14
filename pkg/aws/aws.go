@@ -38,7 +38,6 @@ type Client struct {
 AnASGNamed updates the current ASG to be used by the other ASG related steps.
 */
 func (c *Client) AnASGNamed(name string) error {
-
 	if c.ASClient == nil {
 		return errors.Errorf("Unable to get ASG %v: The AS client was not found, use the method GetAWSCredsAndClients", name)
 	}
@@ -48,6 +47,8 @@ func (c *Client) AnASGNamed(name string) error {
 	})
 	if err != nil {
 		return errors.Errorf("Failed describing the ASG %v: %v", name, err)
+	} else if len(out.AutoScalingGroups) == 0 {
+		return errors.Errorf("No ASG found by the name: '%s'", name)
 	}
 
 	arn := aws.StringValue(out.AutoScalingGroups[0].AutoScalingGroupARN)
