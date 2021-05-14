@@ -47,22 +47,17 @@ func (c *Client) AnASGNamed(name string) error {
 	})
 	if err != nil {
 		return errors.Errorf("Failed describing the ASG %v: %v", name, err)
+	} else if len(out.AutoScalingGroups) == 0 {
+		return errors.Errorf("No ASG found by the name: '%s'", name)
 	}
 
-	ASGs := out.AutoScalingGroups
-	switch len(ASGs) {
-	case 1:
-		arn := aws.StringValue(ASGs[0].AutoScalingGroupARN)
-		log.Infof("[KUBEDOG] Auto Scaling group: %v", arn)
-		c.LaunchConfigName = aws.StringValue(ASGs[0].LaunchConfigurationName)
-		c.AsgName = name
-		return nil
-	case 0:
-		return errors.Errorf("No ASG found by the name: '%s'", name)
-	default:
-		// Not likely to happen. Here in case something inherently wrong with AWS/API
-		return errors.Errorf("DescribeAutoScalingGroups returned %d ASGs with the name '%s': %v", len(ASGs), name, ASGs)
-	}
+	arn := aws.StringValue(out.AutoScalingGroups[0].AutoScalingGroupARN)
+	log.Infof("[KUBEDOG] Auto Scaling group: %v", arn)
+
+	c.LaunchConfigName = aws.StringValue(out.AutoScalingGroups[0].LaunchConfigurationName)
+	c.AsgName = name
+
+	return nil
 }
 
 /*

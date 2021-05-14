@@ -85,27 +85,6 @@ func TestAnASGNamed(t *testing.T) {
 				},
 				expectError: false,
 			},
-			{ // case len(out.AutoScalingGroups) > 1
-				ASClient: mockAutoScalingClient{
-					ASGs: []*autoscaling.Group{
-						{
-							AutoScalingGroupName:    aws.String("ASG-name-1"),
-							LaunchConfigurationName: aws.String("ASG-name-1-LC"),
-							AutoScalingGroupARN:     aws.String("ASG-name-1-ARN"),
-						},
-						{
-							AutoScalingGroupName:    aws.String("ASG-name-1"),
-							LaunchConfigurationName: aws.String("ASG-name-2-LC"),
-							AutoScalingGroupARN:     aws.String("ASG-name-3-ARN"),
-						},
-					},
-					Err: nil,
-				},
-				expectedASG: &autoscaling.Group{
-					AutoScalingGroupName: aws.String("ASG-name-1"),
-				},
-				expectError: true,
-			},
 		}
 	)
 
@@ -250,7 +229,7 @@ func (asc *mockAutoScalingClient) DescribeAutoScalingGroups(input *autoscaling.D
 		for _, Group := range asc.ASGs {
 			if aws.StringValue(Group.AutoScalingGroupName) == inName {
 				ASGs = append(ASGs, Group)
-				//No break to allow case 'len(out.AutoScalingGroups) > 1' to happen
+				break
 			}
 		}
 	}
