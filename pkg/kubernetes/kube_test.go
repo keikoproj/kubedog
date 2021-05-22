@@ -22,7 +22,7 @@ import (
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -75,7 +75,6 @@ func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	err = kc.NodesWithSelectorShouldBe(1, testFoundSelector, NodeStateFound)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	// TODO: negative test
 }
 
 func TestPostitiveResourceOperation(t *testing.T) {
@@ -104,12 +103,10 @@ func TestPostitiveResourceOperation(t *testing.T) {
 		FilesPath:          "../../test/templates",
 	}
 
-	// TODO: test resource already created and already deleted
 	err = kc.ResourceOperation(OperationCreate, fileName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	err = kc.ResourceOperation(OperationDelete, fileName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	// TODO: negative test
 }
 
 func TestPostitiveResourceShouldBe(t *testing.T) {
@@ -157,7 +154,6 @@ func TestPostitiveResourceShouldBe(t *testing.T) {
 
 	err = kc.ResourceShouldBe(fileName, ResourceStateDeleted)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	// TODO: negative test
 }
 
 func TestPostitiveResourceShouldConvergeToSelector(t *testing.T) {
@@ -196,7 +192,6 @@ func TestPostitiveResourceShouldConvergeToSelector(t *testing.T) {
 
 	err = kc.ResourceShouldConvergeToSelector(fileName, selector)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	// TODO: negative test
 }
 
 func TestPostitiveResourceConditionShouldBe(t *testing.T) {
@@ -236,7 +231,6 @@ func TestPostitiveResourceConditionShouldBe(t *testing.T) {
 
 	err = kc.ResourceConditionShouldBe(fileName, testConditionType, testConditionStatus)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	// TODO: negative test
 }
 
 func TestPostitiveUpdateResourceWithField(t *testing.T) {
@@ -286,7 +280,6 @@ func TestPostitiveUpdateResourceWithField(t *testing.T) {
 	expectedLabelValue, found, err := unstructured.NestedString(testResource.UnstructuredContent(), "metadata", "labels", "testUpdateKey")
 	g.Expect(found).To(gomega.BeTrue())
 	g.Expect(expectedLabelValue).To(gomega.Equal(testUpdateValue))
-	// TODO: negative test
 }
 
 func TestDeploymentInNamespace(t *testing.T) {
