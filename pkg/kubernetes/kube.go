@@ -38,7 +38,6 @@ import (
 )
 
 type Client struct {
-	// TODO: support multiple resources
 	KubeInterface      kubernetes.Interface
 	DynamicInterface   dynamic.Interface
 	DiscoveryInterface discovery.DiscoveryInterface
@@ -115,14 +114,13 @@ func (kc *Client) AKubernetesCluster() error {
 ResourceOperation performs the given operation on the resource defined in resourceFileName. The operation could be “create”, “submit” or “delete”.
 */
 func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
-	var resourcePath string
-
-	if kc.FilesPath != "" {
-		resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
-	} else {
-		resourcePath = filepath.Join("templates", resourceFileName)
+	if kc.DynamicInterface == nil {
+		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	} else if kc.DiscoveryInterface == nil {
+		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	}
 
+	resourcePath := kc.getResourcePath(resourceFileName)
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
@@ -156,16 +154,17 @@ ResourceShouldBe checks if the resource defined in resourceFileName is in the de
 */
 func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 	var (
-		exists       bool
-		counter      int
-		resourcePath string
+		exists  bool
+		counter int
 	)
 
-	if kc.FilesPath != "" {
-		resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
-	} else {
-		resourcePath = filepath.Join("templates", resourceFileName)
+	if kc.DynamicInterface == nil {
+		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	} else if kc.DiscoveryInterface == nil {
+		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	}
+
+	resourcePath := kc.getResourcePath(resourceFileName)
 
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
@@ -209,20 +208,28 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 ResourceShouldConvergeToSelector checks if the resource defined in resourceFileName has the desired selector. It retries every 30 seconds for a total of 40 times. Selector in the form <keys>=<value>.
 */
 func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector string) error {
-	var (
-		counter      int
-		split        = util.DeleteEmpty(strings.Split(selector, "="))
-		key          = split[0]
-		keySlice     = util.DeleteEmpty(strings.Split(key, "."))
-		value        = split[1]
-		resourcePath string
-	)
+	var counter int
 
-	if kc.FilesPath != "" {
-		resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
-	} else {
-		resourcePath = filepath.Join("templates", resourceFileName)
+	if kc.DynamicInterface == nil {
+		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	} else if kc.DiscoveryInterface == nil {
+		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	}
+
+	split := util.DeleteEmpty(strings.Split(selector, "="))
+	if len(split) != 2 {
+		return errors.Errorf("Selector '%s' should meet format '<key>=<value>'", selector)
+	}
+
+	key := split[0]
+	value := split[1]
+
+	keySlice := util.DeleteEmpty(strings.Split(key, "."))
+	if len(keySlice) < 1 {
+		return errors.Errorf("Found empty 'key' in selector '%s' of form '<key>=<value>'", selector)
+	}
+
+	resourcePath := kc.getResourcePath(resourceFileName)
 
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
@@ -262,15 +269,15 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 	var (
 		counter        int
 		expectedStatus = strings.Title(status)
-		resourcePath   string
 	)
 
-	if kc.FilesPath != "" {
-		resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
-	} else {
-		resourcePath = filepath.Join("templates", resourceFileName)
+	if kc.DynamicInterface == nil {
+		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	} else if kc.DiscoveryInterface == nil {
+		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	}
 
+	resourcePath := kc.getResourcePath(resourceFileName)
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
@@ -326,6 +333,10 @@ func (kc *Client) NodesWithSelectorShouldBe(n int, selector, state string) error
 		found   bool
 	)
 
+	if kc.KubeInterface == nil {
+		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	}
+
 	for {
 		var (
 			conditionNodes int
@@ -380,15 +391,16 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 		keySlice     = util.DeleteEmpty(strings.Split(key, "."))
 		overrideType bool
 		intValue     int64
-		resourcePath string
+		//err          error
 	)
 
-	if kc.FilesPath != "" {
-		resourcePath = filepath.Join(kc.FilesPath, resourceFileName)
-	} else {
-		resourcePath = filepath.Join("templates", resourceFileName)
+	if kc.DynamicInterface == nil {
+		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	} else if kc.DiscoveryInterface == nil {
+		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	}
 
+	resourcePath := kc.getResourcePath(resourceFileName)
 	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
@@ -405,10 +417,15 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 		return err
 	}
 
-	if overrideType {
-		unstructured.SetNestedField(updateTarget.UnstructuredContent(), intValue, keySlice...)
-	} else {
-		unstructured.SetNestedField(updateTarget.UnstructuredContent(), value, keySlice...)
+	switch overrideType {
+	case true:
+		if err := unstructured.SetNestedField(updateTarget.UnstructuredContent(), intValue, keySlice...); err != nil {
+			return err
+		}
+	case false:
+		if err := unstructured.SetNestedField(updateTarget.UnstructuredContent(), value, keySlice...); err != nil {
+			return err
+		}
 	}
 
 	_, err = kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Update(updateTarget, metav1.UpdateOptions{})
@@ -423,13 +440,13 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 DeleteAllTestResources deletes all the resources defined by yaml files in the path given by FilesPath, if FilesPath is empty, it will look for the files in ./templates. Meant to be use in the before/after suite/scenario/step hooks
 */
 func (kc *Client) DeleteAllTestResources() error {
-	// TODO: only delete if the resources exist
-	var resourcePath string
-	if kc.FilesPath != "" {
-		resourcePath = kc.FilesPath
-	} else {
-		resourcePath = "templates"
+	if kc.DynamicInterface == nil {
+		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	} else if kc.DiscoveryInterface == nil {
+		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	}
+
+	resourcesPath := kc.getTemplatesPath()
 
 	// Getting context
 	err := kc.AKubernetesCluster()
@@ -437,7 +454,10 @@ func (kc *Client) DeleteAllTestResources() error {
 		return errors.Errorf("Failed getting the kubernetes client: %v", err)
 	}
 
-	var deleteFn = func(path string, info os.FileInfo, err error) error {
+	var deleteFn = func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
 
 		if info.IsDir() || filepath.Ext(path) != ".yaml" {
 			return nil
@@ -453,10 +473,14 @@ func (kc *Client) DeleteAllTestResources() error {
 		return nil
 	}
 
-	var waitFn = func(path string, info os.FileInfo, err error) error {
+	var waitFn = func(path string, info os.FileInfo, walkErr error) error {
 		var (
 			counter int
 		)
+
+		if walkErr != nil {
+			return walkErr
+		}
 
 		if info.IsDir() || filepath.Ext(path) != ".yaml" {
 			return nil
@@ -485,11 +509,10 @@ func (kc *Client) DeleteAllTestResources() error {
 		return nil
 	}
 
-	if err := filepath.Walk(resourcePath, deleteFn); err != nil {
+	if err := filepath.Walk(resourcesPath, deleteFn); err != nil {
 		return err
 	}
-
-	if err := filepath.Walk(resourcePath, waitFn); err != nil {
+	if err := filepath.Walk(resourcesPath, waitFn); err != nil {
 		return err
 	}
 
@@ -500,6 +523,10 @@ func (kc *Client) DeleteAllTestResources() error {
 DeploymentInNamespace check if deployment in the related namespace
 */
 func (kc *Client) DeploymentInNamespace(name, ns string) error {
+	if kc.KubeInterface == nil {
+		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	}
+
 	_, err := kc.KubeInterface.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -509,8 +536,12 @@ func (kc *Client) DeploymentInNamespace(name, ns string) error {
 
 /*
 ScaleDeployment scale up/down for the deployment
- */
+*/
 func (kc *Client) ScaleDeployment(name, ns string, replica int32) error {
+	if kc.KubeInterface == nil {
+		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	}
+
 	scale := &autoscalingv1.Scale{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -526,4 +557,16 @@ func (kc *Client) ScaleDeployment(name, ns string, replica int32) error {
 		return err
 	}
 	return nil
+}
+
+func (kc *Client) getTemplatesPath() string {
+	if kc.FilesPath != "" {
+		return kc.FilesPath
+	} else {
+		return "templates"
+	}
+}
+func (kc *Client) getResourcePath(resourceFileName string) string {
+	templatesPath := kc.getTemplatesPath()
+	return filepath.Join(templatesPath, resourceFileName)
 }

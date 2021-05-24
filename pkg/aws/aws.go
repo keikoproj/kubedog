@@ -28,7 +28,6 @@ import (
 )
 
 type Client struct {
-	// TODO: support multiple ASG
 	ASClient         autoscalingiface.AutoScalingAPI
 	AsgName          string
 	LaunchConfigName string

@@ -15,12 +15,12 @@ limitations under the License.
 package kubedog
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/cucumber/godog"
 	aws "github.com/keikoproj/kubedog/pkg/aws"
 	kube "github.com/keikoproj/kubedog/pkg/kubernetes"
+	log "github.com/sirupsen/logrus"
 )
 
 type Test struct {
@@ -40,32 +40,27 @@ Run contains the steps definition, should be called in the InitializeScenario fu
 Check https://github.com/keikoproj/kubedog/blob/master/docs/syntax.md for steps syntax details.
 */
 func (kdt *Test) Run() {
-	// TODO: define default suite hooks if any, check that the suite context was set
-
 	if kdt.scenarioContext == nil {
-		fmt.Println("FATAL: kubedog.Test.scenarioContext was not set, use kubedog.Test.InitScenario")
+		log.Fatalln("kubedog.Test.scenarioContext was not set, use kubedog.Test.InitScenario")
 		os.Exit(testFailedStatus)
 	}
 
-	// TODO: define default scenario hooks if any
-	// TODO: define default step hooks if any
-
 	// Kubernetes related steps
 	kdt.scenarioContext.Step(`^a Kubernetes cluster$`, kdt.KubeContext.AKubernetesCluster)
-	kdt.scenarioContext.Step(`^I (create|submit|delete) the resource ([^"]*)$`, kdt.KubeContext.ResourceOperation)
-	kdt.scenarioContext.Step(`^the resource ([^"]*) should be (created|deleted)$`, kdt.KubeContext.ResourceShouldBe)
-	kdt.scenarioContext.Step(`^the resource ([^"]*) should converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
-	kdt.scenarioContext.Step(`^the resource ([^"]*) converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
-	kdt.scenarioContext.Step(`^the resource ([^"]*) condition ([^"]*) should be (true|false)$`, kdt.KubeContext.ResourceConditionShouldBe)
-	kdt.scenarioContext.Step(`^I update a resource ([^"]*) with ([^"]*) set to ([^"]*)$`, kdt.KubeContext.UpdateResourceWithField)
+	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete) (?:the )?resource ([^"]*)$`, kdt.KubeContext.ResourceOperation)
+	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) should be (created|deleted)$`, kdt.KubeContext.ResourceShouldBe)
+	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) converged to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
+	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) should converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
+	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) condition ([^"]*) should be (true|false)$`, kdt.KubeContext.ResourceConditionShouldBe)
+	kdt.scenarioContext.Step(`^(?:I )?update (?:a )?resource ([^"]*) with ([^"]*) set to ([^"]*)$`, kdt.KubeContext.UpdateResourceWithField)
 	kdt.scenarioContext.Step(`^(\d+) node\(s\) with selector ([^"]*) should be (found|ready)$`, kdt.KubeContext.NodesWithSelectorShouldBe)
-	kdt.scenarioContext.Step(`^deployment ([^"]*) is in namespace ([^"]*)$`, kdt.KubeContext.DeploymentInNamespace)
-	kdt.scenarioContext.Step(`^scale deployment ([^"]*) in namespace ([^"]*) to (\d+)$`, kdt.KubeContext.ScaleDeployment)
+	kdt.scenarioContext.Step(`^(?:the )?deployment ([^"]*) is in namespace ([^"]*)$`, kdt.KubeContext.DeploymentInNamespace)
+	kdt.scenarioContext.Step(`^(?:I )?scale (?:the )?deployment ([^"]*) in namespace ([^"]*) to (\d+)$`, kdt.KubeContext.ScaleDeployment)
 	// AWS related steps
 	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
 	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
-	kdt.scenarioContext.Step(`^I update the current Auto Scaling Group with ([^"]*) set to ([^"]*)$`, kdt.AwsContext.UpdateFieldOfCurrentASG)
-	kdt.scenarioContext.Step(`the current Auto Scaling Group is scaled to \(min, max\) = \((\d+), (\d+)\)$`, kdt.AwsContext.ScaleCurrentASG)
+	kdt.scenarioContext.Step(`^(?:I )?update (?:the )current Auto Scaling Group with ([^"]*) set to ([^"]*)$`, kdt.AwsContext.UpdateFieldOfCurrentASG)
+	kdt.scenarioContext.Step(`(?:the )?current Auto Scaling Group (?:is )scaled to \(min, max\) = \((\d+), (\d+)\)$`, kdt.AwsContext.ScaleCurrentASG)
 }
 
 /*
