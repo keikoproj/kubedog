@@ -440,12 +440,6 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 DeleteAllTestResources deletes all the resources defined by yaml files in the path given by FilesPath, if FilesPath is empty, it will look for the files in ./templates. Meant to be use in the before/after suite/scenario/step hooks
 */
 func (kc *Client) DeleteAllTestResources() error {
-	if kc.DynamicInterface == nil {
-		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
-	} else if kc.DiscoveryInterface == nil {
-		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
-	}
-
 	resourcesPath := kc.getTemplatesPath()
 
 	// Getting context
