@@ -6,7 +6,7 @@ Let’s jump right into it:
 
 ## Step 1: the feature file
 
-First we need the `*.feature` file defining the desired behavior. You can define this file as you would normally do when using Godog, but utilizing [Kubedog syntax](https://github.com/keikoproj/kubedog/blob/master/docs/syntax.md). As mentioned, you can also redefine the steps and use custom syntax. 
+First we need the `*.feature` file defining the desired behavior. You can define this file as you would normally do when using Godog, but utilizing [Kubedog syntax](syntax.md). As mentioned, you can also redefine the steps and use custom syntax. 
 
 ``` gherkin
 Feature: UM's RollingUpgrade Create

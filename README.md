@@ -8,8 +8,9 @@ The library has a one and only purpose – it saves you from the hassle of imple
 
 ## Resources:
 
-- [Steps syntax](https://github.com/keikoproj/kubedog/blob/master/docs/syntax.md)
-- [Usage example](https://github.com/keikoproj/kubedog/blob/master/docs/example.md): upgrade-manager's BDD
+- [Steps syntax](docs/syntax.md)
+- [Usage example](docs/example.md): upgrade-manager's BDD
+- Kubernetes manifests: [templating yaml files](pkg/kubernetes/readme.md)
 
 #### GoDocs
 
