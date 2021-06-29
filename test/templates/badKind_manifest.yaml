@@ -1,0 +1,4 @@
+kind: {{.Kindd}}
+apiVersion: {{.ApiVersion}}
+metadata:
+  name: {{.Name}}

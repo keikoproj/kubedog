@@ -1,0 +1,302 @@
+/*
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package generic
+
+import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/onsi/gomega"
+)
+
+func TestGetValue(t *testing.T) {
+	var (
+		g     = gomega.NewWithT(t)
+		tests = []struct {
+			templateArgument TemplateArgument
+			setup            func()
+			expectedValue    string
+			expectError      bool
+		}{
+			// PositiveTests:
+			{ // Mandatory, Env_Var set
+				templateArgument: TemplateArgument{
+					Key:       "key1",
+					Env_Var:   "VAR1",
+					Mandatory: true,
+					Fallback:  "fallback1",
+				},
+				setup: func() {
+					os.Setenv("VAR1", "value1")
+				},
+				expectedValue: "value1",
+				expectError:   false,
+			},
+			{ // not Mandatory, Env_Var unset, Fallback not empty
+				templateArgument: TemplateArgument{
+					Key:       "key2",
+					Env_Var:   "VAR2",
+					Mandatory: false,
+					Fallback:  "fallback2",
+				},
+				setup: func() {
+					os.Unsetenv("VAR2")
+				},
+				expectedValue: "fallback2",
+				expectError:   false,
+			},
+			{ // not Mandatory, Env_Var set empty
+				templateArgument: TemplateArgument{
+					Key:       "key3",
+					Env_Var:   "VAR3",
+					Mandatory: false,
+					Fallback:  "fallback3",
+				},
+				setup: func() {
+					os.Setenv("VAR3", "")
+				},
+				expectedValue: "",
+				expectError:   false,
+			},
+			{ // not Mandatory, Env_Var unset, Fallback empty
+				templateArgument: TemplateArgument{
+					Key:       "key4",
+					Env_Var:   "VAR4",
+					Mandatory: false,
+					Fallback:  "",
+				},
+				setup: func() {
+					os.Unsetenv("VAR4")
+				},
+				expectedValue: "",
+				expectError:   false,
+			},
+			{ // not Mandatory, Env_Var empty
+				templateArgument: TemplateArgument{
+					Key:       "key5",
+					Env_Var:   "",
+					Mandatory: false,
+					Fallback:  "fallback5",
+				},
+				setup:         func() {},
+				expectedValue: "fallback5",
+				expectError:   false,
+			},
+			// NegativeTests:
+			{ // Mandatory, Env_Var unset
+				templateArgument: TemplateArgument{
+					Key:       "key",
+					Env_Var:   "VAR",
+					Mandatory: true,
+					Fallback:  "fallback",
+				},
+				setup: func() {
+					os.Unsetenv("VAR")
+				},
+				expectedValue: "",
+				expectError:   true,
+			},
+			{ // Key empty
+				templateArgument: TemplateArgument{
+					Key:       "",
+					Env_Var:   "VAR",
+					Mandatory: true,
+					Fallback:  "fallback",
+				},
+				setup: func() {
+					os.Setenv("VAR", "value")
+				},
+				expectedValue: "",
+				expectError:   true,
+			},
+			{ // Mandatory, Env_Var empty
+				templateArgument: TemplateArgument{
+					Key:       "key",
+					Env_Var:   "",
+					Mandatory: true,
+					Fallback:  "fallback",
+				},
+				setup: func() {
+					os.Setenv("VAR", "value")
+				},
+				expectedValue: "",
+				expectError:   true,
+			},
+		}
+	)
+
+	for _, test := range tests {
+		test.setup()
+		value, err := test.templateArgument.GetValue()
+		if test.expectError {
+			g.Expect(err).Should(gomega.HaveOccurred())
+		} else {
+			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+		}
+		g.Expect(value).To(gomega.Equal(test.expectedValue))
+	}
+}
+
+func TestTemplateArgumentsToMap(t *testing.T) {
+	var (
+		g     = gomega.NewWithT(t)
+		tests = []struct {
+			templateArguments []TemplateArgument
+			setup             func()
+			expectedArgs      map[string]string
+			expectError       bool
+		}{
+			{ // PositiveTest
+				templateArguments: []TemplateArgument{
+					{ // Mandatory, Env_Var set
+						Key:       "key1",
+						Env_Var:   "VAR1",
+						Mandatory: true,
+						Fallback:  "fallback1",
+					},
+					{ // not Mandatory, Env_Var unset, Fallback not empty
+						Key:       "key2",
+						Env_Var:   "VAR2",
+						Mandatory: false,
+						Fallback:  "fallback2",
+					},
+					{ // not Mandatory, Env_Var set empty
+						Key:       "key3",
+						Env_Var:   "VAR3",
+						Mandatory: false,
+						Fallback:  "fallback3",
+					},
+					{ // not Mandatory, Env_Var unset, Fallback empty
+						Key:       "key4",
+						Env_Var:   "VAR4",
+						Mandatory: false,
+						Fallback:  "",
+					},
+					{ // not Mandatory, Env_Var empty
+						Key:       "key5",
+						Env_Var:   "",
+						Mandatory: false,
+						Fallback:  "fallback5",
+					},
+				},
+				setup: func() {
+					os.Setenv("VAR1", "value1")
+					os.Unsetenv("VAR2")
+					os.Setenv("VAR3", "")
+					os.Unsetenv("VAR4")
+				},
+				expectedArgs: map[string]string{
+					"key1": "value1",
+					"key2": "fallback2",
+					"key3": "",
+					"key4": "",
+					"key5": "fallback5",
+				},
+				expectError: false,
+			},
+		}
+	)
+
+	for _, test := range tests {
+		test.setup()
+		args, err := TemplateArgumentsToMap(test.templateArguments...)
+		if test.expectError {
+			g.Expect(err).Should(gomega.HaveOccurred())
+		} else {
+			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+		}
+		g.Expect(args).To(gomega.Equal(test.expectedArgs))
+	}
+}
+
+func TestGenerateFileFromTemplate(t *testing.T) {
+	type templateArgs struct {
+		Kind       string
+		ApiVersion string
+		Name       string
+	}
+
+	fileToString := func(filePath string) string {
+		file, _ := ioutil.ReadFile(filePath)
+		return string(file)
+	}
+
+	templateArgsToExpectedFileAsString := func(args templateArgs) string {
+		return `kind: ` + args.Kind + `
+apiVersion: ` + args.ApiVersion + `
+metadata:
+  name: ` + args.Name
+	}
+
+	var (
+		g                    = gomega.NewWithT(t)
+		testTemplatesPath, _ = filepath.Abs("../../test/templates")
+		tests                = []struct {
+			templatedFilePath string
+			args              templateArgs
+			expectedFilePath  string
+			expectError       bool
+		}{
+			{ // PositiveTest
+				templatedFilePath: testTemplatesPath + "/manifest.yaml",
+				args: templateArgs{
+					Kind:       "myKind",
+					ApiVersion: "myApiVersion",
+					Name:       "myName",
+				},
+				expectedFilePath: testTemplatesPath + "/generated_manifest.yaml",
+				expectError:      false,
+			},
+			{ // NegativeTest: template.ParseFiles fails
+				templatedFilePath: testTemplatesPath + "/wrongName_manifest.yaml",
+				args: templateArgs{
+					Kind:       "myKind",
+					ApiVersion: "myApiVersion",
+					Name:       "myName",
+				},
+				expectedFilePath: "",
+				expectError:      true,
+			},
+			{ // NegativeTest: template.Execute fails
+				templatedFilePath: testTemplatesPath + "/badKind_manifest.yaml",
+				args: templateArgs{
+					Kind:       "myKind",
+					ApiVersion: "myApiVersion",
+					Name:       "myName",
+				},
+				expectedFilePath: "",
+				expectError:      true,
+			},
+		}
+	)
+
+	for _, test := range tests {
+		generatedFilePath, err := GenerateFileFromTemplate(test.templatedFilePath, test.args)
+
+		g.Expect(generatedFilePath).To(gomega.Equal(test.expectedFilePath))
+
+		if test.expectError {
+			g.Expect(err).Should(gomega.HaveOccurred())
+		} else {
+			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+			generatedFileString := fileToString(generatedFilePath)
+			expectedFileString := templateArgsToExpectedFileAsString(test.args)
+			g.Expect(generatedFileString).To(gomega.Equal(expectedFileString))
+		}
+	}
+}
