@@ -38,7 +38,7 @@ func TestGetValue(t *testing.T) {
 					Key:                 "key1",
 					EnvironmentVariable: "VAR1",
 					Mandatory:           true,
-					Fallback:            "fallback1",
+					Default:             "fallback1",
 				},
 				setup: func() {
 					os.Setenv("VAR1", "value1")
@@ -46,12 +46,12 @@ func TestGetValue(t *testing.T) {
 				expectedValue: "value1",
 				expectError:   false,
 			},
-			{ // not Mandatory, EnvironmentVariable unset, Fallback not empty
+			{ // not Mandatory, EnvironmentVariable unset, Default not empty
 				templateArgument: TemplateArgument{
 					Key:                 "key2",
 					EnvironmentVariable: "VAR2",
 					Mandatory:           false,
-					Fallback:            "fallback2",
+					Default:             "fallback2",
 				},
 				setup: func() {
 					os.Unsetenv("VAR2")
@@ -64,7 +64,7 @@ func TestGetValue(t *testing.T) {
 					Key:                 "key3",
 					EnvironmentVariable: "VAR3",
 					Mandatory:           false,
-					Fallback:            "fallback3",
+					Default:             "fallback3",
 				},
 				setup: func() {
 					os.Setenv("VAR3", "")
@@ -72,12 +72,12 @@ func TestGetValue(t *testing.T) {
 				expectedValue: "",
 				expectError:   false,
 			},
-			{ // not Mandatory, EnvironmentVariable unset, Fallback empty
+			{ // not Mandatory, EnvironmentVariable unset, Default empty
 				templateArgument: TemplateArgument{
 					Key:                 "key4",
 					EnvironmentVariable: "VAR4",
 					Mandatory:           false,
-					Fallback:            "",
+					Default:             "",
 				},
 				setup: func() {
 					os.Unsetenv("VAR4")
@@ -90,7 +90,7 @@ func TestGetValue(t *testing.T) {
 					Key:                 "key5",
 					EnvironmentVariable: "",
 					Mandatory:           false,
-					Fallback:            "fallback5",
+					Default:             "fallback5",
 				},
 				setup:         func() {},
 				expectedValue: "fallback5",
@@ -102,7 +102,7 @@ func TestGetValue(t *testing.T) {
 					Key:                 "key",
 					EnvironmentVariable: "VAR",
 					Mandatory:           true,
-					Fallback:            "fallback",
+					Default:             "fallback",
 				},
 				setup: func() {
 					os.Unsetenv("VAR")
@@ -115,7 +115,7 @@ func TestGetValue(t *testing.T) {
 					Key:                 "",
 					EnvironmentVariable: "VAR",
 					Mandatory:           true,
-					Fallback:            "fallback",
+					Default:             "fallback",
 				},
 				setup: func() {
 					os.Setenv("VAR", "value")
@@ -128,7 +128,7 @@ func TestGetValue(t *testing.T) {
 					Key:                 "key",
 					EnvironmentVariable: "",
 					Mandatory:           true,
-					Fallback:            "fallback",
+					Default:             "fallback",
 				},
 				setup: func() {
 					os.Setenv("VAR", "value")
@@ -166,31 +166,31 @@ func TestTemplateArgumentsToMap(t *testing.T) {
 						Key:                 "key1",
 						EnvironmentVariable: "VAR1",
 						Mandatory:           true,
-						Fallback:            "fallback1",
+						Default:             "fallback1",
 					},
-					{ // not Mandatory, EnvironmentVariable unset, Fallback not empty
+					{ // not Mandatory, EnvironmentVariable unset, Default not empty
 						Key:                 "key2",
 						EnvironmentVariable: "VAR2",
 						Mandatory:           false,
-						Fallback:            "fallback2",
+						Default:             "fallback2",
 					},
 					{ // not Mandatory, EnvironmentVariable set empty
 						Key:                 "key3",
 						EnvironmentVariable: "VAR3",
 						Mandatory:           false,
-						Fallback:            "fallback3",
+						Default:             "fallback3",
 					},
-					{ // not Mandatory, EnvironmentVariable unset, Fallback empty
+					{ // not Mandatory, EnvironmentVariable unset, Default empty
 						Key:                 "key4",
 						EnvironmentVariable: "VAR4",
 						Mandatory:           false,
-						Fallback:            "",
+						Default:             "",
 					},
 					{ // not Mandatory, EnvironmentVariable empty
 						Key:                 "key5",
 						EnvironmentVariable: "",
 						Mandatory:           false,
-						Fallback:            "fallback5",
+						Default:             "fallback5",
 					},
 				},
 				setup: func() {

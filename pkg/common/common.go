@@ -28,12 +28,12 @@ import (
 type TemplateArgument struct {
 	Key                 string
 	EnvironmentVariable string
-	Fallback            string
+	Default             string
 	Mandatory           bool
 }
 
 // GetValue returns the value of the Environment Variable defined by 'TemplateArgument.EnvironmentVariable'.
-// If 'TemplateArgument.EnvironmentVariable' is empty or the ENV. VAR. it defines is unset, 'TemplateArgument.Fallback' is returned.
+// If 'TemplateArgument.EnvironmentVariable' is empty or the ENV. VAR. it defines is unset, 'TemplateArgument.Default' is returned.
 // That is, if 'TemplateArgument.Mandatory' is not 'true', in which case, an error is returned.
 func (ta TemplateArgument) GetValue() (string, error) {
 	if ta.Key == "" {
@@ -43,7 +43,7 @@ func (ta TemplateArgument) GetValue() (string, error) {
 	} else if ta.Mandatory {
 		return "", errors.Errorf("'TemplateArgument.Mandatory'='true' but the Environment Variable '%s' defined by 'TemplateArgument.EnvironmentVariable' is not set", ta.EnvironmentVariable)
 	} else {
-		return ta.Fallback, nil
+		return ta.Default, nil
 	}
 }
 
