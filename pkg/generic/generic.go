@@ -26,22 +26,22 @@ import (
 )
 
 type TemplateArgument struct {
-	Key       string
-	Env_Var   string
-	Fallback  string
-	Mandatory bool
+	Key                 string
+	EnvironmentVariable string
+	Fallback            string
+	Mandatory           bool
 }
 
-// GetValue returns the value of the Environment Variable defined by 'TemplateArgument.Env_Var'.
-// If 'TemplateArgument.Env_Var' is empty or the ENV. VAR. it defines is unset, 'TemplateArgument.Fallback' is returned.
+// GetValue returns the value of the Environment Variable defined by 'TemplateArgument.EnvironmentVariable'.
+// If 'TemplateArgument.EnvironmentVariable' is empty or the ENV. VAR. it defines is unset, 'TemplateArgument.Fallback' is returned.
 // That is, if 'TemplateArgument.Mandatory' is not 'true', in which case, an error is returned.
 func (ta TemplateArgument) GetValue() (string, error) {
 	if ta.Key == "" {
 		return "", errors.Errorf("'TemplateArgument.Key' can not be empty.")
-	} else if env_Value, ok := os.LookupEnv(ta.Env_Var); ok {
-		return env_Value, nil
+	} else if value, ok := os.LookupEnv(ta.EnvironmentVariable); ok {
+		return value, nil
 	} else if ta.Mandatory {
-		return "", errors.Errorf("'TemplateArgument.Mandatory'='true' but the Environment Variable '%s' defined by 'TemplateArgument.Env_Var' is not set", ta.Env_Var)
+		return "", errors.Errorf("'TemplateArgument.Mandatory'='true' but the Environment Variable '%s' defined by 'TemplateArgument.EnvironmentVariable' is not set", ta.EnvironmentVariable)
 	} else {
 		return ta.Fallback, nil
 	}
