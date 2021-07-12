@@ -12,8 +12,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package generic provides functions and steps implementations not specifically related to Kubernetes nor AWS.
-package generic
+// Package common provides functions and steps implementations not specifically related to Kubernetes nor AWS.
+package common
 
 import (
 	"io/ioutil"
