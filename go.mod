@@ -15,3 +15,5 @@ require (
 	k8s.io/apimachinery v0.17.2
 	k8s.io/client-go v0.17.2
 )
+
+replace github.com/keikoproj/kubedog => github.com/kyle-wong/kubedog v0.1.3-0.20210728221204-b1d2ca828b0e
