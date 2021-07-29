@@ -15,7 +15,9 @@ limitations under the License.
 package kube
 
 import (
+	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -24,16 +26,25 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	decoder "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/discovery"
 	fakeDiscovery "k8s.io/client-go/discovery/fake"
 	fakeDynamic "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
 	kTesting "k8s.io/client-go/testing"
 )
+
+type KubernetesResource struct {
+	Gvr      *meta.RESTMapping
+	Resource *unstructured.Unstructured
+	Err      error
+}
 
 func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 
@@ -108,7 +119,36 @@ func TestPostitiveResourceOperation(t *testing.T) {
 	err = kc.ResourceOperation(OperationDelete, fileName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
+func TestPostitiveMultipleResourcesOperation(t *testing.T) {
+	var (
+		err               error
+		g                 = gomega.NewWithT(t)
+		dynScheme         = runtime.NewScheme()
+		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(dynScheme)
+		testResource      *unstructured.Unstructured
+		fakeDiscovery     = fakeDiscovery.FakeDiscovery{}
+	)
+	kc := Client{
+		DynamicInterface:   fakeDynamicClient,
+		DiscoveryInterface: &fakeDiscovery,
+		FilesPath:          "../../test/templates",
+	}
+	const fileName = "test-resourcefile.yaml"
 
+	testResourceList, err := multipleResourcesFromYaml(fileName, kc.DiscoveryInterface)
+	if err != nil {
+		t.Errorf("Failed getting the test resource from the file %v: %v", fileName, err)
+	}
+	testResource = testResourceList[0]
+
+	fakeDiscovery.Fake = &fakeDynamicClient.Fake
+	fakeDiscovery.Resources = append(fakeDiscovery.Resources, newTestAPIResourceList(testResource.GetAPIVersion(), testResource.GetName(), testResource.GetKind()))
+
+	err = kc.ResourceOperation(OperationCreate, fileName)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	err = kc.ResourceOperation(OperationDelete, fileName)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+}
 func TestPostitiveResourceShouldBe(t *testing.T) {
 	var (
 		err                 error
@@ -354,7 +394,8 @@ func resourceFromYaml(resourceFileName string) (*unstructured.Unstructured, erro
 	if err != nil {
 		return nil, err
 	}
-
+	log.Infof(string(d))
+	println(len(d))
 	resource := &unstructured.Unstructured{}
 	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 	_, _, err = dec.Decode(d, nil, resource)
@@ -364,7 +405,51 @@ func resourceFromYaml(resourceFileName string) (*unstructured.Unstructured, erro
 
 	return resource, nil
 }
-
+func multipleResourcesFromYaml(resourceFileName string, dc discovery.DiscoveryInterface) ([]*unstructured.Unstructured, error) {
+	resource := &unstructured.Unstructured{}
+	resourcePath := filepath.Join("../../test/templates", resourceFileName)
+	file, err := os.Open(resourcePath)
+	if err != nil {
+		return nil, err
+	}
+	yamlDecoder := decoder.NewDocumentDecoder(io.NopCloser(file))
+	buf := make([]byte, 4*1024) //same size as internal buffer in yamlDecoder
+	chunk := make([]byte, 0)
+	resourceList := make([]*unstructured.Unstructured, 0)
+	for {
+		chunk = chunk[:0]
+		for { //Keep adding to the chunk until: a separator is hit (err==nil), EOF, or other error
+			length, err := yamlDecoder.Read(buf)
+			chunk = append(chunk, buf[:length]...)
+			if err != io.ErrShortBuffer {
+				break
+			}
+		}
+		log.Infof("Chunk")
+		log.Infof(string(chunk))
+		println(len(chunk))
+		if (err != nil && err != io.EOF) || len(chunk) == 0 {
+			//If we are in error state, abort
+			break
+		}
+		dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+		_, gvk, err := dec.Decode(chunk, nil, resource)
+		println(gvk)
+		if err != nil {
+			//If any resource has an error, abort
+			println(err.Error())
+			println("ERROR")
+			break
+		}
+		resourceList = append(resourceList, resource)
+		if err == io.EOF {
+			err = nil
+			break
+		}
+	}
+	yamlDecoder.Close()
+	return resourceList, err
+}
 func newTestAPIResourceList(apiVersion, name, kind string) *metav1.APIResourceList {
 	return &metav1.APIResourceList{
 		GroupVersion: apiVersion,

@@ -150,6 +150,51 @@ func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
 }
 
 /*
+ResourceOperation performs the given operation on the resource defined in resourceFileName. The operation could be “create”, “submit” or “delete”.
+*/
+func (kc *Client) MultiResourceOperation(operation, resourceFileName string) error {
+	if kc.DynamicInterface == nil {
+		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	} else if kc.DiscoveryInterface == nil {
+		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	}
+
+	resourcePath := kc.getResourcePath(resourceFileName)
+	resourceList, err := util.GetMultipleResourcesFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
+	if err != nil {
+		return err
+	}
+	for _, kubernetesResource := range resourceList {
+		gvr, resource, err := kubernetesResource.Gvr, kubernetesResource.Resource, kubernetesResource.Err
+		if err != nil {
+			return err
+		}
+		switch operation {
+		case OperationCreate, OperationSubmit:
+			_, err = kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Create(resource, metav1.CreateOptions{})
+			if err != nil {
+				if kerrors.IsAlreadyExists(err) {
+					// already created
+					break
+				}
+				return err
+			}
+		case OperationDelete:
+			err = kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(resource.GetName(), &metav1.DeleteOptions{})
+			if err != nil {
+				if kerrors.IsNotFound(err) {
+					// already deleted
+					break
+				}
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+/*
 ResourceShouldBe checks if the resource defined in resourceFileName is in the desired state. It retries every 30 seconds for a total of 40 times. The state could be “created” or “deleted”.
 */
 func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
