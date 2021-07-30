@@ -126,6 +126,9 @@ func GetMultipleResourcesFromYaml(path string, dc discovery.DiscoveryInterface, 
 	manifests := bytes.Split(data, []byte("\n---"))
 	resourceList := make([]KubernetesResource, 0)
 	for _, manifest := range manifests {
+		if len(bytes.Trim(manifest, "\n ")) == 0 {
+			continue
+		}
 		kubernetesResource, err := GetResourceFromString(string(manifest), dc, args)
 		if err != nil {
 			return nil, err

@@ -409,6 +409,9 @@ func multipleResourcesFromYaml(resourceFileName string) ([]KubernetesResource, e
 	manifests := bytes.Split(data, []byte("\n---"))
 	resourceList := make([]KubernetesResource, 0)
 	for _, manifest := range manifests {
+		if len(bytes.Trim(manifest, "\n ")) == 0 {
+			continue
+		}
 		kubernetesResource, err := getResourceFromString(string(manifest))
 		if err != nil {
 			return nil, err
