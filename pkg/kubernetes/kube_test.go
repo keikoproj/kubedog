@@ -37,6 +37,9 @@ import (
 	kTesting "k8s.io/client-go/testing"
 )
 
+const yamlSeparator = "\n---"
+const trimTokens = "\n "
+
 type KubernetesResource struct {
 	Gvr      *meta.RESTMapping
 	Resource *unstructured.Unstructured
@@ -84,7 +87,7 @@ func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-func TestPostitiveResourceOperation(t *testing.T) {
+func TestPositiveResourceOperation(t *testing.T) {
 	var (
 		err               error
 		g                 = gomega.NewWithT(t)
@@ -115,7 +118,7 @@ func TestPostitiveResourceOperation(t *testing.T) {
 	err = kc.ResourceOperation(OperationDelete, fileName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
-func TestPostitiveMultipleResourcesOperation(t *testing.T) {
+func TestPositiveMultipleResourcesOperation(t *testing.T) {
 	var (
 		err               error
 		g                 = gomega.NewWithT(t)
@@ -123,30 +126,30 @@ func TestPostitiveMultipleResourcesOperation(t *testing.T) {
 		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(dynScheme)
 		fakeDiscovery     = fakeDiscovery.FakeDiscovery{}
 	)
+
+	const fileName = "test-multi-resourcefile.yaml"
+	resourceList, err := multipleResourcesFromYaml(fileName)
+	if err != nil {
+		t.Errorf("Failed getting the test resource from the file %v: %v", fileName, err)
+	}
+
+	fakeDiscovery.Fake = &fakeDynamicClient.Fake
+	for _, testResource := range resourceList {
+		fakeDiscovery.Resources = append(fakeDiscovery.Resources, newTestAPIResourceList(testResource.GetAPIVersion(), testResource.GetName(), testResource.GetKind()))
+	}
+
 	kc := Client{
 		DynamicInterface:   fakeDynamicClient,
 		DiscoveryInterface: &fakeDiscovery,
 		FilesPath:          "../../test/templates",
 	}
-	const fileName = "test-multi-resourcefile.yaml"
-
-	testResourceList, err := multipleResourcesFromYaml(fileName)
-	if err != nil {
-		t.Errorf("Failed getting the test resource from the file %v: %v", fileName, err)
-	}
-	for _, kubernetesResource := range testResourceList {
-		testResource := kubernetesResource.Resource
-		fakeDiscovery.Fake = &fakeDynamicClient.Fake
-		fakeDiscovery.Resources = append(fakeDiscovery.Resources, newTestAPIResourceList(testResource.GetAPIVersion(), testResource.GetName(), testResource.GetKind()))
-
-		err = kc.ResourceOperation(OperationCreate, fileName)
-		g.Expect(err).ShouldNot(gomega.HaveOccurred())
-		err = kc.ResourceOperation(OperationDelete, fileName)
-		g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	}
+	err = kc.MultiResourceOperation(OperationCreate, fileName)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	err = kc.MultiResourceOperation(OperationDelete, fileName)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 }
-func TestPostitiveResourceShouldBe(t *testing.T) {
+func TestPositiveResourceShouldBe(t *testing.T) {
 	var (
 		err                 error
 		g                   = gomega.NewWithT(t)
@@ -193,7 +196,7 @@ func TestPostitiveResourceShouldBe(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-func TestPostitiveResourceShouldConvergeToSelector(t *testing.T) {
+func TestPositiveResourceShouldConvergeToSelector(t *testing.T) {
 
 	var (
 		err               error
@@ -231,7 +234,7 @@ func TestPostitiveResourceShouldConvergeToSelector(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-func TestPostitiveResourceConditionShouldBe(t *testing.T) {
+func TestPositiveResourceConditionShouldBe(t *testing.T) {
 
 	var (
 		err               error
@@ -270,7 +273,7 @@ func TestPostitiveResourceConditionShouldBe(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-func TestPostitiveUpdateResourceWithField(t *testing.T) {
+func TestPositiveUpdateResourceWithField(t *testing.T) {
 
 	const (
 		fileName           = "test-resourcefile.yaml"
@@ -391,44 +394,34 @@ func resourceFromYaml(resourceFileName string) (*unstructured.Unstructured, erro
 	if err != nil {
 		return nil, err
 	}
+	return resourceFromBytes(d)
+}
+func multipleResourcesFromYaml(resourceFileName string) ([]*unstructured.Unstructured, error) {
+	resourcePath := filepath.Join("../../test/templates", resourceFileName)
+	d, err := ioutil.ReadFile(resourcePath)
+	manifests := bytes.Split(d, []byte(yamlSeparator))
+	resourceList := make([]*unstructured.Unstructured, 0)
+	for _, manifest := range manifests {
+		if len(bytes.Trim(manifest, trimTokens)) == 0 {
+			continue
+		}
+		resource, err := resourceFromBytes(manifest)
+		if err != nil {
+			return nil, err
+		}
+		resourceList = append(resourceList, resource)
+	}
+	return resourceList, err
+}
+func resourceFromBytes(bytes []byte) (*unstructured.Unstructured, error) {
 	resource := &unstructured.Unstructured{}
 	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	_, _, err = dec.Decode(d, nil, resource)
+	_, _, err := dec.Decode(bytes, nil, resource)
 	if err != nil {
 		return nil, err
 	}
 
 	return resource, nil
-}
-func multipleResourcesFromYaml(resourceFileName string) ([]KubernetesResource, error) {
-	resourcePath := filepath.Join("../../test/templates", resourceFileName)
-	data, err := ioutil.ReadFile(resourcePath)
-	if err != nil {
-		return nil, err
-	}
-	manifests := bytes.Split(data, []byte("\n---"))
-	resourceList := make([]KubernetesResource, 0)
-	for _, manifest := range manifests {
-		if len(bytes.Trim(manifest, "\n ")) == 0 {
-			continue
-		}
-		kubernetesResource, err := getResourceFromString(string(manifest))
-		if err != nil {
-			return nil, err
-		}
-		resourceList = append(resourceList, kubernetesResource)
-	}
-	return resourceList, err
-}
-func getResourceFromString(resourceString string) (KubernetesResource, error) {
-	resource := &unstructured.Unstructured{}
-
-	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	_, _, err := dec.Decode([]byte(resourceString), nil, resource)
-	if err != nil {
-		return KubernetesResource{nil, resource}, err
-	}
-	return KubernetesResource{nil, resource}, err
 }
 func newTestAPIResourceList(apiVersion, name, kind string) *metav1.APIResourceList {
 	return &metav1.APIResourceList{
