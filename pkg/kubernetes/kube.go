@@ -150,7 +150,8 @@ func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
 }
 
 /*
-ResourceOperation performs the given operation on the resource defined in resourceFileName. The operation could be “create”, “submit” or “delete”.
+MultiResourceOperation performs the given operation on the resources defined in resourceFileName. The operation could be “create”, “submit” or “delete”.
+Files created using this function cannot individually be addressed by filename.
 */
 func (kc *Client) MultiResourceOperation(operation, resourceFileName string) error {
 	if kc.DynamicInterface == nil {
@@ -165,10 +166,7 @@ func (kc *Client) MultiResourceOperation(operation, resourceFileName string) err
 		return err
 	}
 	for _, kubernetesResource := range resourceList {
-		gvr, resource, err := kubernetesResource.Gvr, kubernetesResource.Resource, kubernetesResource.Err
-		if err != nil {
-			return err
-		}
+		gvr, resource := kubernetesResource.Gvr, kubernetesResource.Resource
 		switch operation {
 		case OperationCreate, OperationSubmit:
 			_, err = kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Create(resource, metav1.CreateOptions{})

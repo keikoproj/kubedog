@@ -17,20 +17,17 @@ package util
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"text/template"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
-	decoder "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/restmapper"
@@ -39,7 +36,6 @@ import (
 type KubernetesResource struct {
 	Gvr      *meta.RESTMapping
 	Resource *unstructured.Unstructured
-	Err      error
 }
 
 func IsNodeReady(n corev1.Node) bool {
@@ -107,7 +103,6 @@ func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface, args inte
 	if err != nil {
 		return nil, resource, err
 	}
-	err = ioutil.WriteFile("single-resource.txt", renderBuffer.Bytes(), 0644)
 	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 	_, gvk, err := dec.Decode(renderBuffer.Bytes(), nil, resource)
 
@@ -124,77 +119,41 @@ func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface, args inte
 }
 
 func GetMultipleResourcesFromYaml(path string, dc discovery.DiscoveryInterface, args interface{}) ([]KubernetesResource, error) {
-	file, err := os.Open(path)
+	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	yamlDecoder := decoder.NewDocumentDecoder(io.NopCloser(file))
-	defer yamlDecoder.Close()
-	buf := make([]byte, 100) //same size as internal buffer in yamlDecoder
-	chunk := make([]byte, 0)
+	manifests := bytes.Split(data, []byte("\n---"))
 	resourceList := make([]KubernetesResource, 0)
-	for {
-		chunk = chunk[:0]
-		for { //Keep adding to the chunk until: a separator is hit (err==nil), EOF, or other error
-			length, err := yamlDecoder.Read(buf)
-			if length == 0 {
-				log.Infof("0 length")
-			}
-			chunk = append(chunk, buf[:length]...)
-			if err != io.ErrShortBuffer {
-				if err == nil {
-					log.Infof("No error")
-				} else {
-					log.Infof(err.Error())
-				}
-				break
-			}
-		}
-		log.Infof(fmt.Sprintf("Chunk Length: %d", len(chunk)))
-		if len(chunk) > 50 {
-			log.Infof(string(chunk[:50]) + "...")
-		} else {
-			log.Infof(string(chunk))
-		}
-		if err != nil && err != io.EOF {
-			break
-		}
-
-		if len(chunk) == 0 {
-			continue
-		}
-		kubernetesResource := GetResourceFromString(string(chunk), dc, args)
-		if kubernetesResource.Err != nil {
-			err = kubernetesResource.Err
-			break
+	for _, manifest := range manifests {
+		kubernetesResource, err := GetResourceFromString(string(manifest), dc, args)
+		if err != nil {
+			return nil, err
 		}
 		resourceList = append(resourceList, kubernetesResource)
-		if err == io.EOF {
-			err = nil
-			break
-		}
 	}
 	return resourceList, err
 }
-func GetResourceFromString(resourceString string, dc discovery.DiscoveryInterface, args interface{}) KubernetesResource {
+func GetResourceFromString(resourceString string, dc discovery.DiscoveryInterface, args interface{}) (KubernetesResource, error) {
 	resource := &unstructured.Unstructured{}
+
 	template, err := template.New("Resource").Parse(resourceString)
 	if err != nil {
-		return KubernetesResource{nil, resource, err}
+		return KubernetesResource{nil, resource}, err
 	}
 	var renderBuffer bytes.Buffer
 	err = template.Execute(&renderBuffer, &args)
 	if err != nil {
-		return KubernetesResource{nil, resource, err}
+		return KubernetesResource{nil, resource}, err
 	}
 	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 	_, gvk, err := dec.Decode(renderBuffer.Bytes(), nil, resource)
 	if err != nil {
-		return KubernetesResource{nil, resource, err}
+		return KubernetesResource{nil, resource}, err
 	}
 	gvr, err := FindGVR(gvk, dc)
 	if err != nil {
-		return KubernetesResource{nil, resource, err}
+		return KubernetesResource{nil, resource}, err
 	}
-	return KubernetesResource{gvr, resource, nil}
+	return KubernetesResource{gvr, resource}, err
 }
