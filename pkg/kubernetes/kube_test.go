@@ -15,9 +15,8 @@ limitations under the License.
 package kube
 
 import (
-	"io"
+	"bytes"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -32,8 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
-	decoder "k8s.io/apimachinery/pkg/util/yaml"
-	"k8s.io/client-go/discovery"
 	fakeDiscovery "k8s.io/client-go/discovery/fake"
 	fakeDynamic "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
@@ -43,7 +40,6 @@ import (
 type KubernetesResource struct {
 	Gvr      *meta.RESTMapping
 	Resource *unstructured.Unstructured
-	Err      error
 }
 
 func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
@@ -125,7 +121,6 @@ func TestPostitiveMultipleResourcesOperation(t *testing.T) {
 		g                 = gomega.NewWithT(t)
 		dynScheme         = runtime.NewScheme()
 		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(dynScheme)
-		testResource      *unstructured.Unstructured
 		fakeDiscovery     = fakeDiscovery.FakeDiscovery{}
 	)
 	kc := Client{
@@ -133,21 +128,23 @@ func TestPostitiveMultipleResourcesOperation(t *testing.T) {
 		DiscoveryInterface: &fakeDiscovery,
 		FilesPath:          "../../test/templates",
 	}
-	const fileName = "test-resourcefile.yaml"
+	const fileName = "test-multi-resourcefile.yaml"
 
-	testResourceList, err := multipleResourcesFromYaml(fileName, kc.DiscoveryInterface)
+	testResourceList, err := multipleResourcesFromYaml(fileName)
 	if err != nil {
 		t.Errorf("Failed getting the test resource from the file %v: %v", fileName, err)
 	}
-	testResource = testResourceList[0]
+	for _, kubernetesResource := range testResourceList {
+		testResource := kubernetesResource.Resource
+		fakeDiscovery.Fake = &fakeDynamicClient.Fake
+		fakeDiscovery.Resources = append(fakeDiscovery.Resources, newTestAPIResourceList(testResource.GetAPIVersion(), testResource.GetName(), testResource.GetKind()))
 
-	fakeDiscovery.Fake = &fakeDynamicClient.Fake
-	fakeDiscovery.Resources = append(fakeDiscovery.Resources, newTestAPIResourceList(testResource.GetAPIVersion(), testResource.GetName(), testResource.GetKind()))
+		err = kc.ResourceOperation(OperationCreate, fileName)
+		g.Expect(err).ShouldNot(gomega.HaveOccurred())
+		err = kc.ResourceOperation(OperationDelete, fileName)
+		g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	}
 
-	err = kc.ResourceOperation(OperationCreate, fileName)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = kc.ResourceOperation(OperationDelete, fileName)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 func TestPostitiveResourceShouldBe(t *testing.T) {
 	var (
@@ -394,8 +391,6 @@ func resourceFromYaml(resourceFileName string) (*unstructured.Unstructured, erro
 	if err != nil {
 		return nil, err
 	}
-	log.Infof(string(d))
-	println(len(d))
 	resource := &unstructured.Unstructured{}
 	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 	_, _, err = dec.Decode(d, nil, resource)
@@ -405,50 +400,32 @@ func resourceFromYaml(resourceFileName string) (*unstructured.Unstructured, erro
 
 	return resource, nil
 }
-func multipleResourcesFromYaml(resourceFileName string, dc discovery.DiscoveryInterface) ([]*unstructured.Unstructured, error) {
-	resource := &unstructured.Unstructured{}
+func multipleResourcesFromYaml(resourceFileName string) ([]KubernetesResource, error) {
 	resourcePath := filepath.Join("../../test/templates", resourceFileName)
-	file, err := os.Open(resourcePath)
+	data, err := ioutil.ReadFile(resourcePath)
 	if err != nil {
 		return nil, err
 	}
-	yamlDecoder := decoder.NewDocumentDecoder(io.NopCloser(file))
-	buf := make([]byte, 4*1024) //same size as internal buffer in yamlDecoder
-	chunk := make([]byte, 0)
-	resourceList := make([]*unstructured.Unstructured, 0)
-	for {
-		chunk = chunk[:0]
-		for { //Keep adding to the chunk until: a separator is hit (err==nil), EOF, or other error
-			length, err := yamlDecoder.Read(buf)
-			chunk = append(chunk, buf[:length]...)
-			if err != io.ErrShortBuffer {
-				break
-			}
-		}
-		log.Infof("Chunk")
-		log.Infof(string(chunk))
-		println(len(chunk))
-		if (err != nil && err != io.EOF) || len(chunk) == 0 {
-			//If we are in error state, abort
-			break
-		}
-		dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-		_, gvk, err := dec.Decode(chunk, nil, resource)
-		println(gvk)
+	manifests := bytes.Split(data, []byte("\n---"))
+	resourceList := make([]KubernetesResource, 0)
+	for _, manifest := range manifests {
+		kubernetesResource, err := getResourceFromString(string(manifest))
 		if err != nil {
-			//If any resource has an error, abort
-			println(err.Error())
-			println("ERROR")
-			break
+			return nil, err
 		}
-		resourceList = append(resourceList, resource)
-		if err == io.EOF {
-			err = nil
-			break
-		}
+		resourceList = append(resourceList, kubernetesResource)
 	}
-	yamlDecoder.Close()
 	return resourceList, err
+}
+func getResourceFromString(resourceString string) (KubernetesResource, error) {
+	resource := &unstructured.Unstructured{}
+
+	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
+	_, _, err := dec.Decode([]byte(resourceString), nil, resource)
+	if err != nil {
+		return KubernetesResource{nil, resource}, err
+	}
+	return KubernetesResource{nil, resource}, err
 }
 func newTestAPIResourceList(apiVersion, name, kind string) *metav1.APIResourceList {
 	return &metav1.APIResourceList{
