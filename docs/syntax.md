@@ -4,9 +4,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 **Kubernetes related steps**:
 1. 	`<GK> a Kubernetes cluster` [AKubernetesCluster](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.AKubernetesCluster)
 2.	`<GK> [I] <create|submit|delete> [the] resource <filename>.yaml` [ResourceOperation](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceOperation)
-3.	`<GK> [I] <create|submit|delete> [the] resources <filename>.yaml` [MultiResourceOperation](https://github.com/keikoproj/kubedog/blob/master/pkg/kubernetes/kube.go#L156)
-* Note: Resources created via MultiResourceOperation **cannot** be referenced invidividually.
-
+3.	`<GK> [I] <create|submit|delete> [the] resources in <filename>.yaml` [MultiResourceOperation](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.MultiResourceOperation)
 4.	`<GK> [the] resource <filename> should be <created|deleted>` [ResourceShouldBe](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceShouldBe)
 5.	`<GK> [the] resource <filename> [should] converge(d) to selector <complete key>=<value>` [ResourceShouldConvergeToSelector](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceShouldConvergeToSelector)
 6.	`<GK> [the] resource <filename> condition <condition type> should be (true|false)` [ResourceConditionShouldBe](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceConditionShouldBe)
