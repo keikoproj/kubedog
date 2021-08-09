@@ -10,7 +10,7 @@ status:
     - type: someConditionType
       status: "True"
 ---
-apiVersion: someGroup.apiVersion/OtherVersion
+apiVersion: otherGroup.apiVersion/OtherVersion
 kind: OtherKind
 metadata:
   name: otherResource

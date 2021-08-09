@@ -33,8 +33,8 @@ import (
 	"k8s.io/client-go/restmapper"
 )
 
-const yamlSeparator = "\n---"
-const trimTokens = "\n "
+const YamlSeparator = "\n---"
+const TrimTokens = "\n "
 
 type K8sUnstructuredResource struct {
 	GVR      *meta.RESTMapping
@@ -103,10 +103,10 @@ func GetMultipleResourcesFromYaml(path string, dc discovery.DiscoveryInterface, 
 	if err != nil {
 		return nil, err
 	}
-	manifests := bytes.Split(data, []byte(yamlSeparator))
+	manifests := bytes.Split(data, []byte(YamlSeparator))
 	resourceList := make([]K8sUnstructuredResource, 0)
 	for _, manifest := range manifests {
-		if len(bytes.Trim(manifest, trimTokens)) == 0 {
+		if len(bytes.Trim(manifest, TrimTokens)) == 0 {
 			continue
 		}
 		unstructuredResource, err := GetResourceFromString(string(manifest), dc, args)

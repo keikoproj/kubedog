@@ -15,17 +15,16 @@ limitations under the License.
 package kube
 
 import (
-	"bytes"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
 
+	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,14 +35,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	kTesting "k8s.io/client-go/testing"
 )
-
-const yamlSeparator = "\n---"
-const trimTokens = "\n "
-
-type KubernetesResource struct {
-	Gvr      *meta.RESTMapping
-	Resource *unstructured.Unstructured
-}
 
 func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 
@@ -118,36 +109,60 @@ func TestPositiveResourceOperation(t *testing.T) {
 	err = kc.ResourceOperation(OperationDelete, fileName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
-func TestPositiveMultipleResourcesOperation(t *testing.T) {
+func TestMultipleResourcesOperation(t *testing.T) {
+
 	var (
-		err               error
-		g                 = gomega.NewWithT(t)
-		dynScheme         = runtime.NewScheme()
-		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(dynScheme)
-		fakeDiscovery     = fakeDiscovery.FakeDiscovery{}
+		dynScheme           = runtime.NewScheme()
+		fakeDynamicClient   = fakeDynamic.NewSimpleDynamicClient(dynScheme)
+		fakeDiscovery       = fakeDiscovery.FakeDiscovery{}
+		g                   = gomega.NewWithT(t)
+		testTemplatePath, _ = filepath.Abs("../../test/templates")
 	)
-
-	const fileName = "test-multi-resourcefile.yaml"
-	resourceList, err := multipleResourcesFromYaml(fileName)
-	if err != nil {
-		t.Errorf("Failed getting the test resource from the file %v: %v", fileName, err)
+	expectedResources := []*metav1.APIResourceList{
+		newTestAPIResourceList("someGroup.apiVersion/SomeVersion", "someResource", "SomeKind"),
+		newTestAPIResourceList("otherGroup.apiVersion/OtherVersion", "otherResource", "OtherKind"),
 	}
-
 	fakeDiscovery.Fake = &fakeDynamicClient.Fake
-	for _, testResource := range resourceList {
-		fakeDiscovery.Resources = append(fakeDiscovery.Resources, newTestAPIResourceList(testResource.GetAPIVersion(), testResource.GetName(), testResource.GetKind()))
+	fakeDiscovery.Resources = append(fakeDiscovery.Resources, expectedResources...)
+
+	resourceToApiResourceList := func(resource *unstructured.Unstructured) *metav1.APIResourceList {
+		return newTestAPIResourceList(
+			resource.GetAPIVersion(),
+			resource.GetName(),
+			resource.GetKind(),
+		)
 	}
 
-	kc := Client{
-		DynamicInterface:   fakeDynamicClient,
-		DiscoveryInterface: &fakeDiscovery,
-		FilesPath:          "../../test/templates",
+	tests := []struct {
+		testResourcePath string
+		numResources     int
+		expectError      bool
+	}{
+		{ // PositiveTest
+			testResourcePath: testTemplatePath + "/test-multi-resourcefile.yaml",
+			numResources:     2,
+			expectError:      false,
+		},
+		{ // NegativeTest: file doesn't exist
+			testResourcePath: testTemplatePath + "/wrongName_manifest.yaml",
+			numResources:     0,
+			expectError:      true,
+		},
 	}
-	err = kc.MultiResourceOperation(OperationCreate, fileName)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = kc.MultiResourceOperation(OperationDelete, fileName)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
+	for _, test := range tests {
+		resourceList, err := util.GetMultipleResourcesFromYaml(test.testResourcePath, &fakeDiscovery, nil)
+
+		g.Expect(len(resourceList)).To(gomega.Equal(test.numResources))
+		if test.expectError {
+			g.Expect(err).Should(gomega.HaveOccurred())
+		} else {
+			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+			for i, resource := range resourceList {
+				g.Expect(resourceToApiResourceList(resource.Resource)).To(gomega.Equal(expectedResources[i]))
+			}
+		}
+	}
 }
 func TestPositiveResourceShouldBe(t *testing.T) {
 	var (
@@ -395,23 +410,6 @@ func resourceFromYaml(resourceFileName string) (*unstructured.Unstructured, erro
 		return nil, err
 	}
 	return resourceFromBytes(d)
-}
-func multipleResourcesFromYaml(resourceFileName string) ([]*unstructured.Unstructured, error) {
-	resourcePath := filepath.Join("../../test/templates", resourceFileName)
-	d, err := ioutil.ReadFile(resourcePath)
-	manifests := bytes.Split(d, []byte(yamlSeparator))
-	resourceList := make([]*unstructured.Unstructured, 0)
-	for _, manifest := range manifests {
-		if len(bytes.Trim(manifest, trimTokens)) == 0 {
-			continue
-		}
-		resource, err := resourceFromBytes(manifest)
-		if err != nil {
-			return nil, err
-		}
-		resourceList = append(resourceList, resource)
-	}
-	return resourceList, err
 }
 func resourceFromBytes(bytes []byte) (*unstructured.Unstructured, error) {
 	resource := &unstructured.Unstructured{}

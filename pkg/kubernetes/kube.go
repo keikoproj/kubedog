@@ -140,6 +140,7 @@ func (kc *Client) MultiResourceOperation(operation, resourceFileName string) err
 	}
 
 	resourcePath := kc.getResourcePath(resourceFileName)
+
 	resourceList, err := util.GetMultipleResourcesFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
@@ -165,6 +166,7 @@ func (kc *Client) unstructuredResourceOperation(operation string, unstructuredRe
 			}
 			return err
 		}
+		log.Infof("%s %s has been created", resource.GetKind(), resource.GetName())
 	case OperationDelete:
 		err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(resource.GetName(), &metav1.DeleteOptions{})
 		if err != nil {
@@ -174,6 +176,7 @@ func (kc *Client) unstructuredResourceOperation(operation string, unstructuredRe
 			}
 			return err
 		}
+		log.Infof("%s %s has been deleted", resource.GetKind(), resource.GetName())
 	}
 	return nil
 }
