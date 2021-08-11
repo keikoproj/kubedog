@@ -161,7 +161,7 @@ func (kc *Client) unstructuredResourceOperation(operation string, unstructuredRe
 		_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Create(resource, metav1.CreateOptions{})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
-				// already created
+				log.Infof("%s %s already created", resource.GetKind(), resource.GetName())
 				break
 			}
 			return err
@@ -171,7 +171,7 @@ func (kc *Client) unstructuredResourceOperation(operation string, unstructuredRe
 		err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(resource.GetName(), &metav1.DeleteOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
-				// already deleted
+				log.Infof("%s %s already deleted", resource.GetKind(), resource.GetName())
 				break
 			}
 			return err
