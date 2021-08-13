@@ -121,30 +121,62 @@ func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
 	}
 
 	resourcePath := kc.getResourcePath(resourceFileName)
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
+	unstructuredResource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
 	}
+	return kc.unstructuredResourceOperation(operation, unstructuredResource)
+}
 
+/*
+MultiResourceOperation performs the given operation on the resources defined in resourceFileName. The operation could be “create”, “submit” or “delete”.
+Files created using this function cannot individually be addressed by filename.
+*/
+func (kc *Client) MultiResourceOperation(operation, resourceFileName string) error {
+	if kc.DynamicInterface == nil {
+		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	} else if kc.DiscoveryInterface == nil {
+		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	}
+
+	resourcePath := kc.getResourcePath(resourceFileName)
+
+	resourceList, err := util.GetMultipleResourcesFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
+	if err != nil {
+		return err
+	}
+	for _, unstructuredResource := range resourceList {
+		err = kc.unstructuredResourceOperation(operation, unstructuredResource)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+func (kc *Client) unstructuredResourceOperation(operation string, unstructuredResource util.K8sUnstructuredResource) error {
+	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 	switch operation {
 	case OperationCreate, OperationSubmit:
-		_, err = kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Create(resource, metav1.CreateOptions{})
+		_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Create(resource, metav1.CreateOptions{})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
-				// already created
+				log.Infof("%s %s already created", resource.GetKind(), resource.GetName())
 				break
 			}
 			return err
 		}
+		log.Infof("%s %s has been created", resource.GetKind(), resource.GetName())
 	case OperationDelete:
-		err = kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(resource.GetName(), &metav1.DeleteOptions{})
+		err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(resource.GetName(), &metav1.DeleteOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
-				// already deleted
+				log.Infof("%s %s already deleted", resource.GetKind(), resource.GetName())
 				break
 			}
 			return err
 		}
+		log.Infof("%s %s has been deleted", resource.GetKind(), resource.GetName())
 	}
 	return nil
 }
@@ -166,11 +198,11 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 
 	resourcePath := kc.getResourcePath(resourceFileName)
 
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
+	unstructuredResource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
 	}
-
+	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 	for {
 		exists = true
 		if counter >= DefaultWaiterRetries {
@@ -231,10 +263,11 @@ func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector st
 
 	resourcePath := kc.getResourcePath(resourceFileName)
 
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
+	unstructuredResource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
 	}
+	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
 	for {
 		if counter >= DefaultWaiterRetries {
@@ -278,10 +311,11 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 	}
 
 	resourcePath := kc.getResourcePath(resourceFileName)
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
+	unstructuredResource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
 	}
+	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
 	for {
 		if counter >= DefaultWaiterRetries {
@@ -401,10 +435,11 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 	}
 
 	resourcePath := kc.getResourcePath(resourceFileName)
-	gvr, resource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
+	unstructuredResource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
 		return err
 	}
+	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
 	n, err := strconv.ParseInt(value, 10, 64)
 	if err == nil {
@@ -457,10 +492,11 @@ func (kc *Client) DeleteAllTestResources() error {
 			return nil
 		}
 
-		gvr, resource, err := util.GetResourceFromYaml(path, kc.DiscoveryInterface, kc.TemplateArguments)
+		unstructuredResource, err := util.GetResourceFromYaml(path, kc.DiscoveryInterface, kc.TemplateArguments)
 		if err != nil {
 			return err
 		}
+		gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
 		kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(resource.GetName(), &metav1.DeleteOptions{})
 		log.Infof("[KUBEDOG] submitted deletion for %v/%v", resource.GetNamespace(), resource.GetName())
@@ -480,10 +516,11 @@ func (kc *Client) DeleteAllTestResources() error {
 			return nil
 		}
 
-		gvr, resource, err := util.GetResourceFromYaml(path, kc.DiscoveryInterface, kc.TemplateArguments)
+		unstructuredResource, err := util.GetResourceFromYaml(path, kc.DiscoveryInterface, kc.TemplateArguments)
 		if err != nil {
 			return err
 		}
+		gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
 		for {
 			if counter >= DefaultWaiterRetries {

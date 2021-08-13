@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -77,7 +78,7 @@ func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-func TestPostitiveResourceOperation(t *testing.T) {
+func TestPositiveResourceOperation(t *testing.T) {
 	var (
 		err               error
 		g                 = gomega.NewWithT(t)
@@ -108,8 +109,62 @@ func TestPostitiveResourceOperation(t *testing.T) {
 	err = kc.ResourceOperation(OperationDelete, fileName)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
+func TestMultipleResourcesOperation(t *testing.T) {
 
-func TestPostitiveResourceShouldBe(t *testing.T) {
+	var (
+		dynScheme           = runtime.NewScheme()
+		fakeDynamicClient   = fakeDynamic.NewSimpleDynamicClient(dynScheme)
+		fakeDiscovery       = fakeDiscovery.FakeDiscovery{}
+		g                   = gomega.NewWithT(t)
+		testTemplatePath, _ = filepath.Abs("../../test/templates")
+	)
+	expectedResources := []*metav1.APIResourceList{
+		newTestAPIResourceList("someGroup.apiVersion/SomeVersion", "someResource", "SomeKind"),
+		newTestAPIResourceList("otherGroup.apiVersion/OtherVersion", "otherResource", "OtherKind"),
+	}
+	fakeDiscovery.Fake = &fakeDynamicClient.Fake
+	fakeDiscovery.Resources = append(fakeDiscovery.Resources, expectedResources...)
+
+	resourceToApiResourceList := func(resource *unstructured.Unstructured) *metav1.APIResourceList {
+		return newTestAPIResourceList(
+			resource.GetAPIVersion(),
+			resource.GetName(),
+			resource.GetKind(),
+		)
+	}
+
+	tests := []struct {
+		testResourcePath string
+		numResources     int
+		expectError      bool
+	}{
+		{ // PositiveTest
+			testResourcePath: testTemplatePath + "/test-multi-resourcefile.yaml",
+			numResources:     2,
+			expectError:      false,
+		},
+		{ // NegativeTest: file doesn't exist
+			testResourcePath: testTemplatePath + "/wrongName_manifest.yaml",
+			numResources:     0,
+			expectError:      true,
+		},
+	}
+
+	for _, test := range tests {
+		resourceList, err := util.GetMultipleResourcesFromYaml(test.testResourcePath, &fakeDiscovery, nil)
+
+		g.Expect(len(resourceList)).To(gomega.Equal(test.numResources))
+		if test.expectError {
+			g.Expect(err).Should(gomega.HaveOccurred())
+		} else {
+			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+			for i, resource := range resourceList {
+				g.Expect(resourceToApiResourceList(resource.Resource)).To(gomega.Equal(expectedResources[i]))
+			}
+		}
+	}
+}
+func TestPositiveResourceShouldBe(t *testing.T) {
 	var (
 		err                 error
 		g                   = gomega.NewWithT(t)
@@ -156,7 +211,7 @@ func TestPostitiveResourceShouldBe(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-func TestPostitiveResourceShouldConvergeToSelector(t *testing.T) {
+func TestPositiveResourceShouldConvergeToSelector(t *testing.T) {
 
 	var (
 		err               error
@@ -194,7 +249,7 @@ func TestPostitiveResourceShouldConvergeToSelector(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-func TestPostitiveResourceConditionShouldBe(t *testing.T) {
+func TestPositiveResourceConditionShouldBe(t *testing.T) {
 
 	var (
 		err               error
@@ -233,7 +288,7 @@ func TestPostitiveResourceConditionShouldBe(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-func TestPostitiveUpdateResourceWithField(t *testing.T) {
+func TestPositiveUpdateResourceWithField(t *testing.T) {
 
 	const (
 		fileName           = "test-resourcefile.yaml"
@@ -354,17 +409,18 @@ func resourceFromYaml(resourceFileName string) (*unstructured.Unstructured, erro
 	if err != nil {
 		return nil, err
 	}
-
+	return resourceFromBytes(d)
+}
+func resourceFromBytes(bytes []byte) (*unstructured.Unstructured, error) {
 	resource := &unstructured.Unstructured{}
 	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	_, _, err = dec.Decode(d, nil, resource)
+	_, _, err := dec.Decode(bytes, nil, resource)
 	if err != nil {
 		return nil, err
 	}
 
 	return resource, nil
 }
-
 func newTestAPIResourceList(apiVersion, name, kind string) *metav1.APIResourceList {
 	return &metav1.APIResourceList{
 		GroupVersion: apiVersion,

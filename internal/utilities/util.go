@@ -33,6 +33,14 @@ import (
 	"k8s.io/client-go/restmapper"
 )
 
+const YamlSeparator = "\n---"
+const TrimTokens = "\n "
+
+type K8sUnstructuredResource struct {
+	GVR      *meta.RESTMapping
+	Resource *unstructured.Unstructured
+}
+
 func IsNodeReady(n corev1.Node) bool {
 	for _, condition := range n.Status.Conditions {
 		if condition.Type == "Ready" {
@@ -82,36 +90,53 @@ func FindGVR(gvk *schema.GroupVersionKind, dc discovery.DiscoveryInterface) (*me
 	return RESTMapping, nil
 }
 
-func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface, args interface{}) (*meta.RESTMapping, *unstructured.Unstructured, error) {
+func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface, args interface{}) (K8sUnstructuredResource, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return K8sUnstructuredResource{nil, nil}, err
+	}
+	return GetResourceFromString(string(data), dc, args)
+}
+
+func GetMultipleResourcesFromYaml(path string, dc discovery.DiscoveryInterface, args interface{}) ([]K8sUnstructuredResource, error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	manifests := bytes.Split(data, []byte(YamlSeparator))
+	resourceList := make([]K8sUnstructuredResource, 0)
+	for _, manifest := range manifests {
+		if len(bytes.Trim(manifest, TrimTokens)) == 0 {
+			continue
+		}
+		unstructuredResource, err := GetResourceFromString(string(manifest), dc, args)
+		if err != nil {
+			return nil, err
+		}
+		resourceList = append(resourceList, unstructuredResource)
+	}
+	return resourceList, err
+}
+func GetResourceFromString(resourceString string, dc discovery.DiscoveryInterface, args interface{}) (K8sUnstructuredResource, error) {
 	resource := &unstructured.Unstructured{}
 
-	d, err := ioutil.ReadFile(path)
+	template, err := template.New("Resource").Parse(resourceString)
 	if err != nil {
-		return nil, resource, err
+		return K8sUnstructuredResource{nil, resource}, err
 	}
-
-	template, err := template.New("Resource").Parse(string(d))
-	if err != nil {
-		return nil, resource, err
-	}
-
 	var renderBuffer bytes.Buffer
 	err = template.Execute(&renderBuffer, &args)
 	if err != nil {
-		return nil, resource, err
+		return K8sUnstructuredResource{nil, resource}, err
 	}
 	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-
 	_, gvk, err := dec.Decode(renderBuffer.Bytes(), nil, resource)
-
 	if err != nil {
-		return nil, resource, err
+		return K8sUnstructuredResource{nil, resource}, err
 	}
-
 	gvr, err := FindGVR(gvk, dc)
 	if err != nil {
-		return nil, resource, err
+		return K8sUnstructuredResource{nil, resource}, err
 	}
-
-	return gvr, resource, nil
+	return K8sUnstructuredResource{gvr, resource}, err
 }

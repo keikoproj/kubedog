@@ -1,0 +1,23 @@
+apiVersion: someGroup.apiVersion/SomeVersion
+kind: SomeKind
+metadata:
+  name: someResource
+  namespace: someTestNamespace
+  labels:
+    someTestKey: someTestValue
+status:
+  conditions:
+    - type: someConditionType
+      status: "True"
+---
+apiVersion: otherGroup.apiVersion/OtherVersion
+kind: OtherKind
+metadata:
+  name: otherResource
+  namespace: someTestNamespace
+  labels:
+    someTestKey: someTestValue
+status:
+  conditions:
+    - type: someConditionType
+      status: "True"
