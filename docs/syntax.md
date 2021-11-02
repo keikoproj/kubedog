@@ -10,7 +10,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 6.	`<GK> [the] resource <filename> condition <condition type> should be (true|false)` [ResourceConditionShouldBe](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceConditionShouldBe)
 7.	`<GK> [I] update [a] resource <filename> with <complete key> set to <value>` [UpdateResourceWithField](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.UpdateResourceWithField)
 8.	`<GK>  <number of> nodes with selector <complete key>=<value> should be (found|ready)` [NodesWithSelectorShouldBe](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.NodesWithSelectorShouldBe)
-9. `<GK>  [the] <deployment|service> <resource_name> is in namespace <namespace-name>` [ResourceInNamespace](https://pkg.go.dev/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceInNamespace)
+9. `<GK>  [the] <deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget> <resource_name> is in namespace <namespace-name>` [ResourceInNamespace](https://pkg.go.dev/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceInNamespace)
 10. `<GK>  [I] scale [the] deployment <filename> in namespace <namespace-name> to <replica(s)>` [ScaleDeployment](https://pkg.go.dev/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ScaleDeployment)
 
 **AWS related steps**:
