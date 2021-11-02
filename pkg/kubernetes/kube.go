@@ -554,25 +554,30 @@ func (kc *Client) DeleteAllTestResources() error {
 ResourceInNamespace check if (deployment|service) in the related namespace
 */
 func (kc *Client) ResourceInNamespace(resource, name, ns string) error {
+	var err error
+
 	if kc.KubeInterface == nil {
 		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	}
 
 	switch resource {
 	case "deployment":
-		_, err := kc.KubeInterface.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		return nil
+		_, err = kc.KubeInterface.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
+
 	case "service":
-		_, err := kc.KubeInterface.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-		return nil
+		_, err = kc.KubeInterface.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
+
+	case "hpa", "horizontalpodautoscaler":
+		_, err = kc.KubeInterface.AutoscalingV2beta2().HorizontalPodAutoscalers(ns).Get(name, metav1.GetOptions{})
+
+	default:
+		return errors.Errorf("Invalid resource type")
 	}
-	return errors.Errorf("Invalid resource type")
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 /*

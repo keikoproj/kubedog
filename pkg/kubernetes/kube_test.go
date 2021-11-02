@@ -23,6 +23,7 @@ import (
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
+	hpa "k8s.io/api/autoscaling/v2beta2"
 	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -345,6 +346,7 @@ func TestResourceInNamespace(t *testing.T) {
 		namespace      = "test_ns"
 		deployName     = "test_deploy"
 		serviceName    = "test_service"
+		hpaName        = "test_hpa"
 	)
 
 	kc := Client{
@@ -370,10 +372,19 @@ func TestResourceInNamespace(t *testing.T) {
 		},
 	})
 
+	_, _ = kc.KubeInterface.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Create(&hpa.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: hpaName,
+		},
+	})
+
 	err = kc.ResourceInNamespace("deployment", deployName, namespace)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	err = kc.ResourceInNamespace("service", serviceName, namespace)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	err = kc.ResourceInNamespace("hpa", hpaName, namespace)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
