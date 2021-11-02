@@ -551,7 +551,7 @@ func (kc *Client) DeleteAllTestResources() error {
 }
 
 /*
-ResourceInNamespace check if (deployment|servuce) in the related namespace
+ResourceInNamespace check if (deployment|service) in the related namespace
 */
 func (kc *Client) ResourceInNamespace(resource, name, ns string) error {
 	if kc.KubeInterface == nil {
