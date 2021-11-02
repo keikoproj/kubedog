@@ -570,6 +570,9 @@ func (kc *Client) ResourceInNamespace(resource, name, ns string) error {
 	case "hpa", "horizontalpodautoscaler":
 		_, err = kc.KubeInterface.AutoscalingV2beta2().HorizontalPodAutoscalers(ns).Get(name, metav1.GetOptions{})
 
+	case "pdb", "poddisruptionbudget":
+		_, err = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(ns).Get(name, metav1.GetOptions{})
+
 	default:
 		return errors.Errorf("Invalid resource type")
 	}

@@ -25,6 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	hpa "k8s.io/api/autoscaling/v2beta2"
 	v1 "k8s.io/api/core/v1"
+	policy "k8s.io/api/policy/v1beta1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -347,6 +348,7 @@ func TestResourceInNamespace(t *testing.T) {
 		deployName     = "test_deploy"
 		serviceName    = "test_service"
 		hpaName        = "test_hpa"
+		pdbName        = "test_pdb"
 	)
 
 	kc := Client{
@@ -378,6 +380,12 @@ func TestResourceInNamespace(t *testing.T) {
 		},
 	})
 
+	_, _ = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(namespace).Create(&policy.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: pdbName,
+		},
+	})
+
 	err = kc.ResourceInNamespace("deployment", deployName, namespace)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
@@ -385,6 +393,9 @@ func TestResourceInNamespace(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	err = kc.ResourceInNamespace("hpa", hpaName, namespace)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	err = kc.ResourceInNamespace("pdb", pdbName, namespace)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
