@@ -5,7 +5,7 @@ GO_LDFLAGS := -ldflags="-s -w"
 BINARY := kubedog
 
 .PHONY: all
-all: clean test build style vet lint
+all: test build style vet lint
 
 .PHONY: build
 build:
