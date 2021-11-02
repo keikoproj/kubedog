@@ -2,3 +2,5 @@
 .DS_Store
 *.test
 test/templates/generated_*
+kubedog
+coverage.out

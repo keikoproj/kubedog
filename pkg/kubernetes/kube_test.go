@@ -337,13 +337,14 @@ func TestPositiveUpdateResourceWithField(t *testing.T) {
 	g.Expect(expectedLabelValue).To(gomega.Equal(testUpdateValue))
 }
 
-func TestDeploymentInNamespace(t *testing.T) {
+func TestResourceInNamespace(t *testing.T) {
 	var (
 		err            error
 		g              = gomega.NewWithT(t)
 		fakeKubeClient = fake.NewSimpleClientset()
 		namespace      = "test_ns"
 		deployName     = "test_deploy"
+		serviceName    = "test_service"
 	)
 
 	kc := Client{
@@ -363,7 +364,16 @@ func TestDeploymentInNamespace(t *testing.T) {
 		},
 	})
 
-	err = kc.DeploymentInNamespace(deployName, namespace)
+	_, _ = kc.KubeInterface.CoreV1().Services(namespace).Create(&v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: serviceName,
+		},
+	})
+
+	err = kc.ResourceInNamespace("deployment", deployName, namespace)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+
+	err = kc.ResourceInNamespace("service", serviceName, namespace)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 

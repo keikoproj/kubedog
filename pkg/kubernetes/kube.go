@@ -551,18 +551,28 @@ func (kc *Client) DeleteAllTestResources() error {
 }
 
 /*
-DeploymentInNamespace check if deployment in the related namespace
+ResourceInNamespace check if (deployment|servuce) in the related namespace
 */
-func (kc *Client) DeploymentInNamespace(name, ns string) error {
+func (kc *Client) ResourceInNamespace(resource, name, ns string) error {
 	if kc.KubeInterface == nil {
 		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	}
 
-	_, err := kc.KubeInterface.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return err
+	switch resource {
+	case "deployment":
+		_, err := kc.KubeInterface.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		return nil
+	case "service":
+		_, err := kc.KubeInterface.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		return nil
 	}
-	return nil
+	return errors.Errorf("Invalid resource type")
 }
 
 /*
