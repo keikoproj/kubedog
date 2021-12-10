@@ -23,7 +23,9 @@ import (
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
+	hpa "k8s.io/api/autoscaling/v2beta2"
 	v1 "k8s.io/api/core/v1"
+	policy "k8s.io/api/policy/v1beta1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -337,14 +339,43 @@ func TestPositiveUpdateResourceWithField(t *testing.T) {
 	g.Expect(expectedLabelValue).To(gomega.Equal(testUpdateValue))
 }
 
-func TestDeploymentInNamespace(t *testing.T) {
+func TestResourceInNamespace(t *testing.T) {
 	var (
 		err            error
 		g              = gomega.NewWithT(t)
 		fakeKubeClient = fake.NewSimpleClientset()
 		namespace      = "test_ns"
-		deployName     = "test_deploy"
 	)
+
+	tests := []struct {
+		resource string
+		name     string
+	}{
+		{
+			resource: "deployment",
+			name:     "test_deploy",
+		},
+		{
+			resource: "service",
+			name:     "test_service",
+		},
+		{
+			resource: "hpa",
+			name:     "test_hpa",
+		},
+		{
+			resource: "horizontalpodautoscaler",
+			name:     "test_hpa",
+		},
+		{
+			resource: "pdb",
+			name:     "test_pdb",
+		},
+		{
+			resource: "poddisruptionbudget",
+			name:     "test_pdb",
+		},
+	}
 
 	kc := Client{
 		KubeInterface: fakeKubeClient,
@@ -357,14 +388,34 @@ func TestDeploymentInNamespace(t *testing.T) {
 		Status: v1.NamespaceStatus{Phase: v1.NamespaceActive},
 	})
 
-	_, _ = kc.KubeInterface.AppsV1().Deployments(namespace).Create(&appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: deployName,
-		},
-	})
+	for _, tt := range tests {
+		t.Run(tt.resource, func(t *testing.T) {
+			meta := metav1.ObjectMeta{
+				Name: tt.name,
+			}
 
-	err = kc.DeploymentInNamespace(deployName, namespace)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+			switch tt.resource {
+			case "deployment":
+				_, _ = kc.KubeInterface.AppsV1().Deployments(namespace).Create(&appsv1.Deployment{
+					ObjectMeta: meta,
+				})
+			case "service":
+				_, _ = kc.KubeInterface.CoreV1().Services(namespace).Create(&v1.Service{
+					ObjectMeta: meta,
+				})
+			case "hpa":
+				_, _ = kc.KubeInterface.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Create(&hpa.HorizontalPodAutoscaler{
+					ObjectMeta: meta,
+				})
+			case "pdb":
+				_, _ = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(namespace).Create(&policy.PodDisruptionBudget{
+					ObjectMeta: meta,
+				})
+			}
+			err = kc.ResourceInNamespace(tt.resource, tt.name, namespace)
+			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+		})
+	}
 }
 
 func TestScaleDeployment(t *testing.T) {
