@@ -619,3 +619,48 @@ func (kc *Client) getResourcePath(resourceFileName string) string {
 	templatesPath := kc.getTemplatesPath()
 	return filepath.Join(templatesPath, resourceFileName)
 }
+
+/*
+ServiceAccountInNamespace check if service account is created in the related namespace
+*/
+func (kc *Client) ServiceAccountInNamespace(name, ns string) error {
+	if kc.KubeInterface == nil {
+		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	}
+	_, err := kc.KubeInterface.CoreV1().ServiceAccounts(ns).Get(name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+/*
+ClusterRoleIsFound check if needed clusterrole has been created.
+ */
+
+func (kc *Client) ClusterRoleIsFound(name string) error {
+	if kc.KubeInterface == nil {
+		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	}
+	_, err := kc.KubeInterface.RbacV1().ClusterRoles().Get(name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+/*
+ClusterRoleBindingIsFound check if cluster role binding is present.
+*/
+
+
+func (kc *Client) ClusterRoleBindingIsFound(name string) error {
+	if kc.KubeInterface == nil {
+		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	}
+	_, err := kc.KubeInterface.RbacV1().ClusterRoleBindings().Get(name, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
