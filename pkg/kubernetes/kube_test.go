@@ -376,6 +376,10 @@ func TestResourceInNamespace(t *testing.T) {
 			resource: "poddisruptionbudget",
 			name:     "test_pdb",
 		},
+		{
+			resource: "serviceaccount",
+			name:     "mock_service_account",
+		},
 	}
 
 	kc := Client{
@@ -412,7 +416,7 @@ func TestResourceInNamespace(t *testing.T) {
 				_, _ = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(namespace).Create(&policy.PodDisruptionBudget{
 					ObjectMeta: meta,
 				})
-			case "sa":
+			case "serviceaccount":
 				_, _ = kc.KubeInterface.CoreV1().ServiceAccounts(namespace).Create(&v1.ServiceAccount{
 					ObjectMeta: meta,
 				})
