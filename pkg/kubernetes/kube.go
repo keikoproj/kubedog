@@ -572,6 +572,8 @@ func (kc *Client) ResourceInNamespace(resource, name, ns string) error {
 
 	case "pdb", "poddisruptionbudget":
 		_, err = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(ns).Get(name, metav1.GetOptions{})
+	case "sa", "serviceaccount":
+		_, err = kc.KubeInterface.CoreV1().ServiceAccounts(ns).Get(name, metav1.GetOptions{})
 
 	default:
 		return errors.Errorf("Invalid resource type")
@@ -621,44 +623,24 @@ func (kc *Client) getResourcePath(resourceFileName string) string {
 }
 
 /*
-ServiceAccountInNamespace check if service account is created in the related namespace
-*/
-func (kc *Client) ServiceAccountInNamespace(name, ns string) error {
-	if kc.KubeInterface == nil {
-		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
-	}
-	_, err := kc.KubeInterface.CoreV1().ServiceAccounts(ns).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-/*
-ClusterRoleIsFound check if needed clusterrole has been created.
- */
-
-func (kc *Client) ClusterRoleIsFound(name string) error {
-	if kc.KubeInterface == nil {
-		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
-	}
-	_, err := kc.KubeInterface.RbacV1().ClusterRoles().Get(name, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-/*
-ClusterRoleBindingIsFound check if cluster role binding is present.
+Cluster scoped role and bindings are found.
 */
 
-
-func (kc *Client) ClusterRoleBindingIsFound(name string) error {
+func (kc *Client) ClusterRbacIsFound(resource, name string) error {
+	var err error
 	if kc.KubeInterface == nil {
 		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	}
-	_, err := kc.KubeInterface.RbacV1().ClusterRoleBindings().Get(name, metav1.GetOptions{})
+
+	switch resource{
+	case "clusterrole":
+		_, err = kc.KubeInterface.RbacV1().ClusterRoles().Get(name, metav1.GetOptions{})
+	case "clusterrolebinding":
+		_, err = kc.KubeInterface.RbacV1().ClusterRoleBindings().Get(name, metav1.GetOptions{})
+	default:
+		return errors.Errorf("Invalid resource type")
+	}
+
 	if err != nil {
 		return err
 	}
