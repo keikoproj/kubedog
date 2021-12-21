@@ -16,6 +16,7 @@ package kube
 
 import (
 	"io/ioutil"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"path/filepath"
 	"testing"
 
@@ -375,6 +376,10 @@ func TestResourceInNamespace(t *testing.T) {
 			resource: "poddisruptionbudget",
 			name:     "test_pdb",
 		},
+		{
+			resource: "serviceaccount",
+			name:     "mock_service_account",
+		},
 	}
 
 	kc := Client{
@@ -409,6 +414,10 @@ func TestResourceInNamespace(t *testing.T) {
 				})
 			case "pdb":
 				_, _ = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(namespace).Create(&policy.PodDisruptionBudget{
+					ObjectMeta: meta,
+				})
+			case "serviceaccount":
+				_, _ = kc.KubeInterface.CoreV1().ServiceAccounts(namespace).Create(&v1.ServiceAccount{
 					ObjectMeta: meta,
 				})
 			}
@@ -493,5 +502,54 @@ func addLabel(in *unstructured.Unstructured, key, value string) {
 	err := unstructured.SetNestedMap(in.Object, labels, "metadata", "labels")
 	if err != nil {
 		log.Errorf("Failed adding label %v=%v to the resource %v: %v", key, value, in.GetName(), err)
+	}
+}
+
+func TestClusterRoleAndBindingIsFound(t *testing.T) {
+	var (
+		err            error
+		g              = gomega.NewWithT(t)
+		fakeKubeClient = fake.NewSimpleClientset()
+	)
+
+	kc := Client{
+		KubeInterface: fakeKubeClient,
+	}
+
+	tests := []struct {
+		resource string
+		name     string
+	}{
+		{
+			resource: "clusterrole",
+			name: "mock_cluster_role",
+		},
+		{
+			resource: "clusterrolebinding",
+			name: "mock_cluster_role_binding",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.resource, func(t *testing.T) {
+			meta := metav1.ObjectMeta{
+				Name: tt.name,
+			}
+
+			switch tt.resource {
+			case "clusterrole":
+				_, _ = kc.KubeInterface.RbacV1().ClusterRoles().Create(&rbacv1.ClusterRole{
+
+					ObjectMeta: meta,
+				})
+			case "clusterrolebinding":
+				_, _ = kc.KubeInterface.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
+
+					ObjectMeta: meta,
+				})
+			}
+			err = kc.ClusterRbacIsFound(tt.resource, tt.name)
+			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+		})
 	}
 }
