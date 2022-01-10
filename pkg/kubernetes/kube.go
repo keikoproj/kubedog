@@ -16,6 +16,7 @@ limitations under the License.
 package kube
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -158,7 +159,7 @@ func (kc *Client) unstructuredResourceOperation(operation string, unstructuredRe
 	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 	switch operation {
 	case OperationCreate, OperationSubmit:
-		_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Create(resource, metav1.CreateOptions{})
+		_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Create(context.Background(), resource, metav1.CreateOptions{})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
 				log.Infof("%s %s already created", resource.GetKind(), resource.GetName())
@@ -168,7 +169,7 @@ func (kc *Client) unstructuredResourceOperation(operation string, unstructuredRe
 		}
 		log.Infof("%s %s has been created", resource.GetKind(), resource.GetName())
 	case OperationDelete:
-		err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(resource.GetName(), &metav1.DeleteOptions{})
+		err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				log.Infof("%s %s already deleted", resource.GetKind(), resource.GetName())
@@ -210,7 +211,7 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 		}
 		log.Infof("[KUBEDOG] waiting for resource %v/%v to become %v", resource.GetNamespace(), resource.GetName(), state)
 
-		_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(resource.GetName(), metav1.GetOptions{})
+		_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
 				return err
@@ -275,7 +276,7 @@ func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector st
 		}
 
 		log.Infof("[KUBEDOG] waiting for resource %v/%v to converge to %v=%v", resource.GetNamespace(), resource.GetName(), key, value)
-		cr, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(resource.GetName(), metav1.GetOptions{})
+		cr, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -322,7 +323,7 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 			return errors.New("waiter timed out waiting for resource state")
 		}
 		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", resource.GetNamespace(), resource.GetName(), cType, expectedStatus)
-		cr, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(resource.GetName(), metav1.GetOptions{})
+		cr, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -384,7 +385,7 @@ func (kc *Client) NodesWithSelectorShouldBe(n int, selector, state string) error
 		}
 
 		log.Infof("[KUBEDOG] waiting for %v nodes to be %v with selector %v", n, state, selector)
-		nodes, err := kc.KubeInterface.CoreV1().Nodes().List(opts)
+		nodes, err := kc.KubeInterface.CoreV1().Nodes().List(context.Background(), opts)
 		if err != nil {
 			return err
 		}
@@ -447,7 +448,7 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 		intValue = n
 	}
 
-	updateTarget, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(resource.GetName(), metav1.GetOptions{})
+	updateTarget, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -463,7 +464,7 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 		}
 	}
 
-	_, err = kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Update(updateTarget, metav1.UpdateOptions{})
+	_, err = kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Update(context.Background(), updateTarget, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -498,7 +499,7 @@ func (kc *Client) DeleteAllTestResources() error {
 		}
 		gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
-		kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(resource.GetName(), &metav1.DeleteOptions{})
+		kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
 		log.Infof("[KUBEDOG] submitted deletion for %v/%v", resource.GetNamespace(), resource.GetName())
 		return nil
 	}
@@ -527,7 +528,7 @@ func (kc *Client) DeleteAllTestResources() error {
 				return errors.New("waiter timed out waiting for deletion")
 			}
 			log.Infof("[KUBEDOG] waiting for resource deletion of %v/%v", resource.GetNamespace(), resource.GetName())
-			_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(resource.GetName(), metav1.GetOptions{})
+			_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
 			if err != nil {
 				if kerrors.IsNotFound(err) {
 					log.Infof("[KUBEDOG] resource %v/%v is deleted", resource.GetNamespace(), resource.GetName())
@@ -562,18 +563,18 @@ func (kc *Client) ResourceInNamespace(resource, name, ns string) error {
 
 	switch resource {
 	case "deployment":
-		_, err = kc.KubeInterface.AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
+		_, err = kc.KubeInterface.AppsV1().Deployments(ns).Get(context.Background(), name, metav1.GetOptions{})
 
 	case "service":
-		_, err = kc.KubeInterface.CoreV1().Services(ns).Get(name, metav1.GetOptions{})
+		_, err = kc.KubeInterface.CoreV1().Services(ns).Get(context.Background(), name, metav1.GetOptions{})
 
 	case "hpa", "horizontalpodautoscaler":
-		_, err = kc.KubeInterface.AutoscalingV2beta2().HorizontalPodAutoscalers(ns).Get(name, metav1.GetOptions{})
+		_, err = kc.KubeInterface.AutoscalingV2beta2().HorizontalPodAutoscalers(ns).Get(context.Background(), name, metav1.GetOptions{})
 
 	case "pdb", "poddisruptionbudget":
-		_, err = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(ns).Get(name, metav1.GetOptions{})
+		_, err = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(ns).Get(context.Background(), name, metav1.GetOptions{})
 	case "sa", "serviceaccount":
-		_, err = kc.KubeInterface.CoreV1().ServiceAccounts(ns).Get(name, metav1.GetOptions{})
+		_, err = kc.KubeInterface.CoreV1().ServiceAccounts(ns).Get(context.Background(), name, metav1.GetOptions{})
 
 	default:
 		return errors.Errorf("Invalid resource type")
@@ -603,7 +604,7 @@ func (kc *Client) ScaleDeployment(name, ns string, replica int32) error {
 		},
 	}
 
-	_, err := kc.KubeInterface.AppsV1().Deployments(ns).UpdateScale(name, scale)
+	_, err := kc.KubeInterface.AppsV1().Deployments(ns).UpdateScale(context.Background(), name, scale, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -632,11 +633,11 @@ func (kc *Client) ClusterRbacIsFound(resource, name string) error {
 		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	}
 
-	switch resource{
+	switch resource {
 	case "clusterrole":
-		_, err = kc.KubeInterface.RbacV1().ClusterRoles().Get(name, metav1.GetOptions{})
+		_, err = kc.KubeInterface.RbacV1().ClusterRoles().Get(context.Background(), name, metav1.GetOptions{})
 	case "clusterrolebinding":
-		_, err = kc.KubeInterface.RbacV1().ClusterRoleBindings().Get(name, metav1.GetOptions{})
+		_, err = kc.KubeInterface.RbacV1().ClusterRoleBindings().Get(context.Background(), name, metav1.GetOptions{})
 	default:
 		return errors.Errorf("Invalid resource type")
 	}
