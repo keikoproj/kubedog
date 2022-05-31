@@ -16,6 +16,7 @@ package kubedog
 
 import (
 	"os"
+	"time"
 
 	"github.com/cucumber/godog"
 	aws "github.com/keikoproj/kubedog/pkg/aws"
@@ -86,4 +87,12 @@ SetTestFilesPath sets the path for the test files. If SetTestFilesPath was not u
 */
 func (kdt *Test) SetTestFilesPath(testFilesPath string) {
 	kdt.KubeContext.FilesPath = testFilesPath
+}
+
+func (kdt *Test) SetWaiterInterval(duration time.Duration) {
+	kdt.KubeContext.WaiterInterval = duration
+}
+
+func (kdt *Test) SetWaiterTries(tries int) {
+	kdt.KubeContext.WaiterTries = tries
 }

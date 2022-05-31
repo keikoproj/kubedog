@@ -44,6 +44,8 @@ type Client struct {
 	DiscoveryInterface discovery.DiscoveryInterface
 	FilesPath          string
 	TemplateArguments  interface{}
+	WaiterInterval     time.Duration
+	WaiterTries        int
 }
 
 const (
@@ -59,7 +61,9 @@ const (
 	NodeStateFound = "found"
 
 	DefaultWaiterInterval = time.Second * 30
-	DefaultWaiterRetries  = 40
+	DefaultWaiterTries    = 40
+
+	DefaultFilePath = "templates"
 )
 
 /*
@@ -206,7 +210,7 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 	for {
 		exists = true
-		if counter >= DefaultWaiterRetries {
+		if counter >= kc.getWaiterTries() {
 			return errors.New("waiter timed out waiting for resource state")
 		}
 		log.Infof("[KUBEDOG] waiting for resource %v/%v to become %v", resource.GetNamespace(), resource.GetName(), state)
@@ -233,7 +237,7 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 			}
 		}
 		counter++
-		time.Sleep(DefaultWaiterInterval)
+		time.Sleep(kc.getWaiterInterval())
 	}
 }
 
@@ -271,7 +275,7 @@ func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector st
 	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
 	for {
-		if counter >= DefaultWaiterRetries {
+		if counter >= kc.getWaiterTries() {
 			return errors.New("waiter timed out waiting for resource")
 		}
 
@@ -290,7 +294,7 @@ func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector st
 			}
 		}
 		counter++
-		time.Sleep(DefaultWaiterInterval)
+		time.Sleep(kc.getWaiterInterval())
 	}
 
 	return nil
@@ -319,7 +323,7 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
 	for {
-		if counter >= DefaultWaiterRetries {
+		if counter >= kc.getWaiterTries() {
 			return errors.New("waiter timed out waiting for resource state")
 		}
 		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", resource.GetNamespace(), resource.GetName(), cType, expectedStatus)
@@ -355,7 +359,7 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 			}
 		}
 		counter++
-		time.Sleep(DefaultWaiterInterval)
+		time.Sleep(kc.getWaiterInterval())
 	}
 }
 
@@ -380,7 +384,7 @@ func (kc *Client) NodesWithSelectorShouldBe(n int, selector, state string) error
 			}
 		)
 
-		if counter >= DefaultWaiterRetries {
+		if counter >= kc.getWaiterTries() {
 			return errors.New("waiter timed out waiting for nodes")
 		}
 
@@ -413,7 +417,7 @@ func (kc *Client) NodesWithSelectorShouldBe(n int, selector, state string) error
 		}
 
 		counter++
-		time.Sleep(DefaultWaiterInterval)
+		time.Sleep(kc.getWaiterInterval())
 	}
 	return nil
 }
@@ -524,7 +528,7 @@ func (kc *Client) DeleteAllTestResources() error {
 		gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
 		for {
-			if counter >= DefaultWaiterRetries {
+			if counter >= kc.getWaiterTries() {
 				return errors.New("waiter timed out waiting for deletion")
 			}
 			log.Infof("[KUBEDOG] waiting for resource deletion of %v/%v", resource.GetNamespace(), resource.GetName())
@@ -536,7 +540,7 @@ func (kc *Client) DeleteAllTestResources() error {
 				}
 			}
 			counter++
-			time.Sleep(DefaultWaiterInterval)
+			time.Sleep(kc.getWaiterInterval())
 		}
 		return nil
 	}
@@ -614,10 +618,10 @@ func (kc *Client) ScaleDeployment(name, ns string, replica int32) error {
 func (kc *Client) getTemplatesPath() string {
 	if kc.FilesPath != "" {
 		return kc.FilesPath
-	} else {
-		return "templates"
 	}
+	return DefaultFilePath
 }
+
 func (kc *Client) getResourcePath(resourceFileName string) string {
 	templatesPath := kc.getTemplatesPath()
 	return filepath.Join(templatesPath, resourceFileName)
@@ -646,4 +650,18 @@ func (kc *Client) ClusterRbacIsFound(resource, name string) error {
 		return err
 	}
 	return nil
+}
+
+func (kc *Client) getWaiterInterval() time.Duration {
+	if kc.WaiterInterval >= 0 {
+		return kc.WaiterInterval
+	}
+	return DefaultWaiterInterval
+}
+
+func (kc *Client) getWaiterTries() int {
+	if kc.WaiterTries > 0 {
+		return kc.WaiterTries
+	}
+	return DefaultWaiterTries
 }
