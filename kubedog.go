@@ -93,6 +93,6 @@ func (kdt *Test) SetWaiterInterval(duration time.Duration) {
 	kdt.KubeContext.WaiterInterval = duration
 }
 
-func (kdt *Test) SetWaiterRetries(retries int) {
-	kdt.KubeContext.WaiterRetries = retries
+func (kdt *Test) SetWaiterTries(tries int) {
+	kdt.KubeContext.WaiterTries = tries
 }
