@@ -378,8 +378,8 @@ func (kc *Client) NodesWithSelectorShouldBe(n int, selector, state string) error
 
 	for {
 		var (
-			conditionNodes int
-			opts           = metav1.ListOptions{
+			nodesCount int
+			opts       = metav1.ListOptions{
 				LabelSelector: selector,
 			}
 		)
@@ -388,7 +388,6 @@ func (kc *Client) NodesWithSelectorShouldBe(n int, selector, state string) error
 			return errors.New("waiter timed out waiting for nodes")
 		}
 
-		log.Infof("[KUBEDOG] waiting for %v nodes to be %v with selector %v", n, state, selector)
 		nodes, err := kc.KubeInterface.CoreV1().Nodes().List(context.Background(), opts)
 		if err != nil {
 			return err
@@ -396,17 +395,18 @@ func (kc *Client) NodesWithSelectorShouldBe(n int, selector, state string) error
 
 		switch state {
 		case NodeStateFound:
-			if len(nodes.Items) == n {
+			nodesCount = len(nodes.Items)
+			if nodesCount == n {
 				log.Infof("[KUBEDOG] found %v nodes", n)
 				found = true
 			}
 		case NodeStateReady:
 			for _, node := range nodes.Items {
 				if util.IsNodeReady(node) {
-					conditionNodes++
+					nodesCount++
 				}
 			}
-			if conditionNodes == n {
+			if nodesCount == n {
 				log.Infof("[KUBEDOG] found %v ready nodes", n)
 				found = true
 			}
@@ -415,6 +415,8 @@ func (kc *Client) NodesWithSelectorShouldBe(n int, selector, state string) error
 		if found {
 			break
 		}
+
+		log.Infof("[KUBEDOG] found %v nodes, waiting for %v nodes to be %v with selector %v", nodesCount, n, state, selector)
 
 		counter++
 		time.Sleep(kc.getWaiterInterval())
