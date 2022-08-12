@@ -123,10 +123,13 @@ func TestMultipleResourcesOperation(t *testing.T) {
 		g                   = gomega.NewWithT(t)
 		testTemplatePath, _ = filepath.Abs("../../test/templates")
 	)
+
 	expectedResources := []*metav1.APIResourceList{
 		newTestAPIResourceList("someGroup.apiVersion/SomeVersion", "someResource", "SomeKind"),
 		newTestAPIResourceList("otherGroup.apiVersion/OtherVersion", "otherResource", "OtherKind"),
+		newTestAPIResourceList("argoproj.io/v1alpha1", "AnalysisTemplate", "AnalysisTemplate"),
 	}
+
 	fakeDiscovery.Fake = &fakeDynamicClient.Fake
 	fakeDiscovery.Resources = append(fakeDiscovery.Resources, expectedResources...)
 
@@ -139,19 +142,33 @@ func TestMultipleResourcesOperation(t *testing.T) {
 	}
 
 	tests := []struct {
-		testResourcePath string
-		numResources     int
-		expectError      bool
+		testResourcePath  string
+		numResources      int
+		expectError       bool
+		expectedResources []*metav1.APIResourceList
 	}{
 		{ // PositiveTest
 			testResourcePath: testTemplatePath + "/test-multi-resourcefile.yaml",
 			numResources:     2,
 			expectError:      false,
+			expectedResources: []*metav1.APIResourceList{
+				newTestAPIResourceList("someGroup.apiVersion/SomeVersion", "someResource", "SomeKind"),
+				newTestAPIResourceList("otherGroup.apiVersion/OtherVersion", "otherResource", "OtherKind"),
+			},
 		},
 		{ // NegativeTest: file doesn't exist
-			testResourcePath: testTemplatePath + "/wrongName_manifest.yaml",
-			numResources:     0,
-			expectError:      true,
+			testResourcePath:  testTemplatePath + "/wrongName_manifest.yaml",
+			numResources:      0,
+			expectError:       true,
+			expectedResources: []*metav1.APIResourceList{},
+		},
+		{ // Avoid text/template no function found error when working with AnalysisTemplate/no template args
+			testResourcePath: testTemplatePath + "/analysis-template.yaml",
+			numResources:     1,
+			expectError:      false,
+			expectedResources: []*metav1.APIResourceList{
+				newTestAPIResourceList("argoproj.io/v1alpha1", "args-test", "AnalysisTemplate"),
+			},
 		},
 	}
 
@@ -164,7 +181,7 @@ func TestMultipleResourcesOperation(t *testing.T) {
 		} else {
 			g.Expect(err).ShouldNot(gomega.HaveOccurred())
 			for i, resource := range resourceList {
-				g.Expect(resourceToApiResourceList(resource.Resource)).To(gomega.Equal(expectedResources[i]))
+				g.Expect(resourceToApiResourceList(resource.Resource)).To(gomega.Equal(test.expectedResources[i]))
 			}
 		}
 	}

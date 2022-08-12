@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  labels:
+    env: dev
+  name: args-test
+spec:
+  args:
+  - name: namespace
+  - name: stable-hash
+  - name: canary-hash
+  - name: prometheus-port
+  - name: cpu-utilization-limit-perc
+  - name: initial-delay
+    value: 1m
+  - name: count
+    value: "10"
+  - name: interval
+    value: 60s
+  - name: failure-limit
+    value: "1"
+  - name: inconclusive-limit
+    value: "1"
+  metrics:
+  - count: '{{args.count}}'
+    failureLimit: '{{args.failure-limit}}'
+    inconclusiveLimit: '{{args.inconclusive-limit}}'
+    initialDelay: '{{args.initial-delay}}'
+    interval: '{{args.interval}}'
+    name: cpu-utilization
+    provider:
+      prometheus:
+        address: http://prometheus.addon-metricset-ns.svc.cluster.local:{{args.prometheus-port}}
+        query: (quantile(0.5, quantile_over_time(0.5, namespace_pod_cpu_utilization{namespace="{{args.namespace}}",
+          pod=~".*-{{args.canary-hash}}-.*"}[11m])))
+    successCondition: result[0] <= {{args.cpu-utilization-limit-perc}}
