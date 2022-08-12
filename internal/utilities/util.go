@@ -117,18 +117,25 @@ func GetMultipleResourcesFromYaml(path string, dc discovery.DiscoveryInterface, 
 	}
 	return resourceList, err
 }
+
 func GetResourceFromString(resourceString string, dc discovery.DiscoveryInterface, args interface{}) (K8sUnstructuredResource, error) {
 	resource := &unstructured.Unstructured{}
-
-	template, err := template.New("Resource").Parse(resourceString)
-	if err != nil {
-		return K8sUnstructuredResource{nil, resource}, err
-	}
 	var renderBuffer bytes.Buffer
-	err = template.Execute(&renderBuffer, &args)
-	if err != nil {
-		return K8sUnstructuredResource{nil, resource}, err
+
+	if args != nil {
+		template, err := template.New("Resource").Parse(resourceString)
+		if err != nil {
+			return K8sUnstructuredResource{nil, resource}, err
+		}
+
+		err = template.Execute(&renderBuffer, &args)
+		if err != nil {
+			return K8sUnstructuredResource{nil, resource}, err
+		}
+	} else {
+		renderBuffer.WriteString(resourceString)
 	}
+
 	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
 	_, gvk, err := dec.Decode(renderBuffer.Bytes(), nil, resource)
 	if err != nil {
