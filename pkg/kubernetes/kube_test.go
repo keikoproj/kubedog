@@ -20,8 +20,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	rbacv1 "k8s.io/api/rbac/v1"
-
 	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
@@ -29,13 +27,16 @@ import (
 	hpa "k8s.io/api/autoscaling/v2beta2"
 	v1 "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	fakeDiscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/dynamic"
 	fakeDynamic "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/fake"
 	kTesting "k8s.io/client-go/testing"
@@ -569,6 +570,121 @@ func TestClusterRoleAndBindingIsFound(t *testing.T) {
 			}
 			err = kc.ClusterRbacIsFound(tt.resource, tt.name)
 			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+		})
+	}
+}
+
+func Test_unstructuredResourceOperation(t *testing.T) {
+	type clientFields struct {
+		DynamicInterface dynamic.Interface
+	}
+	type funcArgs struct {
+		operation            string
+		ns                   string
+		unstructuredResource util.K8sUnstructuredResource
+	}
+
+	resourceNoNs, err := resourceFromYaml("../../test/templates/resource-without-namespace.yaml")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	resourceNs, err := resourceFromYaml("../../test/templates/resource-with-namespace.yaml")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	dynScheme := runtime.NewScheme()
+	fakeDynamicClient := fakeDynamic.NewSimpleDynamicClient(dynScheme)
+
+	tests := []struct {
+		name         string
+		clientFields clientFields
+		funcArgs     funcArgs
+		wantErr      bool
+	}{
+		{
+			name: "Resource create succeeds when namespace is configurable",
+			clientFields: clientFields{
+				DynamicInterface: fakeDynamicClient,
+			},
+			funcArgs: funcArgs{
+				operation: "create",
+				ns:        "test-namespace",
+				unstructuredResource: util.K8sUnstructuredResource{
+					GVR:      &meta.RESTMapping{},
+					Resource: resourceNoNs,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Resource delete succeeds when namespace is configurable",
+			clientFields: clientFields{
+				DynamicInterface: fakeDynamicClient,
+			},
+			funcArgs: funcArgs{
+				operation: "delete",
+				ns:        "test-namespace",
+				unstructuredResource: util.K8sUnstructuredResource{
+					GVR:      &meta.RESTMapping{},
+					Resource: resourceNoNs,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Resource create succeeds when namespace in YAML",
+			clientFields: clientFields{
+				DynamicInterface: fakeDynamicClient,
+			},
+			funcArgs: funcArgs{
+				operation: "create",
+				unstructuredResource: util.K8sUnstructuredResource{
+					GVR:      &meta.RESTMapping{},
+					Resource: resourceNs,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Resource create fails when namespace configured and in YAML",
+			clientFields: clientFields{
+				DynamicInterface: fakeDynamicClient,
+			},
+			funcArgs: funcArgs{
+				operation: "create",
+				ns:        "override-ns",
+				unstructuredResource: util.K8sUnstructuredResource{
+					GVR:      &meta.RESTMapping{},
+					Resource: resourceNs,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "Unsupported operation produces error",
+			clientFields: clientFields{
+				DynamicInterface: fakeDynamicClient,
+			},
+			funcArgs: funcArgs{
+				operation: "invalid",
+				unstructuredResource: util.K8sUnstructuredResource{
+					GVR:      &meta.RESTMapping{},
+					Resource: resourceNs,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			kc := &Client{
+				DynamicInterface: tt.clientFields.DynamicInterface,
+			}
+			if err := kc.unstructuredResourceOperation(tt.funcArgs.operation, tt.funcArgs.ns, tt.funcArgs.unstructuredResource); (err != nil) != tt.wantErr {
+				t.Errorf("Client.unstructuredResourceOperation() error = %v, wantErr %v", err, tt.wantErr)
+			}
 		})
 	}
 }
