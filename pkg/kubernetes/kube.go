@@ -17,6 +17,7 @@ package kube
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -119,18 +120,35 @@ func (kc *Client) AKubernetesCluster() error {
 ResourceOperation performs the given operation on the resource defined in resourceFileName. The operation could be “create”, “submit” or “delete”.
 */
 func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
+	unstructuredResource, err := kc.parseSingleResource(resourceFileName)
+	if err != nil {
+		return err
+	}
+	return kc.unstructuredResourceOperation(operation, "", unstructuredResource)
+}
+
+func (kc *Client) ResourceOperationInNamespace(operation, resourceFileName, ns string) error {
+	unstructuredResource, err := kc.parseSingleResource(resourceFileName)
+	if err != nil {
+		return err
+	}
+	return kc.unstructuredResourceOperation(operation, ns, unstructuredResource)
+}
+
+func (kc *Client) parseSingleResource(resourceFileName string) (util.K8sUnstructuredResource, error) {
 	if kc.DynamicInterface == nil {
-		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+		return util.K8sUnstructuredResource{}, errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	} else if kc.DiscoveryInterface == nil {
-		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+		return util.K8sUnstructuredResource{}, errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	}
 
 	resourcePath := kc.getResourcePath(resourceFileName)
 	unstructuredResource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
-		return err
+		return util.K8sUnstructuredResource{}, err
 	}
-	return kc.unstructuredResourceOperation(operation, unstructuredResource)
+
+	return unstructuredResource, nil
 }
 
 /*
@@ -138,20 +156,13 @@ MultiResourceOperation performs the given operation on the resources defined in 
 Files created using this function cannot individually be addressed by filename.
 */
 func (kc *Client) MultiResourceOperation(operation, resourceFileName string) error {
-	if kc.DynamicInterface == nil {
-		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
-	} else if kc.DiscoveryInterface == nil {
-		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
-	}
-
-	resourcePath := kc.getResourcePath(resourceFileName)
-
-	resourceList, err := util.GetMultipleResourcesFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
+	resourceList, err := kc.parseMultipleResources(resourceFileName)
 	if err != nil {
 		return err
 	}
+
 	for _, unstructuredResource := range resourceList {
-		err = kc.unstructuredResourceOperation(operation, unstructuredResource)
+		err = kc.unstructuredResourceOperation(operation, "", unstructuredResource)
 		if err != nil {
 			return err
 		}
@@ -159,11 +170,50 @@ func (kc *Client) MultiResourceOperation(operation, resourceFileName string) err
 
 	return nil
 }
-func (kc *Client) unstructuredResourceOperation(operation string, unstructuredResource util.K8sUnstructuredResource) error {
+
+func (kc *Client) MultiResourceOperationInNamespace(operation, resourceFileName, ns string) error {
+	resourceList, err := kc.parseMultipleResources(resourceFileName)
+	if err != nil {
+		return err
+	}
+
+	for _, unstructuredResource := range resourceList {
+		err = kc.unstructuredResourceOperation(operation, ns, unstructuredResource)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (kc *Client) parseMultipleResources(resourceFileName string) ([]util.K8sUnstructuredResource, error) {
+	if kc.DynamicInterface == nil {
+		return nil, errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	} else if kc.DiscoveryInterface == nil {
+		return nil, errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	}
+
+	resourcePath := kc.getResourcePath(resourceFileName)
+
+	resourceList, err := util.GetMultipleResourcesFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
+	if err != nil {
+		return nil, err
+	}
+
+	return resourceList, nil
+}
+
+func (kc *Client) unstructuredResourceOperation(operation, ns string, unstructuredResource util.K8sUnstructuredResource) error {
 	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
+
+	if ns == "" {
+		ns = resource.GetNamespace()
+	}
+
 	switch operation {
 	case OperationCreate, OperationSubmit:
-		_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Create(context.Background(), resource, metav1.CreateOptions{})
+		_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(ns).Create(context.Background(), resource, metav1.CreateOptions{})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
 				log.Infof("%s %s already created", resource.GetKind(), resource.GetName())
@@ -171,9 +221,9 @@ func (kc *Client) unstructuredResourceOperation(operation string, unstructuredRe
 			}
 			return err
 		}
-		log.Infof("%s %s has been created", resource.GetKind(), resource.GetName())
+		log.Infof("%s %s has been created in namespace %s", resource.GetKind(), resource.GetName(), ns)
 	case OperationDelete:
-		err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
+		err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(ns).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				log.Infof("%s %s already deleted", resource.GetKind(), resource.GetName())
@@ -181,7 +231,9 @@ func (kc *Client) unstructuredResourceOperation(operation string, unstructuredRe
 			}
 			return err
 		}
-		log.Infof("%s %s has been deleted", resource.GetKind(), resource.GetName())
+		log.Infof("%s %s has been deleted from namespace %s", resource.GetKind(), resource.GetName(), ns)
+	default:
+		return fmt.Errorf("unsupported operation: %s", operation)
 	}
 	return nil
 }
