@@ -49,6 +49,7 @@ func (kdt *Test) Run() {
 	// Kubernetes related steps
 	kdt.scenarioContext.Step(`^a Kubernetes cluster$`, kdt.KubeContext.AKubernetesCluster)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete) (?:the )?resource ([^"]*)$`, kdt.KubeContext.ResourceOperation)
+	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete) (?:the )?resource ([^"]*) in (?:the )?([^"]*) namespace`, kdt.KubeContext.ResourceOperationInNamespace)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete) (?:the )?resources in ([^"]*)$`, kdt.KubeContext.MultiResourceOperation)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete) (?:the )?resources in ([^"]*) in (?:the )?([^"]*) namespace`, kdt.KubeContext.MultiResourceOperationInNamespace)
 	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) should be (created|deleted)$`, kdt.KubeContext.ResourceShouldBe)

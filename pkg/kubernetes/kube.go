@@ -120,18 +120,35 @@ func (kc *Client) AKubernetesCluster() error {
 ResourceOperation performs the given operation on the resource defined in resourceFileName. The operation could be “create”, “submit” or “delete”.
 */
 func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
+	unstructuredResource, err := kc.parseSingleResource(resourceFileName)
+	if err != nil {
+		return err
+	}
+	return kc.unstructuredResourceOperation(operation, "", unstructuredResource)
+}
+
+func (kc *Client) ResourceOperationInNamespace(operation, resourceFileName, ns string) error {
+	unstructuredResource, err := kc.parseSingleResource(resourceFileName)
+	if err != nil {
+		return err
+	}
+	return kc.unstructuredResourceOperation(operation, ns, unstructuredResource)
+}
+
+func (kc *Client) parseSingleResource(resourceFileName string) (util.K8sUnstructuredResource, error) {
 	if kc.DynamicInterface == nil {
-		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+		return util.K8sUnstructuredResource{}, errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	} else if kc.DiscoveryInterface == nil {
-		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+		return util.K8sUnstructuredResource{}, errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
 	}
 
 	resourcePath := kc.getResourcePath(resourceFileName)
 	unstructuredResource, err := util.GetResourceFromYaml(resourcePath, kc.DiscoveryInterface, kc.TemplateArguments)
 	if err != nil {
-		return err
+		return util.K8sUnstructuredResource{}, err
 	}
-	return kc.unstructuredResourceOperation(operation, "", unstructuredResource)
+
+	return unstructuredResource, nil
 }
 
 /*
