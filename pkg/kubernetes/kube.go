@@ -230,8 +230,8 @@ func (kc *Client) unstructuredResourceOperation(operation, ns string, unstructur
 		if err != nil {
 			return err
 		}
-		
-		resource.SetResourceVersion(currentResourceVersion.GetResourceVersion())
+
+		resource.SetResourceVersion(currentResourceVersion.DeepCopy().GetResourceVersion())
 
 		_, err = kc.DynamicInterface.Resource(gvr.Resource).Namespace(ns).Update(context.Background(), resource, metav1.UpdateOptions{})
 		if err != nil {
