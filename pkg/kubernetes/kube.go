@@ -117,7 +117,7 @@ func (kc *Client) AKubernetesCluster() error {
 }
 
 /*
-ResourceOperation performs the given operation on the resource defined in resourceFileName. The operation could be “create”, “submit” or “delete”.
+ResourceOperation performs the given operation on the resource defined in resourceFileName. The operation could be “create”, “submit”, “delete”, or "update".
 */
 func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
 	unstructuredResource, err := kc.parseSingleResource(resourceFileName)
@@ -127,6 +127,9 @@ func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
 	return kc.unstructuredResourceOperation(operation, "", unstructuredResource)
 }
 
+/*
+ResourceOperationInNamespace performs the given operation on the resource defined in resourceFileName in a specified namespace. The operation could be “create”, “submit”, “delete”, or "update".
+*/
 func (kc *Client) ResourceOperationInNamespace(operation, resourceFileName, ns string) error {
 	unstructuredResource, err := kc.parseSingleResource(resourceFileName)
 	if err != nil {
@@ -222,6 +225,19 @@ func (kc *Client) unstructuredResourceOperation(operation, ns string, unstructur
 			return err
 		}
 		log.Infof("%s %s has been created in namespace %s", resource.GetKind(), resource.GetName(), ns)
+	case OperationUpdate:
+		currentResourceVersion, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(ns).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		resource.SetResourceVersion(currentResourceVersion.DeepCopy().GetResourceVersion())
+
+		_, err = kc.DynamicInterface.Resource(gvr.Resource).Namespace(ns).Update(context.Background(), resource, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+		log.Infof("%s %s has been updated in namespace %s", resource.GetKind(), resource.GetName(), ns)
 	case OperationDelete:
 		err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(ns).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
 		if err != nil {
