@@ -594,6 +594,16 @@ func Test_unstructuredResourceOperation(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
+	resourceNoNsUpdate, err := resourceFromYaml("../../test/templates/resource-without-namespace-update.yaml")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	resourceNsUpdate, err := resourceFromYaml("../../test/templates/resource-with-namespace-update.yaml")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
 	dynScheme := runtime.NewScheme()
 	fakeDynamicClient := fakeDynamic.NewSimpleDynamicClient(dynScheme)
 
@@ -614,6 +624,21 @@ func Test_unstructuredResourceOperation(t *testing.T) {
 				unstructuredResource: util.K8sUnstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNoNs,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Resource update succeeds when namespace is configurable",
+			clientFields: clientFields{
+				DynamicInterface: fakeDynamicClient,
+			},
+			funcArgs: funcArgs{
+				operation: "update",
+				ns:        "test-namespace",
+				unstructuredResource: util.K8sUnstructuredResource{
+					GVR:      &meta.RESTMapping{},
+					Resource: resourceNoNsUpdate,
 				},
 			},
 			wantErr: false,
@@ -643,6 +668,20 @@ func Test_unstructuredResourceOperation(t *testing.T) {
 				unstructuredResource: util.K8sUnstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNs,
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Resource update succeeds when namespace is in YAML",
+			clientFields: clientFields{
+				DynamicInterface: fakeDynamicClient,
+			},
+			funcArgs: funcArgs{
+				operation: "update",
+				unstructuredResource: util.K8sUnstructuredResource{
+					GVR:      &meta.RESTMapping{},
+					Resource: resourceNsUpdate,
 				},
 			},
 			wantErr: false,

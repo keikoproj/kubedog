@@ -3,10 +3,10 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 
 **Kubernetes related steps**:
 1. 	`<GK> a Kubernetes cluster` [AKubernetesCluster](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.AKubernetesCluster)
-2.	`<GK> [I] <create|submit|delete> [the] resource <filename>.yaml` [ResourceOperation](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceOperation)
-3.	`<GK> [I] <create|submit|delete> [the] resource <filename>.yaml in [the] <namespacename> namespace` [ResourceOperationInNamespace](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceOperationInNamespace)
-4.	`<GK> [I] <create|submit|delete> [the] resources in <filename>.yaml` [MultiResourceOperation](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.MultiResourceOperation)
-5.	`<GK> [I] <create|submit|delete> [the] resources in <filename>.yaml in [the] <namespacename> namespace` [MultiResourceOperationInNamespace](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.MultiResourceOperationInNamespace)
+2.	`<GK> [I] <create|submit|delete|update> [the] resource <filename>.yaml` [ResourceOperation](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceOperation)
+3.	`<GK> [I] <create|submit|delete|update> [the] resource <filename>.yaml in [the] <namespacename> namespace` [ResourceOperationInNamespace](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceOperationInNamespace)
+4.	`<GK> [I] <create|submit|delete|update> [the] resources in <filename>.yaml` [MultiResourceOperation](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.MultiResourceOperation)
+5.	`<GK> [I] <create|submit|delete|update> [the] resources in <filename>.yaml in [the] <namespacename> namespace` [MultiResourceOperationInNamespace](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.MultiResourceOperationInNamespace)
 6.	`<GK> [the] resource <filename> should be <created|deleted>` [ResourceShouldBe](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceShouldBe)
 7.	`<GK> [the] resource <filename> [should] converge(d) to selector <complete key>=<value>` [ResourceShouldConvergeToSelector](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceShouldConvergeToSelector)
 8.	`<GK> [the] resource <filename> condition <condition type> should be (true|false)` [ResourceConditionShouldBe](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes#Client.ResourceConditionShouldBe)
