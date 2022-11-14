@@ -69,6 +69,9 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:I )?print (?:the )?nodes list$`, kdt.KubeContext.PrintNodes)
 	kdt.scenarioContext.Step(`^(?:I )?print (?:the )?pods in namespace ([^"]*) with selector ([^"]*)$`, kdt.KubeContext.PrintPodsWithSelector)
 	kdt.scenarioContext.Step(`^(?:I )?print (?:the )?pods in namespace ([^"]*)$`, kdt.KubeContext.PrintPods)
+	kdt.scenarioContext.Step(`^(?:the )?deployment ([^"]*) is running in namespace ([^"]*)$`, kdt.KubeContext.DeploymentIsRunning)
+	kdt.scenarioContext.Step(`^(?:the )?daemonset ([^"]*) is running in namespace ([^"]*)$`, kdt.KubeContext.DaemonsetIsRunning)
+	kdt.scenarioContext.Step(`^(?:the )?persistentvolume ([^"]*) exists with status (Available|Bound|Released|Failed|Pending)$`, kdt.KubeContext.PersistentVolExists)
 }
 
 /*
