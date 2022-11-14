@@ -27,9 +27,11 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
+	"github.com/keikoproj/kubedog/pkg/common"
 	"github.com/pkg/errors"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -734,4 +736,51 @@ func (kc *Client) getWaiterTries() int {
 		return kc.WaiterTries
 	}
 	return DefaultWaiterTries
+}
+
+// ListNodes lists nodes
+func ListNodes(client kubernetes.Interface) (*corev1.NodeList, error) {
+	nodes, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
+		return client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list nodes")
+	}
+
+	return nodes.(*corev1.NodeList), nil
+}
+
+func (kc *Client) PrintNodes() error {
+
+	var readyStatus = func(conditions []v1.NodeCondition) string {
+		var status = false
+		var err error
+		for _, condition := range conditions {
+			if condition.Type == "Ready" {
+				status, err = strconv.ParseBool(string(condition.Status))
+				if err != nil {
+					return "Unknown"
+				}
+				break
+			}
+		}
+		if status {
+			return "Ready"
+		}
+		return "NotReady"
+	}
+	// List nodes
+	nodes, _ := ListNodes(kc.KubeInterface)
+	if nodes != nil {
+		tableFormat := "%-64s%-12s%-24s%-16s"
+		log.Infof(tableFormat, "NAME", "STATUS", "INSTANCEGROUP", "AZ")
+		for _, node := range nodes.Items {
+			log.Infof(tableFormat,
+				node.Name,
+				readyStatus(node.Status.Conditions),
+				node.Labels["node.kubernetes.io/instancegroup"],
+				node.Labels["failure-domain.beta.kubernetes.io/zone"])
+		}
+	}
+	return nil
 }
