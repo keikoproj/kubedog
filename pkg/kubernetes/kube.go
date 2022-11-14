@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
@@ -801,6 +802,55 @@ func (kc *Client) PrintPodsWithSelector(namespace, selector string) error {
 	for _, pod := range pods.Items {
 		log.Infof(tableFormat,
 			pod.Name, readyCount(pod.Status.ContainerStatuses), pod.Status.Phase)
+	}
+	return nil
+}
+
+func (kc *Client) DaemonsetIsRunning(dsName, namespace string) error {
+	gomega.Eventually(func() error {
+		ds, err := common.GetDaemonset(kc.KubeInterface, dsName, namespace)
+		if err != nil {
+			return err
+		}
+
+		if ds.Status.DesiredNumberScheduled != ds.Status.CurrentNumberScheduled {
+			return fmt.Errorf("daemonset %s/%s is not updated. status: %s", namespace, dsName, ds.Status.String())
+		}
+
+		return nil
+	}, 10*time.Second).Should(gomega.Succeed(), func() string {
+		// Print Pods after failure
+		_ = kc.PrintPods(namespace)
+		return fmt.Sprintf("daemonset %s/%s is not updated.", namespace, dsName)
+	})
+
+	return nil
+}
+
+func (kc *Client) DeploymentIsRunning(deployName, namespace string) error {
+	deploy, err := common.GetDeployment(kc.KubeInterface, deployName, namespace)
+	if err != nil {
+		return err
+	}
+	if deploy.Status.ReadyReplicas != deploy.Status.Replicas {
+		return fmt.Errorf("deployment %s/%s is not ready. status: %s", namespace, deployName, deploy.Status.String())
+	}
+
+	if deploy.Status.UpdatedReplicas != deploy.Status.Replicas {
+		return fmt.Errorf("deploymemnt %s/%s is not updated. status: %s", namespace, deployName, deploy.Status.String())
+	}
+
+	return nil
+}
+
+func (kc *Client) PersistentVolExists(volName, expectedPhase string) error {
+	vol, err := common.GetPersistentVolume(kc.KubeInterface, volName)
+	if err != nil {
+		return err
+	}
+	phase := string(vol.Status.Phase)
+	if phase != expectedPhase {
+		return fmt.Errorf("persistentvolume had unexpected phase %v, expected phase %v", phase, expectedPhase)
 	}
 	return nil
 }
