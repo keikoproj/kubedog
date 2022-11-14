@@ -66,9 +66,9 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
 	kdt.scenarioContext.Step(`^(?:I )?update (?:the )current Auto Scaling Group with ([^"]*) set to ([^"]*)$`, kdt.AwsContext.UpdateFieldOfCurrentASG)
 	kdt.scenarioContext.Step(`(?:the )?current Auto Scaling Group (?:is )scaled to \(min, max\) = \((\d+), (\d+)\)$`, kdt.AwsContext.ScaleCurrentASG)
-	kdt.scenarioContext.Step(`^print nodes list$`, kdt.KubeContext.PrintNodes)
-	kdt.scenarioContext.Step(`^print pods in namespace ([^"]*)$`, kdt.KubeContext.PrintPods)
-	kdt.scenarioContext.Step(`^print pods in namespace ([^"]*) with selector ([^"]*)$`, kdt.KubeContext.PrintPodsWithSelector)
+	kdt.scenarioContext.Step(`^(?:I )?print (?:the )?nodes list$`, kdt.KubeContext.PrintNodes)
+	kdt.scenarioContext.Step(`^(?:I )?print (?:the )?pods in namespace ([^"]*) with selector ([^"]*)$`, kdt.KubeContext.PrintPodsWithSelector)
+	kdt.scenarioContext.Step(`^(?:I )?print (?:the )?pods in namespace ([^"]*)$`, kdt.KubeContext.PrintPods)
 }
 
 /*
