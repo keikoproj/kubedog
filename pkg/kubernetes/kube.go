@@ -738,18 +738,6 @@ func (kc *Client) getWaiterTries() int {
 	return DefaultWaiterTries
 }
 
-// ListNodes lists nodes
-func ListNodes(client kubernetes.Interface) (*corev1.NodeList, error) {
-	nodes, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
-		return client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to list nodes")
-	}
-
-	return nodes.(*corev1.NodeList), nil
-}
-
 func (kc *Client) PrintNodes() error {
 
 	var readyStatus = func(conditions []v1.NodeCondition) string {
@@ -770,7 +758,7 @@ func (kc *Client) PrintNodes() error {
 		return "NotReady"
 	}
 	// List nodes
-	nodes, _ := ListNodes(kc.KubeInterface)
+	nodes, _ := common.ListNodes(kc.KubeInterface)
 	if nodes != nil {
 		tableFormat := "%-64s%-12s%-24s%-16s"
 		log.Infof(tableFormat, "NAME", "STATUS", "INSTANCEGROUP", "AZ")
@@ -781,6 +769,38 @@ func (kc *Client) PrintNodes() error {
 				node.Labels["node.kubernetes.io/instancegroup"],
 				node.Labels["failure-domain.beta.kubernetes.io/zone"])
 		}
+	}
+	return nil
+}
+
+func (kc *Client) PrintPods(namespace string) error {
+	return kc.PrintPodsWithSelector(namespace, "")
+}
+
+func (kc *Client) PrintPodsWithSelector(namespace, selector string) error {
+	var readyCount = func(conditions []v1.ContainerStatus) string {
+		var readyCount = 0
+		var containerCount = len(conditions)
+		for _, condition := range conditions {
+			if condition.Ready {
+				readyCount++
+			}
+		}
+		return fmt.Sprintf("%d/%d", readyCount, containerCount)
+	}
+	pods, err := common.ListPodsWithLabelSelector(kc.KubeInterface, namespace, selector)
+	if err != nil {
+		return err
+	}
+
+	if len(pods.Items) == 0 {
+		return errors.Errorf("No pods matched selector '%s'", selector)
+	}
+	tableFormat := "%-64s%-12s%-24s"
+	log.Infof(tableFormat, "NAME", "READY", "STATUS")
+	for _, pod := range pods.Items {
+		log.Infof(tableFormat,
+			pod.Name, readyCount(pod.Status.ContainerStatuses), pod.Status.Phase)
 	}
 	return nil
 }
