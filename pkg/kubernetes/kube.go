@@ -17,7 +17,9 @@ package kube
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -863,6 +865,89 @@ func (kc *Client) PersistentVolExists(volName, expectedPhase string) error {
 	if phase != expectedPhase {
 		return fmt.Errorf("persistentvolume had unexpected phase %v, expected phase %v", phase, expectedPhase)
 	}
+	return nil
+}
+
+func (kc *Client) EfsCsiRoleTrust(action, roleName string) error {
+	// Load clients so we can derive account info.
+	sess := aws.GetAWSSession(ClusterAWSRegion)
+	iamClient := iam.New(sess)
+	stsClient := sts.New(sess)
+	accountId := aws.GetAccountNumber(stsClient)
+
+	// Add efs-csi-role-<clustername> as trusted entity
+	var trustedEntityArn = fmt.Sprintf("arn:aws:iam::%s:role/efs-csi-role-%s",
+		accountId, BDDClusterName)
+
+	type StatementEntry struct {
+		Effect    string
+		Action    string
+		Principal map[string]string
+	}
+	type PolicyDocument struct {
+		Version   string
+		Statement []StatementEntry
+	}
+	newPolicyDoc := &PolicyDocument{
+		Version:   "2012-10-17",
+		Statement: make([]StatementEntry, 0),
+	}
+
+	role, err := aws.GetIamRole(roleName, iamClient)
+	if err != nil {
+		return err
+	}
+
+	if role.AssumeRolePolicyDocument != nil {
+		doc := &PolicyDocument{}
+		data, err := url.QueryUnescape(*role.AssumeRolePolicyDocument)
+		if err != nil {
+			return err
+		}
+
+		// parse existing policy
+		err = json.Unmarshal([]byte(data), &doc)
+		if err != nil {
+			return err
+		}
+
+		if len(doc.Statement) > 0 {
+			// loop through existing statements and keep valid trusted entities
+			for _, stmnt := range doc.Statement {
+				if val, ok := stmnt.Principal["AWS"]; ok {
+					if strings.HasPrefix(val, "arn:aws:iam") && val != trustedEntityArn {
+						newPolicyDoc.Statement = append(newPolicyDoc.Statement, stmnt)
+					}
+				}
+			}
+		}
+	}
+
+	switch action {
+	case "add":
+		newStatment := StatementEntry{
+			Effect: "Allow",
+			Principal: map[string]string{
+				"AWS": trustedEntityArn,
+			},
+			Action: "sts:AssumeRole",
+		}
+
+		newPolicyDoc.Statement = append(newPolicyDoc.Statement, newStatment)
+	case "remove":
+		// Do nothing, we already cleansed the trusted entity role above if we're not adding
+	}
+
+	policyJSON, err := json.Marshal(newPolicyDoc)
+	if err != nil {
+		return err
+	}
+
+	_, err = aws.UpdateIAMAssumeRole(roleName, policyJSON, iamClient)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
