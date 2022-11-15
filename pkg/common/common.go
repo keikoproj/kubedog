@@ -18,6 +18,7 @@ package common
 import (
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -149,4 +150,19 @@ func RetryOnError(backoff *wait.Backoff, retryExpected func(error) bool, fn cond
 		err = lastErr
 	}
 	return out, err
+}
+
+func GetEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
+
+func GetUsernamePrefix() string {
+	currUser, err := user.Current()
+	if err != nil || currUser.Username == "root" {
+		return ""
+	}
+	return currUser.Username + "-"
 }
