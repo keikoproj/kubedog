@@ -57,6 +57,7 @@ var (
 		Factor:   1.0,
 		Jitter:   0.1,
 	}
+	KubernetesClusterTagKey = "KubernetesCluster"
 )
 
 // GetValue returns the value of the Environment Variable defined by 'TemplateArgument.EnvironmentVariable'.
