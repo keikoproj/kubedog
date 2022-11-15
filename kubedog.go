@@ -47,40 +47,46 @@ func (kdt *Test) Run() {
 	}
 
 	// Kubernetes related steps
-	kdt.scenarioContext.Step(`^a Kubernetes cluster$`, kdt.KubeContext.AKubernetesCluster)
+	kdt.scenarioContext.Step(`^((?:a )?Kubernetes cluster|(?:there are )?(?:valid )?Kubernetes Credentials)$`, kdt.KubeContext.KubernetesCluster)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+)$`, kdt.KubeContext.ResourceOperation)
-	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+) in (?:the )?([^"]*) namespace`, kdt.KubeContext.ResourceOperationInNamespace)
+	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+) in (?:the )?([^"]*) namespace$`, kdt.KubeContext.ResourceOperationInNamespace)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resources in (\S+)$`, kdt.KubeContext.MultiResourceOperation)
-	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resources in (\S+) in (?:the )?([^"]*) namespace`, kdt.KubeContext.MultiResourceOperationInNamespace)
+	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resources in (\S+) in (?:the )?([^"]*) namespace$`, kdt.KubeContext.MultiResourceOperationInNamespace)
+	kdt.scenarioContext.Step(`^(?:I )?(create|submit|update) (?:the )?secret (\S+) in namespace (\S+) from (?:environment variable )?(\S+)$`, kdt.KubeContext.SecretOperationFromEnvironmentVariable)
+	kdt.scenarioContext.Step(`^(?:I )?delete (?:the )?secret (\S+) in namespace (\S+)$`, kdt.KubeContext.SecretDelete)
 	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) should be (created|deleted)$`, kdt.KubeContext.ResourceShouldBe)
-	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) converged to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
-	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) should converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
+	kdt.scenarioContext.Step(`^(?:the )?Kubernetes cluster should be (created|deleted|upgraded)$`, kdt.KubeContext.KubernetesClusterShouldBe)
+	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) (?:should )?converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
 	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) condition ([^"]*) should be (true|false)$`, kdt.KubeContext.ResourceConditionShouldBe)
-	kdt.scenarioContext.Step(`^(?:I )?update (?:a )?resource ([^"]*) with ([^"]*) set to ([^"]*)$`, kdt.KubeContext.UpdateResourceWithField)
+	kdt.scenarioContext.Step(`^(?:I )?update (?:the )?resource ([^"]*) with ([^"]*) set to ([^"]*)$`, kdt.KubeContext.UpdateResourceWithField)
 	kdt.scenarioContext.Step(`^(\d+) node\(s\) with selector ([^"]*) should be (found|ready)$`, kdt.KubeContext.NodesWithSelectorShouldBe)
 	kdt.scenarioContext.Step(`^(?:the )?(deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) ([^"]*) is in namespace ([^"]*)$`, kdt.KubeContext.ResourceInNamespace)
 	kdt.scenarioContext.Step(`^(?:I )?scale (?:the )?deployment ([^"]*) in namespace ([^"]*) to (\d+)$`, kdt.KubeContext.ScaleDeployment)
 	kdt.scenarioContext.Step(`^(?:the )?(clusterrole|clusterrolebinding) with name ([^"]*) should be found`, kdt.KubeContext.ClusterRbacIsFound)
-	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?nodes list$`, kdt.KubeContext.PrintNodes)
-	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*) with selector ([^"]*)$`, kdt.KubeContext.PrintPodsWithSelector)
-	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*)$`, kdt.KubeContext.PrintPods)
+	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?nodes list$`, kdt.KubeContext.GetNodes)
+	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*) with selector ([^"]*)$`, kdt.KubeContext.GetPodsWithSelector)
+	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*)$`, kdt.KubeContext.GetPods)
 	kdt.scenarioContext.Step(`^(?:the )?(daemonset|deployment) ([^"]*) is running in namespace ([^"]*)$`, kdt.KubeContext.ResourceIsRunning)
 	kdt.scenarioContext.Step(`^(?:the )?persistentvolume ([^"]*) exists with status (Available|Bound|Released|Failed|Pending)$`, kdt.KubeContext.PersistentVolExists)
-	kdt.scenarioContext.Step(`^(?:I )?(add|remove) efs-csi-role as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.EfsCsiRoleTrust)
+	kdt.scenarioContext.Step(`^(?:the )?(clusterrole|clusterrolebinding) with name ([^"]*) should be found$`, kdt.KubeContext.ClusterRbacIsFound)
+	kdt.scenarioContext.Step(`^(?:the )?ingress (\S+) in (?:the )?namespace (\S+) (?:is )?(?:available )?on port (\d+) and path ([^"]*)$`, kdt.KubeContext.IngressAvailable)
+	kdt.scenarioContext.Step(`^(?:I )?send (\d+) tps to ingress (\S+) in (?:the )?namespace (\S+) (?:available )?on port (\d+) and path ([^"]*) for (\d+) (minutes|seconds) expecting (\d+) errors$`, kdt.KubeContext.SendTrafficToIngress)
+	// AWS related steps
+	kdt.scenarioContext.Step(`^(?:there are )?(?:valid )?AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
+	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
+	kdt.scenarioContext.Step(`^(?:I )?update (?:the )?current Auto Scaling Group with ([^"]*) set to ([^"]*)$`, kdt.AwsContext.UpdateFieldOfCurrentASG)
+	kdt.scenarioContext.Step(`^(?:the )?current Auto Scaling Group (?:is )?scaled to \(min, max\) = \((\d+), (\d+)\)$`, kdt.AwsContext.ScaleCurrentASG)
+	kdt.scenarioContext.Step(`^(?:the )?DNS name (\S+) (?:should be )?created in hostedZoneID (\S+)$`, kdt.AwsContext.DnsNameInHostedZoneID)
+	kdt.scenarioContext.Step(`^(?:the )?DNS name (\S+) (?:should )?not (?:be )?created in hostedZoneID (\S+)$`, kdt.AwsContext.DnsNameNotInHostedZoneID)
+	kdt.scenarioContext.Step(`^(?:I )?(add|remove) (?:the )?(\S+) role as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.IamRoleTrust)
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) ?([^"]*) as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.IamRoleTrust)
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) cluster shared iam role$`, kdt.AwsContext.ClusterSharedIamOperation)
-	// AWS related steps
-	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
-	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
-	kdt.scenarioContext.Step(`^(?:I )?update (?:the )current Auto Scaling Group with ([^"]*) set to ([^"]*)$`, kdt.AwsContext.UpdateFieldOfCurrentASG)
-	kdt.scenarioContext.Step(`(?:the )?current Auto Scaling Group (?:is )scaled to \(min, max\) = \((\d+), (\d+)\)$`, kdt.AwsContext.ScaleCurrentASG)
 }
 
 /*
 SetTestSuite sets the TestSuiteContext, should be use in the InitializeTestSuite function required by godog.
 */
 func (kdt *Test) SetTestSuite(testSuite *godog.TestSuiteContext) {
-
 	kdt.suiteContext = testSuite
 }
 
@@ -88,7 +94,6 @@ func (kdt *Test) SetTestSuite(testSuite *godog.TestSuiteContext) {
 SetScenario sets the ScenarioContext, should be use in the InitializeScenario function required by godog.
 */
 func (kdt *Test) SetScenario(scenario *godog.ScenarioContext) {
-
 	kdt.scenarioContext = scenario
 }
 

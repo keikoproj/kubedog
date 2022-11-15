@@ -21,29 +21,34 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	awssdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
+	"github.com/aws/aws-sdk-go/service/eks"
+	"github.com/aws/aws-sdk-go/service/eks/eksiface"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/keikoproj/kubedog/pkg/common"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 type Client struct {
 	ASClient         autoscalingiface.AutoScalingAPI
+	EKSClient        eksiface.EKSAPI
+	Route53Client    route53iface.Route53API
+	IAMClient        iamiface.IAMAPI
+	STSClient        stsiface.STSAPI
 	AsgName          string
 	LaunchConfigName string
 }
-
-var (
-	ClusterAWSRegion = common.GetEnv("AWS_REGION", "us-west-2")
-	BDDClusterName   = common.GetEnv("CLUSTER_NAME", common.GetUsernamePrefix()+"kubedog-bdd")
-)
 
 /*
 AnASGNamed updates the current ASG to be used by the other ASG related steps.
@@ -172,16 +177,16 @@ func (c *Client) GetAWSCredsAndClients() error {
 	log.Infof("[KUBEDOG] Credentials: %v", arn)
 
 	c.ASClient = autoscaling.New(sess)
+	c.EKSClient = eks.New(sess)
+	c.Route53Client = route53.New(sess)
+	c.IAMClient = iam.New(sess)
+	c.STSClient = sts.New(sess)
 
 	return nil
 }
 
 func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
-	// Load clients so we can derive account info.
-	sess := GetAWSSession(ClusterAWSRegion)
-	iamClient := iam.New(sess)
-	stsClient := sts.New(sess)
-	accountId := GetAccountNumber(stsClient)
+	accountId := GetAccountNumber(c.STSClient)
 
 	// Add efs-csi-role-<clustername> as trusted entity
 	var trustedEntityArn = fmt.Sprintf("arn:aws:iam::%s:role/%s",
@@ -201,7 +206,7 @@ func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
 		Statement: make([]StatementEntry, 0),
 	}
 
-	role, err := GetIamRole(roleName, iamClient)
+	role, err := GetIamRole(roleName, c.IAMClient)
 	if err != nil {
 		return err
 	}
@@ -251,7 +256,7 @@ func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
 		return err
 	}
 
-	_, err = UpdateIAMAssumeRole(roleName, policyJSON, iamClient)
+	_, err = UpdateIAMAssumeRole(roleName, policyJSON, c.IAMClient)
 	if err != nil {
 		return err
 	}
@@ -259,21 +264,16 @@ func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
 	return nil
 }
 
-func (c *Client) EfsCsiRoleTrust(action, roleName string) error {
-	var trustedEntityName = fmt.Sprintf("efs-csi-role-%s", BDDClusterName)
-	return c.IamRoleTrust(action, trustedEntityName, roleName)
-}
-
 func (c *Client) ClusterSharedIamOperation(operation string) error {
-	// Load clients so we can derive account info.
 	var (
-		sess      = GetAWSSession(ClusterAWSRegion)
-		iamClient = iam.New(sess)
-		stsClient = sts.New(sess)
-		accountId = GetAccountNumber(stsClient)
-		roleName  = fmt.Sprintf("shared.%s", BDDClusterName)
+		accountId = GetAccountNumber(c.STSClient)
 		iamFmt    = "arn:aws:iam::%s:%s/%s"
 	)
+	clusterName, err := util.GetClusterName()
+	if err != nil {
+		return err
+	}
+	roleName := fmt.Sprintf("shared.%s", clusterName)
 
 	// for trusted entity
 	clusterSharedrole := fmt.Sprintf(iamFmt, accountId, "role", roleName)
@@ -286,27 +286,99 @@ func (c *Client) ClusterSharedIamOperation(operation string) error {
 
 	switch operation {
 	case "add":
-		role, err := PutIAMRole(roleName, "shared cluster role", roleDocument, iamClient)
+		role, err := PutIAMRole(roleName, "shared cluster role", roleDocument, c.IAMClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to create shared cluster role")
 		}
-		log.Infof("BDD >> created shared iam role: %s", awssdk.StringValue(role.Arn))
+		log.Infof("BDD >> created shared iam role: %s", aws.StringValue(role.Arn))
 
-		policy, err := PutManagedPolicy(roleName, clusterSharedPolicy, "shared cluster policy", policyDocument, iamClient)
+		policy, err := PutManagedPolicy(roleName, clusterSharedPolicy, "shared cluster policy", policyDocument, c.IAMClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to create shared cluster managed policy")
 		}
-		log.Infof("BDD >> created shared iam policy: %s", awssdk.StringValue(policy.Arn))
+		log.Infof("BDD >> created shared iam policy: %s", aws.StringValue(policy.Arn))
 	case "remove":
-		err := DeleteManagedPolicy(clusterSharedPolicy, iamClient)
+		err := DeleteManagedPolicy(clusterSharedPolicy, c.IAMClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete shared cluster role")
 		}
 
-		err = DeleteIAMRole(roleName, iamClient)
+		err = DeleteIAMRole(roleName, c.IAMClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete shared cluster managed policy")
 		}
 	}
+	return nil
+}
+
+func (c *Client) GetEksVpc() (string, error) {
+	clusterName, err := util.GetClusterName()
+	if err != nil {
+		return "", err
+	}
+	input := &eks.DescribeClusterInput{
+		Name: aws.String(clusterName),
+	}
+	result, err := c.EKSClient.DescribeCluster(input)
+	if err != nil {
+		return "", err
+	}
+	return aws.StringValue(result.Cluster.ResourcesVpcConfig.VpcId), nil
+}
+
+func (c *Client) DnsNameInHostedZoneID(dnsName string, hostedZoneID string) error {
+	time.Sleep(120 * time.Second)
+
+	recordValue, err := c.GetDNSRecord(dnsName, hostedZoneID)
+	if err != nil {
+		if fmt.Sprintf("more than 1 records for hostedZoneID %s with dnsName %s", hostedZoneID, dnsName) == string(err.Error()) {
+			fmt.Printf("records for hostedZoneID %s with dnsName %s exists", hostedZoneID, dnsName)
+			return nil
+		} else if recordValue != "" {
+			fmt.Printf("records for hostedZoneID %s with dnsName %s exists", hostedZoneID, dnsName)
+			return nil
+		} else {
+			return errors.Errorf("records for hostedZoneID %s with dnsName %s doesn't exists", hostedZoneID, dnsName)
+		}
+	}
+	if recordValue != "" {
+		fmt.Printf("records for hostedZoneID %s with dnsName %s exists", hostedZoneID, dnsName)
+	}
+	return nil
+}
+
+func (c *Client) GetDNSRecord(dnsName string, hostedZoneID string) (string, error) {
+	params := &route53.ListResourceRecordSetsInput{
+		HostedZoneId:    aws.String(hostedZoneID),
+		MaxItems:        aws.String("1"),
+		StartRecordName: aws.String(dnsName),
+	}
+
+	resp, err := c.Route53Client.ListResourceRecordSets(params)
+	if err != nil {
+		return "", err
+	}
+	if len(resp.ResourceRecordSets) == 0 {
+		return "", errors.New(fmt.Sprintf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName))
+	}
+
+	recordSet := resp.ResourceRecordSets[0]
+	if len(recordSet.ResourceRecords) != 1 {
+		return "", errors.New(fmt.Sprintf("more than 1 records for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName))
+	}
+
+	if *recordSet.Name != dnsName {
+		return "", errors.New(fmt.Sprintf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName))
+	}
+
+	record := *(recordSet.ResourceRecords[0].Value)
+	return record, nil
+}
+
+func (c *Client) DnsNameNotInHostedZoneID(dnsName string, hostedZoneID string) error {
+	if err := c.DnsNameInHostedZoneID(dnsName, hostedZoneID); err == nil {
+		return errors.Errorf("unexpected DNS %s exists in hostedZoneID %s", hostedZoneID, dnsName)
+	}
+	fmt.Printf("records for hostedZoneID %s with dnsName %s doesn't exists", hostedZoneID, dnsName)
 	return nil
 }

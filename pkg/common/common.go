@@ -33,12 +33,6 @@ type TemplateArgument struct {
 	Mandatory           bool
 }
 
-type condFunc func() (interface{}, error)
-
-var (
-	KubernetesClusterTagKey = "KubernetesCluster"
-)
-
 // GetValue returns the value of the Environment Variable defined by 'TemplateArgument.EnvironmentVariable'.
 // If 'TemplateArgument.EnvironmentVariable' is empty or the ENV. VAR. it defines is unset, 'TemplateArgument.Default' is returned.
 // That is, if 'TemplateArgument.Mandatory' is not 'true', in which case, an error is returned.

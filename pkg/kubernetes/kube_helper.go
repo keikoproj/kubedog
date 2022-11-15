@@ -3,7 +3,7 @@ package kube
 import (
 	"context"
 
-	"github.com/keikoproj/kubedog/pkg/common"
+	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -12,7 +12,7 @@ import (
 
 // ListPodsWithLabelSelector lists pods with a label selector
 func (kc *Client) ListPodsWithLabelSelector(namespace, selector string) (*corev1.PodList, error) {
-	pods, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
+	pods, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector})
 	})
 	if err != nil {
@@ -24,7 +24,7 @@ func (kc *Client) ListPodsWithLabelSelector(namespace, selector string) (*corev1
 
 // ListNodes lists nodes
 func (kc *Client) ListNodes() (*corev1.NodeList, error) {
-	nodes, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
+	nodes, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	})
 	if err != nil {
@@ -36,7 +36,7 @@ func (kc *Client) ListNodes() (*corev1.NodeList, error) {
 
 // GetDaemonset gets a daemonset
 func (kc *Client) GetDaemonset(name, namespace string) (*appsv1.DaemonSet, error) {
-	ds, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
+	ds, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.AppsV1().DaemonSets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	})
 	if err != nil {
@@ -47,7 +47,7 @@ func (kc *Client) GetDaemonset(name, namespace string) (*appsv1.DaemonSet, error
 
 // GetDeployment gets a deployment
 func (kc *Client) GetDeployment(name, namespace string) (*appsv1.Deployment, error) {
-	deploy, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
+	deploy, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	})
 	if err != nil {
@@ -58,7 +58,7 @@ func (kc *Client) GetDeployment(name, namespace string) (*appsv1.Deployment, err
 
 // GetPersistentVolume gets a pv
 func (kc *Client) GetPersistentVolume(name string) (*corev1.PersistentVolume, error) {
-	pvs, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
+	pvs, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.CoreV1().PersistentVolumes().Get(context.Background(), name, metav1.GetOptions{})
 	})
 	if err != nil {
