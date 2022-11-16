@@ -51,6 +51,7 @@ type Client struct {
 	TemplateArguments  interface{}
 	WaiterInterval     time.Duration
 	WaiterTries        int
+	Timestamps         map[string]time.Time
 }
 
 const (
@@ -993,5 +994,17 @@ func (kc *Client) PodsWithSelectorHaveRestartCountLessThan(namespace string, sel
 		}
 	}
 
+	return nil
+}
+
+func (kc *Client) SetTimestamp(timestampName string) error {
+	now := time.Now()
+	kc.Timestamps[timestampName] = now
+	log.Infof("Memorizing '%s' time is %v", timestampName, now)
+	return nil
+}
+
+func (kc *Client) IWaitSeconds(seconds int) error {
+	time.Sleep(time.Second * time.Duration(seconds))
 	return nil
 }

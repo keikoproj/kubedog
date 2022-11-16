@@ -74,6 +74,8 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:I )?verify InstanceGroups (?:are )?in "ready" state$`, kdt.KubeContext.VerifyInstanceGroups)
 	kdt.scenarioContext.Step(`^(?:I )?validate Prometheus Statefulset ([^"]*) in namespace ([^"]*) has volumeClaimTemplates name ([^"]*)$`, kdt.KubeContext.ValidatePrometheusVolumeClaimTemplatesName)
 	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector ([^"]*) have restart count less than (\d+)$`, kdt.KubeContext.PodsWithSelectorHaveRestartCountLessThan)
+	kdt.scenarioContext.Step(`^(?:I )?store (?:the )?current time as ([^"]*)$`, kdt.KubeContext.SetTimestamp)
+	kdt.scenarioContext.Step(`^I wait (\d+) seconds$`, kdt.KubeContext.IWaitSeconds)
 	// AWS related steps
 	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
 	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
