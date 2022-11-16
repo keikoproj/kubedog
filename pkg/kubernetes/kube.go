@@ -28,7 +28,6 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
-	"github.com/keikoproj/kubedog/pkg/common"
 
 	"github.com/pkg/errors"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -760,7 +759,7 @@ func (kc *Client) PrintNodes() error {
 		return "NotReady"
 	}
 	// List nodes
-	nodes, _ := common.ListNodes(kc.KubeInterface)
+	nodes, _ := ListNodes(kc.KubeInterface)
 	if nodes != nil {
 		tableFormat := "%-64s%-12s%-24s%-16s"
 		log.Infof(tableFormat, "NAME", "STATUS", "INSTANCEGROUP", "AZ")
@@ -790,7 +789,7 @@ func (kc *Client) PrintPodsWithSelector(namespace, selector string) error {
 		}
 		return fmt.Sprintf("%d/%d", readyCount, containerCount)
 	}
-	pods, err := common.ListPodsWithLabelSelector(kc.KubeInterface, namespace, selector)
+	pods, err := ListPodsWithLabelSelector(kc.KubeInterface, namespace, selector)
 	if err != nil {
 		return err
 	}
@@ -809,7 +808,7 @@ func (kc *Client) PrintPodsWithSelector(namespace, selector string) error {
 
 func (kc *Client) DaemonsetIsRunning(dsName, namespace string) error {
 	gomega.Eventually(func() error {
-		ds, err := common.GetDaemonset(kc.KubeInterface, dsName, namespace)
+		ds, err := GetDaemonset(kc.KubeInterface, dsName, namespace)
 		if err != nil {
 			return err
 		}
@@ -829,7 +828,7 @@ func (kc *Client) DaemonsetIsRunning(dsName, namespace string) error {
 }
 
 func (kc *Client) DeploymentIsRunning(deployName, namespace string) error {
-	deploy, err := common.GetDeployment(kc.KubeInterface, deployName, namespace)
+	deploy, err := GetDeployment(kc.KubeInterface, deployName, namespace)
 	if err != nil {
 		return err
 	}
@@ -845,7 +844,7 @@ func (kc *Client) DeploymentIsRunning(deployName, namespace string) error {
 }
 
 func (kc *Client) PersistentVolExists(volName, expectedPhase string) error {
-	vol, err := common.GetPersistentVolume(kc.KubeInterface, volName)
+	vol, err := GetPersistentVolume(kc.KubeInterface, volName)
 	if err != nil {
 		return err
 	}
