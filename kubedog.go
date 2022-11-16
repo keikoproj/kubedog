@@ -73,6 +73,7 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) cluster shared iam role$`, kdt.AwsContext.ClusterSharedIamOperation)
 	kdt.scenarioContext.Step(`^(?:I )?verify InstanceGroups (?:are )?in "ready" state$`, kdt.KubeContext.VerifyInstanceGroups)
 	kdt.scenarioContext.Step(`^(?:I )?validate Prometheus Statefulset ([^"]*) in namespace ([^"]*) has volumeClaimTemplates name ([^"]*)$`, kdt.KubeContext.ValidatePrometheusVolumeClaimTemplatesName)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector ([^"]*) have restart count less than (\d+)$`, kdt.KubeContext.PodsWithSelectorHaveRestartCountLessThan)
 	// AWS related steps
 	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
 	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)

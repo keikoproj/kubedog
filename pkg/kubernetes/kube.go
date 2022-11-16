@@ -971,3 +971,27 @@ func (kc *Client) validatePVLabels(volumeClaimTemplatesName string, requiredLabe
 	}
 	return nil
 }
+
+func (kc *Client) PodsWithSelectorHaveRestartCountLessThan(namespace string, selector string, expectedRestartCountLessThan int) error {
+	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
+	if err != nil {
+		return err
+	}
+
+	if len(pods.Items) == 0 {
+		return errors.Errorf("No pods matched selector '%s'", selector)
+	}
+
+	for _, pod := range pods.Items {
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			log.Infof("Container '%s' of pod '%s' on node '%s' restarted %d times",
+				containerStatus.Name, pod.Name, pod.Spec.NodeName, containerStatus.RestartCount)
+			if int(containerStatus.RestartCount) >= expectedRestartCountLessThan {
+				return errors.Errorf("Container '%s' of pod '%s' restarted %d times",
+					containerStatus.Name, pod.Name, containerStatus.RestartCount)
+			}
+		}
+	}
+
+	return nil
+}
