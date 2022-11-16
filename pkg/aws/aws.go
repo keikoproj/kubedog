@@ -176,7 +176,7 @@ func (c *Client) GetAWSCredsAndClients() error {
 	return nil
 }
 
-func (c *Client) EfsCsiRoleTrust(action, roleName string) error {
+func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
 	// Load clients so we can derive account info.
 	sess := GetAWSSession(ClusterAWSRegion)
 	iamClient := iam.New(sess)
@@ -184,8 +184,8 @@ func (c *Client) EfsCsiRoleTrust(action, roleName string) error {
 	accountId := GetAccountNumber(stsClient)
 
 	// Add efs-csi-role-<clustername> as trusted entity
-	var trustedEntityArn = fmt.Sprintf("arn:aws:iam::%s:role/efs-csi-role-%s",
-		accountId, BDDClusterName)
+	var trustedEntityArn = fmt.Sprintf("arn:aws:iam::%s:role/%s",
+		accountId, entityName)
 
 	type StatementEntry struct {
 		Effect    string
@@ -257,6 +257,11 @@ func (c *Client) EfsCsiRoleTrust(action, roleName string) error {
 	}
 
 	return nil
+}
+
+func (c *Client) EfsCsiRoleTrust(action, roleName string) error {
+	var trustedEntityName = fmt.Sprintf("efs-csi-role-%s", BDDClusterName)
+	return c.IamRoleTrust(action, trustedEntityName, roleName)
 }
 
 func (c *Client) ClusterSharedIamOperation(operation string) error {
