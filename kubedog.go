@@ -61,11 +61,6 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:the )?(deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) ([^"]*) is in namespace ([^"]*)$`, kdt.KubeContext.ResourceInNamespace)
 	kdt.scenarioContext.Step(`^(?:I )?scale (?:the )?deployment ([^"]*) in namespace ([^"]*) to (\d+)$`, kdt.KubeContext.ScaleDeployment)
 	kdt.scenarioContext.Step(`^(?:the )?(clusterrole|clusterrolebinding) with name ([^"]*) should be found`, kdt.KubeContext.ClusterRbacIsFound)
-	// AWS related steps
-	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
-	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
-	kdt.scenarioContext.Step(`^(?:I )?update (?:the )current Auto Scaling Group with ([^"]*) set to ([^"]*)$`, kdt.AwsContext.UpdateFieldOfCurrentASG)
-	kdt.scenarioContext.Step(`(?:the )?current Auto Scaling Group (?:is )scaled to \(min, max\) = \((\d+), (\d+)\)$`, kdt.AwsContext.ScaleCurrentASG)
 	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?nodes list$`, kdt.KubeContext.PrintNodes)
 	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*) with selector ([^"]*)$`, kdt.KubeContext.PrintPodsWithSelector)
 	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*)$`, kdt.KubeContext.PrintPods)
@@ -74,6 +69,11 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) efs-csi-role as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.EfsCsiRoleTrust)
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) ?([^"]*) as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.IamRoleTrust)
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) cluster shared iam role$`, kdt.AwsContext.ClusterSharedIamOperation)
+	// AWS related steps
+	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
+	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
+	kdt.scenarioContext.Step(`^(?:I )?update (?:the )current Auto Scaling Group with ([^"]*) set to ([^"]*)$`, kdt.AwsContext.UpdateFieldOfCurrentASG)
+	kdt.scenarioContext.Step(`(?:the )?current Auto Scaling Group (?:is )scaled to \(min, max\) = \((\d+), (\d+)\)$`, kdt.AwsContext.ScaleCurrentASG)
 }
 
 /*
