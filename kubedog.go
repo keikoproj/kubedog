@@ -73,7 +73,7 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:the )?daemonset ([^"]*) is running in namespace ([^"]*)$`, kdt.KubeContext.DaemonsetIsRunning)
 	kdt.scenarioContext.Step(`^(?:the )?persistentvolume ([^"]*) exists with status (Available|Bound|Released|Failed|Pending)$`, kdt.KubeContext.PersistentVolExists)
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) efs-csi-role as trusted entity to iam role ([^"]*)$`, kdt.KubeContext.EfsCsiRoleTrust)
-	kdt.scenarioContext.Step(`^I (add|remove) cluster shared iam role$`, kdt.KubeContext.ClusterSharedIamOperation)
+	kdt.scenarioContext.Step(`^(?:I )?(add|remove) cluster shared iam role$`, kdt.KubeContext.ClusterSharedIamOperation)
 }
 
 /*
