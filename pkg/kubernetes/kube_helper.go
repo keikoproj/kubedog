@@ -8,15 +8,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
-var ()
-
 // ListPodsWithLabelSelector lists pods with a label selector
-func ListPodsWithLabelSelector(client kubernetes.Interface, namespace, selector string) (*corev1.PodList, error) {
+func (kc *Client) ListPodsWithLabelSelector(namespace, selector string) (*corev1.PodList, error) {
 	pods, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
-		return client.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector})
+		return kc.KubeInterface.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector})
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list pods")
@@ -26,9 +23,9 @@ func ListPodsWithLabelSelector(client kubernetes.Interface, namespace, selector 
 }
 
 // ListNodes lists nodes
-func ListNodes(client kubernetes.Interface) (*corev1.NodeList, error) {
+func (kc *Client) ListNodes() (*corev1.NodeList, error) {
 	nodes, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
-		return client.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
+		return kc.KubeInterface.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list nodes")
@@ -38,9 +35,9 @@ func ListNodes(client kubernetes.Interface) (*corev1.NodeList, error) {
 }
 
 // GetDaemonset gets a daemonset
-func GetDaemonset(client kubernetes.Interface, name, namespace string) (*appsv1.DaemonSet, error) {
+func (kc *Client) GetDaemonset(name, namespace string) (*appsv1.DaemonSet, error) {
 	ds, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
-		return client.AppsV1().DaemonSets(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		return kc.KubeInterface.AppsV1().DaemonSets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get daemonset")
@@ -49,9 +46,9 @@ func GetDaemonset(client kubernetes.Interface, name, namespace string) (*appsv1.
 }
 
 // GetDeployment gets a deployment
-func GetDeployment(client kubernetes.Interface, name, namespace string) (*appsv1.Deployment, error) {
+func (kc *Client) GetDeployment(name, namespace string) (*appsv1.Deployment, error) {
 	deploy, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
-		return client.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		return kc.KubeInterface.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get deployment")
@@ -60,9 +57,9 @@ func GetDeployment(client kubernetes.Interface, name, namespace string) (*appsv1
 }
 
 // GetPersistentVolume gets a pv
-func GetPersistentVolume(client kubernetes.Interface, name string) (*corev1.PersistentVolume, error) {
+func (kc *Client) GetPersistentVolume(name string) (*corev1.PersistentVolume, error) {
 	pvs, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
-		return client.CoreV1().PersistentVolumes().Get(context.Background(), name, metav1.GetOptions{})
+		return kc.KubeInterface.CoreV1().PersistentVolumes().Get(context.Background(), name, metav1.GetOptions{})
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get persistentvolume")

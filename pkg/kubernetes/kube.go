@@ -759,7 +759,7 @@ func (kc *Client) PrintNodes() error {
 		return "NotReady"
 	}
 	// List nodes
-	nodes, _ := ListNodes(kc.KubeInterface)
+	nodes, _ := kc.ListNodes()
 	if nodes != nil {
 		tableFormat := "%-64s%-12s%-24s%-16s"
 		log.Infof(tableFormat, "NAME", "STATUS", "INSTANCEGROUP", "AZ")
@@ -789,7 +789,7 @@ func (kc *Client) PrintPodsWithSelector(namespace, selector string) error {
 		}
 		return fmt.Sprintf("%d/%d", readyCount, containerCount)
 	}
-	pods, err := ListPodsWithLabelSelector(kc.KubeInterface, namespace, selector)
+	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
 	if err != nil {
 		return err
 	}
@@ -808,7 +808,7 @@ func (kc *Client) PrintPodsWithSelector(namespace, selector string) error {
 
 func (kc *Client) daemonsetIsRunning(dsName, namespace string) error {
 	gomega.Eventually(func() error {
-		ds, err := GetDaemonset(kc.KubeInterface, dsName, namespace)
+		ds, err := kc.GetDaemonset(dsName, namespace)
 		if err != nil {
 			return err
 		}
@@ -828,7 +828,7 @@ func (kc *Client) daemonsetIsRunning(dsName, namespace string) error {
 }
 
 func (kc *Client) deploymentIsRunning(deployName, namespace string) error {
-	deploy, err := GetDeployment(kc.KubeInterface, deployName, namespace)
+	deploy, err := kc.GetDeployment(deployName, namespace)
 	if err != nil {
 		return err
 	}
@@ -856,7 +856,7 @@ func (kc *Client) ResourceIsRunning(kind, name, namespace string) error {
 }
 
 func (kc *Client) PersistentVolExists(volName, expectedPhase string) error {
-	vol, err := GetPersistentVolume(kc.KubeInterface, volName)
+	vol, err := kc.GetPersistentVolume(volName)
 	if err != nil {
 		return err
 	}
