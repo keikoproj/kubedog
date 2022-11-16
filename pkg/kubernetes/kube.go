@@ -17,24 +17,17 @@ package kube
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	awssdk "github.com/aws/aws-sdk-go/aws"
-
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
-	"github.com/keikoproj/kubedog/pkg/aws"
 	"github.com/keikoproj/kubedog/pkg/common"
 
 	"github.com/pkg/errors"
@@ -76,11 +69,6 @@ const (
 	DefaultWaiterTries    = 40
 
 	DefaultFilePath = "templates"
-)
-
-var (
-	ClusterAWSRegion = common.GetEnv("AWS_REGION", "us-west-2")
-	BDDClusterName   = common.GetEnv("CLUSTER_NAME", common.GetUsernamePrefix()+"kubedog-bdd")
 )
 
 /*
@@ -864,136 +852,6 @@ func (kc *Client) PersistentVolExists(volName, expectedPhase string) error {
 	phase := string(vol.Status.Phase)
 	if phase != expectedPhase {
 		return fmt.Errorf("persistentvolume had unexpected phase %v, expected phase %v", phase, expectedPhase)
-	}
-	return nil
-}
-
-func (kc *Client) EfsCsiRoleTrust(action, roleName string) error {
-	// Load clients so we can derive account info.
-	sess := aws.GetAWSSession(ClusterAWSRegion)
-	iamClient := iam.New(sess)
-	stsClient := sts.New(sess)
-	accountId := aws.GetAccountNumber(stsClient)
-
-	// Add efs-csi-role-<clustername> as trusted entity
-	var trustedEntityArn = fmt.Sprintf("arn:aws:iam::%s:role/efs-csi-role-%s",
-		accountId, BDDClusterName)
-
-	type StatementEntry struct {
-		Effect    string
-		Action    string
-		Principal map[string]string
-	}
-	type PolicyDocument struct {
-		Version   string
-		Statement []StatementEntry
-	}
-	newPolicyDoc := &PolicyDocument{
-		Version:   "2012-10-17",
-		Statement: make([]StatementEntry, 0),
-	}
-
-	role, err := aws.GetIamRole(roleName, iamClient)
-	if err != nil {
-		return err
-	}
-
-	if role.AssumeRolePolicyDocument != nil {
-		doc := &PolicyDocument{}
-		data, err := url.QueryUnescape(*role.AssumeRolePolicyDocument)
-		if err != nil {
-			return err
-		}
-
-		// parse existing policy
-		err = json.Unmarshal([]byte(data), &doc)
-		if err != nil {
-			return err
-		}
-
-		if len(doc.Statement) > 0 {
-			// loop through existing statements and keep valid trusted entities
-			for _, stmnt := range doc.Statement {
-				if val, ok := stmnt.Principal["AWS"]; ok {
-					if strings.HasPrefix(val, "arn:aws:iam") && val != trustedEntityArn {
-						newPolicyDoc.Statement = append(newPolicyDoc.Statement, stmnt)
-					}
-				}
-			}
-		}
-	}
-
-	switch action {
-	case "add":
-		newStatment := StatementEntry{
-			Effect: "Allow",
-			Principal: map[string]string{
-				"AWS": trustedEntityArn,
-			},
-			Action: "sts:AssumeRole",
-		}
-
-		newPolicyDoc.Statement = append(newPolicyDoc.Statement, newStatment)
-	case "remove":
-		// Do nothing, we already cleansed the trusted entity role above if we're not adding
-	}
-
-	policyJSON, err := json.Marshal(newPolicyDoc)
-	if err != nil {
-		return err
-	}
-
-	_, err = aws.UpdateIAMAssumeRole(roleName, policyJSON, iamClient)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (kc *Client) ClusterSharedIamOperation(operation string) error {
-	// Load clients so we can derive account info.
-	var (
-		sess      = aws.GetAWSSession(ClusterAWSRegion)
-		iamClient = iam.New(sess)
-		stsClient = sts.New(sess)
-		accountId = aws.GetAccountNumber(stsClient)
-		roleName  = fmt.Sprintf("shared.%s", BDDClusterName)
-		iamFmt    = "arn:aws:iam::%s:%s/%s"
-	)
-
-	// for trusted entity
-	clusterSharedrole := fmt.Sprintf(iamFmt, accountId, "role", roleName)
-	rootIAM := fmt.Sprintf("arn:aws:iam::%s:%s", accountId, "root")
-	clusterSharedPolicy := fmt.Sprintf(iamFmt, accountId, "policy", roleName)
-	assumeRoleDoc := `{"Version":"2012-10-17","Statement":[{"Effect": "Allow", "Action": "sts:AssumeRole", "Principal": {"AWS": "%s"}}]}`
-	roleDocument := []byte(fmt.Sprintf(assumeRoleDoc, rootIAM))
-	policyDocT := `{"Version":"2012-10-17","Statement":[{"Effect": "Allow", "Action": "sts:AssumeRole", "Resource": "%s"}]}`
-	policyDocument := []byte(fmt.Sprintf(policyDocT, clusterSharedrole))
-
-	switch operation {
-	case "add":
-		role, err := aws.PutIAMRole(roleName, "shared cluster role", roleDocument, iamClient)
-		if err != nil {
-			return errors.Wrap(err, "failed to create shared cluster role")
-		}
-		log.Infof("BDD >> created shared iam role: %s", awssdk.StringValue(role.Arn))
-
-		policy, err := aws.PutManagedPolicy(roleName, clusterSharedPolicy, "shared cluster policy", policyDocument, iamClient)
-		if err != nil {
-			return errors.Wrap(err, "failed to create shared cluster managed policy")
-		}
-		log.Infof("BDD >> created shared iam policy: %s", awssdk.StringValue(policy.Arn))
-	case "remove":
-		err := aws.DeleteManagedPolicy(clusterSharedPolicy, iamClient)
-		if err != nil {
-			return errors.Wrap(err, "failed to delete shared cluster role")
-		}
-
-		err = aws.DeleteIAMRole(roleName, iamClient)
-		if err != nil {
-			return errors.Wrap(err, "failed to delete shared cluster managed policy")
-		}
 	}
 	return nil
 }
