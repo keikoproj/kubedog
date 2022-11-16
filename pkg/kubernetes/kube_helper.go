@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // ListPodsWithLabelSelector lists pods with a label selector
@@ -65,4 +66,12 @@ func (kc *Client) GetPersistentVolume(name string) (*corev1.PersistentVolume, er
 		return nil, errors.Wrap(err, "failed to get persistentvolume")
 	}
 	return pvs.(*corev1.PersistentVolume), nil
+}
+
+func (kc *Client) ListInstanceGroups() (*unstructured.UnstructuredList, error) {
+	igs, err := kc.DynamicInterface.Resource(InstanceGroupResource).Namespace(InstanceGroupNamespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return igs, nil
 }

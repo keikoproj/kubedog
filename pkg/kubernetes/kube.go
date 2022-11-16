@@ -36,6 +36,7 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -68,6 +69,22 @@ const (
 	DefaultWaiterTries    = 40
 
 	DefaultFilePath = "templates"
+)
+
+var (
+	// InstanceGroupNamespace is the default namespace to use of instance-group submission
+	InstanceGroupNamespace = "instance-manager"
+	// CustomResourceGroup is the group of the instance-manager API/custom resource definition
+	CustomResourceGroup = "instancemgr"
+	// CustomResourceAPIVersion is the version of the instance-manager API/custom resource definition
+	CustomResourceAPIVersion = "v1alpha1"
+	// CustomeResourceDomain is the domain of the instance-manager API/custom resource definition
+	CustomeResourceDomain = "keikoproj.io"
+	// CustomResourceName is the name of the API/custom resource definition
+	CustomResourceName = fmt.Sprintf("%v.%v", CustomResourceGroup, CustomeResourceDomain)
+	// CustomResourceKind is the resource kind (plural) of the instance-manager API/custom resource definition
+	CustomResourceKind    = "instancegroups"
+	InstanceGroupResource = schema.GroupVersionResource{Group: CustomResourceName, Version: CustomResourceAPIVersion, Resource: CustomResourceKind}
 )
 
 /*
@@ -876,4 +893,31 @@ func (kc *Client) PersistentVolExists(volName, expectedPhase string) error {
 		return fmt.Errorf("persistentvolume had unexpected phase %v, expected phase %v", phase, expectedPhase)
 	}
 	return nil
+}
+
+func (kc *Client) VerifyInstanceGroups() error {
+	igs, err := kc.ListInstanceGroups()
+	if err != nil {
+		return err
+	}
+
+	for _, ig := range igs.Items {
+		if !isInstanceGroupStatus(&ig, "ready") {
+			return errors.New("BDD >> failed while instanceGroup state")
+		}
+		log.Infof("BDD >> Ig %v is valid", ig.GetName())
+	}
+
+	return nil
+}
+
+func isInstanceGroupStatus(instanceGroup *unstructured.Unstructured, status string) bool {
+	var instanceGroupCurrentState string
+	if val, ok, _ := unstructured.NestedString(instanceGroup.UnstructuredContent(), "status", "currentState"); ok {
+		instanceGroupCurrentState = val
+	}
+	if strings.EqualFold(instanceGroupCurrentState, status) {
+		return true
+	}
+	return false
 }
