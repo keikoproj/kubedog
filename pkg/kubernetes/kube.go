@@ -806,7 +806,7 @@ func (kc *Client) PrintPodsWithSelector(namespace, selector string) error {
 	return nil
 }
 
-func (kc *Client) DaemonsetIsRunning(dsName, namespace string) error {
+func (kc *Client) daemonsetIsRunning(dsName, namespace string) error {
 	gomega.Eventually(func() error {
 		ds, err := GetDaemonset(kc.KubeInterface, dsName, namespace)
 		if err != nil {
@@ -827,7 +827,7 @@ func (kc *Client) DaemonsetIsRunning(dsName, namespace string) error {
 	return nil
 }
 
-func (kc *Client) DeploymentIsRunning(deployName, namespace string) error {
+func (kc *Client) deploymentIsRunning(deployName, namespace string) error {
 	deploy, err := GetDeployment(kc.KubeInterface, deployName, namespace)
 	if err != nil {
 		return err
@@ -841,6 +841,18 @@ func (kc *Client) DeploymentIsRunning(deployName, namespace string) error {
 	}
 
 	return nil
+}
+
+func (kc *Client) ResourceIsRunning(kind, name, namespace string) error {
+	kind = strings.ToLower(kind)
+	switch kind {
+	case "daemonset":
+		return kc.daemonsetIsRunning(name, namespace)
+	case "deployment":
+		return kc.deploymentIsRunning(name, namespace)
+	default:
+		return fmt.Errorf("invalid resource type: %s", kind)
+	}
 }
 
 func (kc *Client) PersistentVolExists(volName, expectedPhase string) error {
