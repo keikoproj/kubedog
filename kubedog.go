@@ -71,7 +71,8 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) efs-csi-role as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.EfsCsiRoleTrust)
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) ?([^"]*) as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.IamRoleTrust)
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) cluster shared iam role$`, kdt.AwsContext.ClusterSharedIamOperation)
-	kdt.scenarioContext.Step(`^verify InstanceGroups (?:are )?in "ready" state$`, kdt.KubeContext.VerifyInstanceGroups)
+	kdt.scenarioContext.Step(`^(?:I )?verify InstanceGroups (?:are )?in "ready" state$`, kdt.KubeContext.VerifyInstanceGroups)
+	kdt.scenarioContext.Step(`^(?:I )?validate Prometheus Statefulset ([^"]*) in namespace ([^"]*) has volumeClaimTemplates name ([^"]*)$`, kdt.KubeContext.ValidatePrometheusVolumeClaimTemplatesName)
 	// AWS related steps
 	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
 	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)

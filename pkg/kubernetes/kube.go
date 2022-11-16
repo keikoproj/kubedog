@@ -921,3 +921,53 @@ func isInstanceGroupStatus(instanceGroup *unstructured.Unstructured, status stri
 	}
 	return false
 }
+
+func (kc *Client) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName string, namespace string, volumeClaimTemplatesName string) error {
+	var sfsvolumeClaimTemplatesName string
+	// Prometheus StatefulSets deployed, then validate volumeClaimTemplate name.
+	// Validation required:
+	// 	- To retain existing persistent volumes and not to loose any data.
+	//	- And avoid creating new name persistent volumes.
+	sfs, err := kc.ListStatefulSets(namespace)
+	if err != nil {
+		return err
+	}
+	for _, sfsItem := range sfs.Items {
+		if sfsItem.Name == statefulsetName {
+			pvcClaimRef := sfsItem.Spec.VolumeClaimTemplates
+			sfsvolumeClaimTemplatesName = pvcClaimRef[0].Name
+		}
+	}
+	if sfsvolumeClaimTemplatesName == "" {
+		return errors.Errorf("prometheus statefulset not deployed, name given: %v", volumeClaimTemplatesName)
+	} else if sfsvolumeClaimTemplatesName != volumeClaimTemplatesName {
+		return errors.Errorf("Prometheus volumeClaimTemplate name changed', got: %v", sfsvolumeClaimTemplatesName)
+	}
+	// Validate Persistent Volume label
+	requiredLabels := []string{"failure-domain.beta.kubernetes.io/zone", "topology.kubernetes.io/zone"}
+	err = kc.validatePVLabels(volumeClaimTemplatesName, requiredLabels)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (kc *Client) validatePVLabels(volumeClaimTemplatesName string, requiredLabels []string) error {
+	// Get PersistentVolume list
+	pv, err := kc.ListPersistentVolumes()
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, item := range pv.Items {
+		pvcname := item.Spec.ClaimRef.Name
+		if strings.Contains(pvcname, volumeClaimTemplatesName) {
+			for _, label := range requiredLabels {
+				if item.Labels[label] == "" {
+					return errors.Errorf("Prometheus volume %s does not have label %s", pvcname, item.Labels[label])
+				}
+			}
+		}
+	}
+	return nil
+}

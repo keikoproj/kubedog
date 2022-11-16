@@ -75,3 +75,25 @@ func (kc *Client) ListInstanceGroups() (*unstructured.UnstructuredList, error) {
 	}
 	return igs, nil
 }
+
+// ListStatefulSets lists statefulsets
+func (kc *Client) ListStatefulSets(namespace string) (*appsv1.StatefulSetList, error) {
+	sts, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
+		return kc.KubeInterface.AppsV1().StatefulSets(namespace).List(context.Background(), metav1.ListOptions{})
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list statefulsets")
+	}
+	return sts.(*appsv1.StatefulSetList), nil
+}
+
+// ListPersistentVolume lists pvs
+func (kc *Client) ListPersistentVolumes() (*corev1.PersistentVolumeList, error) {
+	pvs, err := common.RetryOnError(&common.DefaultRetry, common.IsRetriable, func() (interface{}, error) {
+		return kc.KubeInterface.CoreV1().PersistentVolumes().List(context.Background(), metav1.ListOptions{})
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list persistentvolumes")
+	}
+	return pvs.(*corev1.PersistentVolumeList), nil
+}
