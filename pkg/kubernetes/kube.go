@@ -123,11 +123,7 @@ func (kc *Client) AKubernetesCluster() error {
 ResourceOperation performs the given operation on the resource defined in resourceFileName. The operation could be “create”, “submit”, “delete”, or "update".
 */
 func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
-	unstructuredResource, err := kc.parseSingleResource(resourceFileName)
-	if err != nil {
-		return err
-	}
-	return kc.unstructuredResourceOperation(operation, "", unstructuredResource)
+	return kc.ResourceOperationInNamespace(operation, resourceFileName, "")
 }
 
 /*
@@ -253,6 +249,21 @@ func (kc *Client) unstructuredResourceOperation(operation, ns string, unstructur
 		log.Infof("%s %s has been deleted from namespace %s", resource.GetKind(), resource.GetName(), ns)
 	default:
 		return fmt.Errorf("unsupported operation: %s", operation)
+	}
+	return nil
+}
+
+func (kc *Client) ResourceOperationWithResult(operation, resourceFileName, expectedResult string) error {
+	return kc.ResourceOperationWithResultInNamespace(operation, resourceFileName, "", expectedResult)
+}
+
+func (kc *Client) ResourceOperationWithResultInNamespace(operation, resourceFileName, namespace, expectedResult string) error {
+	var expectError = strings.EqualFold(expectedResult, "fail")
+	err := kc.ResourceOperationInNamespace(operation, resourceFileName, "")
+	if !expectError && err != nil {
+		return fmt.Errorf("unexpected error when %s %s: %s", operation, resourceFileName, err.Error())
+	} else if expectError && err == nil {
+		return fmt.Errorf("expected error when %s %s, but received none", operation, resourceFileName)
 	}
 	return nil
 }

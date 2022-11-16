@@ -52,6 +52,8 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+) in (?:the )?([^"]*) namespace`, kdt.KubeContext.ResourceOperationInNamespace)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resources in (\S+)$`, kdt.KubeContext.MultiResourceOperation)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resources in (\S+) in (?:the )?([^"]*) namespace`, kdt.KubeContext.MultiResourceOperationInNamespace)
+	kdt.scenarioContext.Step(`^(?:if |when )?I (create|submit|delete|update) (?:the )?resource (\S+), the operation should (succeed|fail)$`, kdt.KubeContext.ResourceOperationWithResult)
+	kdt.scenarioContext.Step(`^(?:if |when )?I (create|submit|delete|update) (?:the )?resource (\S+) in (?:the )?([^"]*) namespace, the operation should (succeed|fail)$`, kdt.KubeContext.ResourceOperationWithResultInNamespace)
 	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) should be (created|deleted)$`, kdt.KubeContext.ResourceShouldBe)
 	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) converged to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
 	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) should converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
