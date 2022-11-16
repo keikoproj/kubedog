@@ -22,6 +22,7 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,6 +32,12 @@ type TemplateArgument struct {
 	Default             string
 	Mandatory           bool
 }
+
+type condFunc func() (interface{}, error)
+
+var (
+	KubernetesClusterTagKey = "KubernetesCluster"
+)
 
 // GetValue returns the value of the Environment Variable defined by 'TemplateArgument.EnvironmentVariable'.
 // If 'TemplateArgument.EnvironmentVariable' is empty or the ENV. VAR. it defines is unset, 'TemplateArgument.Default' is returned.

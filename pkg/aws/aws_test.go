@@ -21,13 +21,31 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/onsi/gomega"
+)
+
+const (
+	TestAwsAccountNumber = "0000123456789"
 )
 
 type mockAutoScalingClient struct {
 	autoscalingiface.AutoScalingAPI
 	ASGs []*autoscaling.Group
 	Err  error
+}
+
+type STSMocker struct {
+	stsiface.STSAPI
+}
+
+func (s *STSMocker) GetCallerIdentity(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
+	output := &sts.GetCallerIdentityOutput{
+		Account: aws.String(TestAwsAccountNumber),
+	}
+
+	return output, nil
 }
 
 func TestAnASGNamed(t *testing.T) {
@@ -237,4 +255,12 @@ func (asc *mockAutoScalingClient) DescribeAutoScalingGroups(input *autoscaling.D
 		AutoScalingGroups: ASGs,
 	}
 	return out, asc.Err
+}
+
+func TestGetAccountNumber(t *testing.T) {
+	g := gomega.NewGomegaWithT(t)
+	stsClient := &STSMocker{}
+
+	output := GetAccountNumber(stsClient)
+	g.Expect(output).ToNot(gomega.Equal(""))
 }
