@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/keikoproj/kubedog/pkg/common"
 	log "github.com/sirupsen/logrus"
 )
@@ -50,7 +51,7 @@ func GetIamRole(roleName string, iamClient iamiface.IAMAPI) (*iam.Role, error) {
 	params := &iam.GetRoleInput{
 		RoleName: aws.String(roleName),
 	}
-	out, err := common.RetryOnError(&common.DefaultRetry, isThrottling, func() (interface{}, error) {
+	out, err := util.RetryOnError(&util.DefaultRetry, isThrottling, func() (interface{}, error) {
 		return iamClient.GetRole(params)
 	})
 	if err != nil {
@@ -89,7 +90,7 @@ func CreateIAMRole(name, description string, policyJSON []byte, iamClient iamifa
 	if len(tags) > 0 {
 		role.Tags = tags
 	}
-	out, err := common.RetryOnError(&common.DefaultRetry, isThrottling, func() (interface{}, error) {
+	out, err := util.RetryOnError(&util.DefaultRetry, isThrottling, func() (interface{}, error) {
 		return iamClient.CreateRole(role)
 	})
 
@@ -107,7 +108,7 @@ func UpdateIAMAssumeRole(roleName string, policyJSON []byte, iamClient iamiface.
 		RoleName:       aws.String(roleName),
 		PolicyDocument: aws.String(json),
 	}
-	out, err := common.RetryOnError(&common.DefaultRetry, isThrottling, func() (interface{}, error) {
+	out, err := util.RetryOnError(&util.DefaultRetry, isThrottling, func() (interface{}, error) {
 		return iamClient.UpdateAssumeRolePolicy(params)
 	})
 	if err != nil {
@@ -174,7 +175,7 @@ func GetManagedPolicy(policyARN string, iamClient iamiface.IAMAPI) (*iam.Policy,
 	policyParams := &iam.GetPolicyInput{
 		PolicyArn: aws.String(policyARN),
 	}
-	out, err := common.RetryOnError(&common.DefaultRetry, isThrottling, func() (interface{}, error) {
+	out, err := util.RetryOnError(&util.DefaultRetry, isThrottling, func() (interface{}, error) {
 		return iamClient.GetPolicy(policyParams)
 	})
 	if err != nil {
@@ -184,7 +185,7 @@ func GetManagedPolicy(policyARN string, iamClient iamiface.IAMAPI) (*iam.Policy,
 		PolicyArn: aws.String(policyARN),
 		VersionId: out.(*iam.GetPolicyOutput).Policy.DefaultVersionId,
 	}
-	policyVersionOut, err := common.RetryOnError(&common.DefaultRetry, isThrottling, func() (interface{}, error) {
+	policyVersionOut, err := util.RetryOnError(&util.DefaultRetry, isThrottling, func() (interface{}, error) {
 		return iamClient.GetPolicyVersion(policyVersionParams)
 	})
 	if err != nil {
@@ -232,7 +233,7 @@ func CreateManagedPolicy(name, description string, policyJSON []byte, iamClient 
 		PolicyName:     aws.String(name),
 	}
 
-	out, err := common.RetryOnError(&common.DefaultRetry, isThrottling, func() (interface{}, error) {
+	out, err := util.RetryOnError(&util.DefaultRetry, isThrottling, func() (interface{}, error) {
 		return iamClient.CreatePolicy(params)
 	})
 	if err != nil {
@@ -247,7 +248,7 @@ func ListManagedPolicyVersions(arn string, iamClient iamiface.IAMAPI) ([]*iam.Po
 	params := &iam.ListPolicyVersionsInput{
 		PolicyArn: aws.String(arn),
 	}
-	listVersionsOutput, err := common.RetryOnError(&common.DefaultRetry, isThrottling, func() (interface{}, error) {
+	listVersionsOutput, err := util.RetryOnError(&util.DefaultRetry, isThrottling, func() (interface{}, error) {
 		return iamClient.ListPolicyVersions(params)
 	})
 	if err != nil {
@@ -275,7 +276,7 @@ func DeleteManagedPolicyVersion(arn, id string, iamClient iamiface.IAMAPI) error
 		PolicyArn: aws.String(arn),
 		VersionId: aws.String(id),
 	}
-	_, err := common.RetryOnError(&common.DefaultRetry, isThrottling, func() (interface{}, error) {
+	_, err := util.RetryOnError(&util.DefaultRetry, isThrottling, func() (interface{}, error) {
 		return iamClient.DeletePolicyVersion(params)
 	})
 	if err != nil {
@@ -292,7 +293,7 @@ func CreateManagedPolicyVersion(arn string, policyJSON []byte, isDefault bool, i
 		PolicyDocument: aws.String(json),
 		SetAsDefault:   aws.Bool(isDefault),
 	}
-	out, err := common.RetryOnError(&common.DefaultRetry, isThrottling, func() (interface{}, error) {
+	out, err := util.RetryOnError(&util.DefaultRetry, isThrottling, func() (interface{}, error) {
 		return iamClient.CreatePolicyVersion(params)
 	})
 	if err != nil {
@@ -323,7 +324,7 @@ func DeleteManagedPolicy(arn string, iamClient iamiface.IAMAPI) error {
 	params := &iam.DeletePolicyInput{
 		PolicyArn: aws.String(arn),
 	}
-	_, err = common.RetryOnError(&common.DefaultRetry, isThrottling, func() (interface{}, error) {
+	_, err = util.RetryOnError(&util.DefaultRetry, isThrottling, func() (interface{}, error) {
 		return iamClient.DeletePolicy(params)
 	})
 	if err != nil {
@@ -337,7 +338,7 @@ func DeleteIAMRole(roleName string, iamClient iamiface.IAMAPI) error {
 	params := &iam.DeleteRoleInput{
 		RoleName: aws.String(roleName),
 	}
-	_, err := common.RetryOnError(&common.DefaultRetry, isThrottling, func() (interface{}, error) {
+	_, err := util.RetryOnError(&util.DefaultRetry, isThrottling, func() (interface{}, error) {
 		return iamClient.DeleteRole(params)
 	})
 	if err != nil {
