@@ -898,31 +898,37 @@ func (kc *Client) ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(na
 	return nil
 }
 
-func (kc *Client) ThePodInNamespaceShouldHaveLabels(podName string,
+func (kc *Client) ThePodsInNamespaceShouldHaveLabels(selector string,
 	namespace string, labels string) error {
-	pod, err := kc.KubeInterface.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+	podList, err := kc.ListPodsWithLabelSelector(namespace, selector)
 	if err != nil {
-		return errors.New("Error fetching pod: " + err.Error())
+		return fmt.Errorf("error getting pods with selector %q: %v", selector, err)
 	}
 
-	inputLabels := make(map[string]string)
-	slc := strings.Split(labels, ",")
-	for _, item := range slc {
-		vals := strings.Split(item, "=")
-		if len(vals) != 2 {
-			continue
-		}
-
-		inputLabels[vals[0]] = vals[1]
+	if len(podList.Items) == 0 {
+		return fmt.Errorf("No pods matched selector '%s'", selector)
 	}
 
-	for k, v := range inputLabels {
-		pV, ok := pod.Labels[k]
-		if !ok {
-			return errors.New(fmt.Sprintf("Label %s missing in pod/namespace %s", k, podName+"/"+namespace))
+	for _, pod := range podList.Items {
+		inputLabels := make(map[string]string)
+		slc := strings.Split(labels, ",")
+		for _, item := range slc {
+			vals := strings.Split(item, "=")
+			if len(vals) != 2 {
+				continue
+			}
+
+			inputLabels[vals[0]] = vals[1]
 		}
-		if v != pV {
-			return errors.New(fmt.Sprintf("Label value %s doesn't match expected %s for key %s in pod/namespace %s", pV, v, k, podName+"/"+namespace))
+
+		for k, v := range inputLabels {
+			pV, ok := pod.Labels[k]
+			if !ok {
+				return fmt.Errorf("Label %s missing in pod/namespace %s", k, pod.Name+"/"+namespace)
+			}
+			if v != pV {
+				return fmt.Errorf("Label value %s doesn't match expected %s for key %s in pod/namespace %s", pV, v, k, pod.Name+"/"+namespace)
+			}
 		}
 	}
 

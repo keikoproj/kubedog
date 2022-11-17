@@ -16,10 +16,13 @@ package kube
 
 import (
 	"context"
+	"io/ioutil"
+	"path/filepath"
+	"testing"
+
 	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
 	appsv1 "k8s.io/api/apps/v1"
 	hpa "k8s.io/api/autoscaling/v2beta2"
 	v1 "k8s.io/api/core/v1"
@@ -38,8 +41,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	kTesting "k8s.io/client-go/testing"
-	"path/filepath"
-	"testing"
 )
 
 func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
@@ -730,7 +731,7 @@ func Test_unstructuredResourceOperation(t *testing.T) {
 
 func Test_ThePodsInNamespaceShouldHaveLabels(t *testing.T) {
 	ns := v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
-	pod := v1.Pod{
+	podWithLabels1 := v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "pod-foo-xhhxj",
 			Namespace: "foo",
@@ -740,13 +741,33 @@ func Test_ThePodsInNamespaceShouldHaveLabels(t *testing.T) {
 			},
 		},
 	}
-	clientNoErr := fake.NewSimpleClientset(&ns, &pod)
+	podWithLabels2 := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-foo-xhhzd",
+			Namespace: "foo",
+			Labels: map[string]string{
+				"app":   "foo",
+				"label": "true",
+			},
+		},
+	}
+	podMissingLabel := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-foo-xhhzr",
+			Namespace: "foo",
+			Labels: map[string]string{
+				"app": "foo",
+			},
+		},
+	}
+	clientNoErr := fake.NewSimpleClientset(&ns, &podWithLabels1, &podWithLabels2)
+	clientErr := fake.NewSimpleClientset(&ns, &podWithLabels1, &podWithLabels2, &podMissingLabel)
 
 	type fields struct {
 		KubeInterface kubernetes.Interface
 	}
 	type args struct {
-		podName   string
+		selector  string
 		namespace string
 		labels    string
 	}
@@ -757,26 +778,38 @@ func Test_ThePodsInNamespaceShouldHaveLabels(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Pod should have labels",
+			name: "No pods found",
+			fields: fields{
+				KubeInterface: clientErr,
+			},
+			args: args{
+				selector:  "app=doesnotexist",
+				namespace: "foo",
+				labels:    "app=foo,label=true",
+			},
+			wantErr: true,
+		},
+		{
+			name: "Pods should have labels",
 			fields: fields{
 				KubeInterface: clientNoErr,
 			},
 			args: args{
-				podName:   "pod-foo-xhhxj",
+				selector:  "app=foo",
 				namespace: "foo",
 				labels:    "app=foo,label=true",
 			},
 			wantErr: false,
 		},
 		{
-			name: "Error from pod missing labels",
+			name: "Error from pod missing label",
 			fields: fields{
-				KubeInterface: clientNoErr,
+				KubeInterface: clientErr,
 			},
 			args: args{
-				podName:   "pod-foo-xhhxj",
+				selector:  "app=foo",
 				namespace: "foo",
-				labels:    "app=not-foo",
+				labels:    "app=foo,label=true",
 			},
 			wantErr: true,
 		},
@@ -786,7 +819,7 @@ func Test_ThePodsInNamespaceShouldHaveLabels(t *testing.T) {
 			kc := &Client{
 				KubeInterface: tt.fields.KubeInterface,
 			}
-			if err := kc.ThePodInNamespaceShouldHaveLabels(tt.args.podName, tt.args.namespace, tt.args.labels); (err != nil) != tt.wantErr {
+			if err := kc.ThePodsInNamespaceShouldHaveLabels(tt.args.selector, tt.args.namespace, tt.args.labels); (err != nil) != tt.wantErr {
 				t.Errorf("ThePodsInNamespaceShouldHaveLabels() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

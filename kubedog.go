@@ -73,7 +73,7 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^the pods in namespace ([^"]*) with selector ([^"]*) doesn't have ([^"]*) in logs since ([^"]*) time$`, kdt.KubeContext.NoMatchingStringInLogsSinceTime)
 	kdt.scenarioContext.Step(`^the pods in namespace ([^"]*) with selector ([^"]*) have no errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime)
 	kdt.scenarioContext.Step(`^the pods in namespace ([^"]*) with selector ([^"]*) have some errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime)
-	kdt.scenarioContext.Step(`^the pod ([^"]*) in namespace ([^"]*) should have labels ([^"]*)$`, kdt.KubeContext.ThePodInNamespaceShouldHaveLabels)
+	kdt.scenarioContext.Step(`^the pods with selector (\S+) in namespace (\S+) should have labels ([^"]*)$`, kdt.KubeContext.ThePodsInNamespaceShouldHaveLabels)
 
 	// AWS related steps
 	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
