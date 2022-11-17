@@ -222,7 +222,7 @@ func TestPositiveResourceShouldBe(t *testing.T) {
 		FilesPath:          "../../test/templates",
 	}
 
-	err = kc.ResourceShouldBe(fileName, ResourceStateCreated)
+	err = kc.ResourceShouldBe(fileName, StateCreated)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	fakeDiscovery.ReactionChain[0] = &kTesting.SimpleReactor{
@@ -231,7 +231,7 @@ func TestPositiveResourceShouldBe(t *testing.T) {
 		Reaction: deletedReactionFunc,
 	}
 
-	err = kc.ResourceShouldBe(fileName, ResourceStateDeleted)
+	err = kc.ResourceShouldBe(fileName, StateDeleted)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
