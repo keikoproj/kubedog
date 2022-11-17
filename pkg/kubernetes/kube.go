@@ -21,16 +21,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
-  
+
 	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-	log "github.com/sirupsen/logrus"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -768,7 +765,7 @@ func (kc *Client) ThePodsInNamespaceWithSelectorHasThisSentenceInLogsSinceTime(n
 			return fmt.Errorf("Time '%s' was not remembered", sinceTime)
 		}
 
-		pods, err := listPodsWithLabelSelector(kc.KubeInterface, namespace, selector)
+		pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
 		if err != nil {
 			return err
 		}
@@ -789,55 +786,6 @@ func (kc *Client) ThePodsInNamespaceWithSelectorHasThisSentenceInLogsSinceTime(n
 		return fmt.Sprintf("Pod has no %s message in the logs", searchkeyword)
 	})
 	return nil
-}
-
-// ListPodsWithLabelSelector lists pods with a label selector
-func listPodsWithLabelSelector(client kubernetes.Interface, namespace, selector string) (*corev1.PodList, error) {
-	pods, err := retryOnError(&DefaultRetry, isRetriable, func() (interface{}, error) {
-		return client.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector})
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to list pods")
-	}
-
-	return pods.(*corev1.PodList), nil
-}
-
-// TODO: Move this when other prs are merged in
-type condFunc func() (interface{}, error)
-
-// TODO: Move this when other prs are merged in
-func retryOnError(backoff *wait.Backoff, retryExpected func(error) bool, fn condFunc) (interface{}, error) {
-	var ex, lastErr error
-	var out interface{}
-	caller := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
-	err := wait.ExponentialBackoff(*backoff, func() (bool, error) {
-		out, ex = fn()
-		switch {
-		case ex == nil:
-			return true, nil
-		case retryExpected(ex):
-			lastErr = ex
-			log.Warnf("A caller %v retried due to exception: %v", caller, ex)
-			return false, nil
-		default:
-			return false, ex
-		}
-	})
-	if err == wait.ErrWaitTimeout {
-		err = lastErr
-	}
-	return out, err
-}
-
-// TODO: Move this when other prs are merged in
-func isRetriable(err error) bool {
-	for _, msg := range retriableErrors {
-		if strings.Contains(err.Error(), msg) {
-			return true
-		}
-	}
-	return false
 }
 
 func findStringInPodLogs(kc *Client, pod corev1.Pod,
@@ -887,7 +835,7 @@ func (kc *Client) NoMatchingStringInLogsSinceTime(namespace,
 		return fmt.Errorf("Time '%s' was not remembered", sinceTime)
 	}
 
-	pods, err := listPodsWithLabelSelector(kc.KubeInterface, namespace, selector)
+	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
 	if err != nil {
 		return err
 	}
@@ -919,7 +867,7 @@ func (kc *Client) ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(name
 		return errors.Errorf("Time '%s' was not remembered", sinceTime)
 	}
 
-	pods, err := listPodsWithLabelSelector(kc.KubeInterface, namespace, selector)
+	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
 	if err != nil {
 		return err
 	}
