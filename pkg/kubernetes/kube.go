@@ -72,7 +72,7 @@ const (
 	DefaultFilePath = "templates"
 )
 
-var (
+const (
 	// InstanceGroupNamespace is the default namespace to use of instance-group submission
 	InstanceGroupNamespace = "instance-manager"
 	// CustomResourceGroup is the group of the instance-manager API/custom resource definition
@@ -81,10 +81,13 @@ var (
 	CustomResourceAPIVersion = "v1alpha1"
 	// CustomeResourceDomain is the domain of the instance-manager API/custom resource definition
 	CustomeResourceDomain = "keikoproj.io"
-	// CustomResourceName is the name of the API/custom resource definition
-	CustomResourceName = fmt.Sprintf("%v.%v", CustomResourceGroup, CustomeResourceDomain)
 	// CustomResourceKind is the resource kind (plural) of the instance-manager API/custom resource definition
-	CustomResourceKind    = "instancegroups"
+	CustomResourceKind = "instancegroups"
+)
+
+var (
+	// CustomResourceName is the name of the API/custom resource definition
+	CustomResourceName    = fmt.Sprintf("%v.%v", CustomResourceGroup, CustomeResourceDomain)
 	InstanceGroupResource = schema.GroupVersionResource{Group: CustomResourceName, Version: CustomResourceAPIVersion, Resource: CustomResourceKind}
 )
 
