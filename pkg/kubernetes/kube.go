@@ -29,6 +29,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
+	"github.com/keikoproj/kubedog/pkg/common"
 
 	"github.com/pkg/errors"
 	vegeta "github.com/tsenart/vegeta/v12/lib"
@@ -65,9 +66,6 @@ const (
 
 	NodeStateReady = "ready"
 	NodeStateFound = "found"
-
-	DurationMinutes = "minutes"
-	DurationSeconds = "seconds"
 
 	DefaultWaiterInterval = time.Second * 30
 	DefaultWaiterTries    = 40
@@ -1027,9 +1025,9 @@ func (kc *Client) SendTrafficToIngress(tps int, name, namespace string, port int
 	rate := vegeta.Rate{Freq: tps, Per: time.Second}
 	var d time.Duration
 	switch durationUnits {
-	case DurationMinutes:
+	case common.DurationMinutes:
 		d = time.Minute * time.Duration(duration)
-	case DurationSeconds:
+	case common.DurationSeconds:
 		d = time.Second * time.Duration(duration)
 	default:
 		return fmt.Errorf("unsupported duration units: '%s'", durationUnits)

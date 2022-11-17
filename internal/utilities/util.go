@@ -213,10 +213,6 @@ func GetClusterName() (string, error) {
 	return GetEnvironmentVariable(clusterNameEnvironmentVariable)
 }
 
-func GetAwsRegion() (string, error) {
-	return GetEnvironmentVariable(awsRegionEnvironmentVariable)
-}
-
 func GetEnvironmentVariable(envName string) (string, error) {
 	if envValue, ok := os.LookupEnv(envName); ok {
 		return envValue, nil

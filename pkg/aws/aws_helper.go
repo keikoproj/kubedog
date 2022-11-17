@@ -2,7 +2,6 @@ package aws
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/route53"
@@ -38,7 +37,6 @@ func (c *Client) GetDNSRecord(dnsName string, hostedZoneID string) (string, erro
 }
 
 func (c *Client) DnsNameInHostedZoneID(dnsName, hostedZoneID string) error {
-	time.Sleep(120 * time.Second)
 	recordValue, err := c.GetDNSRecord(dnsName, hostedZoneID)
 	if err != nil {
 		if fmt.Sprintf("more than 1 records for hostedZoneID %s with dnsName %s", hostedZoneID, dnsName) == string(err.Error()) {

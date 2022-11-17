@@ -16,14 +16,21 @@ limitations under the License.
 package common
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"text/template"
+	"time"
 
 	"github.com/pkg/errors"
 
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	DurationMinutes = "minutes"
+	DurationSeconds = "seconds"
 )
 
 type TemplateArgument struct {
@@ -92,4 +99,17 @@ func GenerateFileFromTemplate(templatedFilePath string, templateArgs interface{}
 	log.Infof("Generated file '%s': \n %s", generatedFilePath, string(generated))
 
 	return generatedFilePath, nil
+}
+
+func WaitFor(duration int, durationUnits string) error {
+	switch durationUnits {
+	case DurationMinutes:
+		time.Sleep(time.Duration(duration) * time.Minute)
+		return nil
+	case DurationSeconds:
+		time.Sleep(time.Duration(duration) * time.Second)
+		return nil
+	default:
+		return fmt.Errorf("unsupported duration units: '%s'", durationUnits)
+	}
 }

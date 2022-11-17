@@ -20,6 +20,7 @@ import (
 
 	"github.com/cucumber/godog"
 	aws "github.com/keikoproj/kubedog/pkg/aws"
+	"github.com/keikoproj/kubedog/pkg/common"
 	kube "github.com/keikoproj/kubedog/pkg/kubernetes"
 	log "github.com/sirupsen/logrus"
 )
@@ -46,6 +47,7 @@ func (kdt *Test) Run() {
 		os.Exit(testFailedStatus)
 	}
 
+	kdt.scenarioContext.Step(`^(?:I )?wait for (\d+) (minutes|seconds)$`, common.WaitFor)
 	// Kubernetes related steps
 	kdt.scenarioContext.Step(`^((?:a )?Kubernetes cluster|(?:there are )?(?:valid )?Kubernetes Credentials)$`, kdt.KubeContext.KubernetesCluster)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+)$`, kdt.KubeContext.ResourceOperation)
