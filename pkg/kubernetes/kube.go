@@ -26,14 +26,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+  
 	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
+	log "github.com/sirupsen/logrus"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -991,4 +993,132 @@ func (kc *Client) getWaiterTries() int {
 		return kc.WaiterTries
 	}
 	return DefaultWaiterTries
+}
+
+func (kc *Client) PrintNodes() error {
+
+	var readyStatus = func(conditions []v1.NodeCondition) string {
+		var status = false
+		var err error
+		for _, condition := range conditions {
+			if condition.Type == "Ready" {
+				status, err = strconv.ParseBool(string(condition.Status))
+				if err != nil {
+					return "Unknown"
+				}
+				break
+			}
+		}
+		if status {
+			return "Ready"
+		}
+		return "NotReady"
+	}
+	// List nodes
+	nodes, _ := kc.ListNodes()
+	if nodes != nil {
+		tableFormat := "%-64s%-12s%-24s%-16s"
+		log.Infof(tableFormat, "NAME", "STATUS", "INSTANCEGROUP", "AZ")
+		for _, node := range nodes.Items {
+			log.Infof(tableFormat,
+				node.Name,
+				readyStatus(node.Status.Conditions),
+				node.Labels["node.kubernetes.io/instancegroup"],
+				node.Labels["failure-domain.beta.kubernetes.io/zone"])
+		}
+	}
+	return nil
+}
+
+func (kc *Client) PrintPods(namespace string) error {
+	return kc.PrintPodsWithSelector(namespace, "")
+}
+
+func (kc *Client) PrintPodsWithSelector(namespace, selector string) error {
+	var readyCount = func(conditions []v1.ContainerStatus) string {
+		var readyCount = 0
+		var containerCount = len(conditions)
+		for _, condition := range conditions {
+			if condition.Ready {
+				readyCount++
+			}
+		}
+		return fmt.Sprintf("%d/%d", readyCount, containerCount)
+	}
+	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
+	if err != nil {
+		return err
+	}
+
+	if len(pods.Items) == 0 {
+		return errors.Errorf("No pods matched selector '%s'", selector)
+	}
+	tableFormat := "%-64s%-12s%-24s"
+	log.Infof(tableFormat, "NAME", "READY", "STATUS")
+	for _, pod := range pods.Items {
+		log.Infof(tableFormat,
+			pod.Name, readyCount(pod.Status.ContainerStatuses), pod.Status.Phase)
+	}
+	return nil
+}
+
+func (kc *Client) daemonsetIsRunning(dsName, namespace string) error {
+	gomega.Eventually(func() error {
+		ds, err := kc.GetDaemonset(dsName, namespace)
+		if err != nil {
+			return err
+		}
+
+		if ds.Status.DesiredNumberScheduled != ds.Status.CurrentNumberScheduled {
+			return fmt.Errorf("daemonset %s/%s is not updated. status: %s", namespace, dsName, ds.Status.String())
+		}
+
+		return nil
+	}, 10*time.Second).Should(gomega.Succeed(), func() string {
+		// Print Pods after failure
+		_ = kc.PrintPods(namespace)
+		return fmt.Sprintf("daemonset %s/%s is not updated.", namespace, dsName)
+	})
+
+	return nil
+}
+
+func (kc *Client) deploymentIsRunning(deployName, namespace string) error {
+	deploy, err := kc.GetDeployment(deployName, namespace)
+	if err != nil {
+		return err
+	}
+	if deploy.Status.ReadyReplicas != deploy.Status.Replicas {
+		return fmt.Errorf("deployment %s/%s is not ready. status: %s", namespace, deployName, deploy.Status.String())
+	}
+
+	if deploy.Status.UpdatedReplicas != deploy.Status.Replicas {
+		return fmt.Errorf("deploymemnt %s/%s is not updated. status: %s", namespace, deployName, deploy.Status.String())
+	}
+
+	return nil
+}
+
+func (kc *Client) ResourceIsRunning(kind, name, namespace string) error {
+	kind = strings.ToLower(kind)
+	switch kind {
+	case "daemonset":
+		return kc.daemonsetIsRunning(name, namespace)
+	case "deployment":
+		return kc.deploymentIsRunning(name, namespace)
+	default:
+		return fmt.Errorf("invalid resource type: %s", kind)
+	}
+}
+
+func (kc *Client) PersistentVolExists(volName, expectedPhase string) error {
+	vol, err := kc.GetPersistentVolume(volName)
+	if err != nil {
+		return err
+	}
+	phase := string(vol.Status.Phase)
+	if phase != expectedPhase {
+		return fmt.Errorf("persistentvolume had unexpected phase %v, expected phase %v", phase, expectedPhase)
+	}
+	return nil
 }

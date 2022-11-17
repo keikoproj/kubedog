@@ -16,13 +16,20 @@ limitations under the License.
 package aws
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	awssdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/keikoproj/kubedog/pkg/common"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -32,6 +39,11 @@ type Client struct {
 	AsgName          string
 	LaunchConfigName string
 }
+
+var (
+	ClusterAWSRegion = common.GetEnv("AWS_REGION", "us-west-2")
+	BDDClusterName   = common.GetEnv("CLUSTER_NAME", common.GetUsernamePrefix()+"kubedog-bdd")
+)
 
 /*
 AnASGNamed updates the current ASG to be used by the other ASG related steps.
@@ -161,5 +173,140 @@ func (c *Client) GetAWSCredsAndClients() error {
 
 	c.ASClient = autoscaling.New(sess)
 
+	return nil
+}
+
+func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
+	// Load clients so we can derive account info.
+	sess := GetAWSSession(ClusterAWSRegion)
+	iamClient := iam.New(sess)
+	stsClient := sts.New(sess)
+	accountId := GetAccountNumber(stsClient)
+
+	// Add efs-csi-role-<clustername> as trusted entity
+	var trustedEntityArn = fmt.Sprintf("arn:aws:iam::%s:role/%s",
+		accountId, entityName)
+
+	type StatementEntry struct {
+		Effect    string
+		Action    string
+		Principal map[string]string
+	}
+	type PolicyDocument struct {
+		Version   string
+		Statement []StatementEntry
+	}
+	newPolicyDoc := &PolicyDocument{
+		Version:   "2012-10-17",
+		Statement: make([]StatementEntry, 0),
+	}
+
+	role, err := GetIamRole(roleName, iamClient)
+	if err != nil {
+		return err
+	}
+
+	if role.AssumeRolePolicyDocument != nil {
+		doc := &PolicyDocument{}
+		data, err := url.QueryUnescape(*role.AssumeRolePolicyDocument)
+		if err != nil {
+			return err
+		}
+
+		// parse existing policy
+		err = json.Unmarshal([]byte(data), &doc)
+		if err != nil {
+			return err
+		}
+
+		if len(doc.Statement) > 0 {
+			// loop through existing statements and keep valid trusted entities
+			for _, stmnt := range doc.Statement {
+				if val, ok := stmnt.Principal["AWS"]; ok {
+					if strings.HasPrefix(val, "arn:aws:iam") && val != trustedEntityArn {
+						newPolicyDoc.Statement = append(newPolicyDoc.Statement, stmnt)
+					}
+				}
+			}
+		}
+	}
+
+	switch action {
+	case "add":
+		newStatment := StatementEntry{
+			Effect: "Allow",
+			Principal: map[string]string{
+				"AWS": trustedEntityArn,
+			},
+			Action: "sts:AssumeRole",
+		}
+
+		newPolicyDoc.Statement = append(newPolicyDoc.Statement, newStatment)
+	case "remove":
+		// Do nothing, we already cleansed the trusted entity role above if we're not adding
+	}
+
+	policyJSON, err := json.Marshal(newPolicyDoc)
+	if err != nil {
+		return err
+	}
+
+	_, err = UpdateIAMAssumeRole(roleName, policyJSON, iamClient)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) EfsCsiRoleTrust(action, roleName string) error {
+	var trustedEntityName = fmt.Sprintf("efs-csi-role-%s", BDDClusterName)
+	return c.IamRoleTrust(action, trustedEntityName, roleName)
+}
+
+func (c *Client) ClusterSharedIamOperation(operation string) error {
+	// Load clients so we can derive account info.
+	var (
+		sess      = GetAWSSession(ClusterAWSRegion)
+		iamClient = iam.New(sess)
+		stsClient = sts.New(sess)
+		accountId = GetAccountNumber(stsClient)
+		roleName  = fmt.Sprintf("shared.%s", BDDClusterName)
+		iamFmt    = "arn:aws:iam::%s:%s/%s"
+	)
+
+	// for trusted entity
+	clusterSharedrole := fmt.Sprintf(iamFmt, accountId, "role", roleName)
+	rootIAM := fmt.Sprintf("arn:aws:iam::%s:%s", accountId, "root")
+	clusterSharedPolicy := fmt.Sprintf(iamFmt, accountId, "policy", roleName)
+	assumeRoleDoc := `{"Version":"2012-10-17","Statement":[{"Effect": "Allow", "Action": "sts:AssumeRole", "Principal": {"AWS": "%s"}}]}`
+	roleDocument := []byte(fmt.Sprintf(assumeRoleDoc, rootIAM))
+	policyDocT := `{"Version":"2012-10-17","Statement":[{"Effect": "Allow", "Action": "sts:AssumeRole", "Resource": "%s"}]}`
+	policyDocument := []byte(fmt.Sprintf(policyDocT, clusterSharedrole))
+
+	switch operation {
+	case "add":
+		role, err := PutIAMRole(roleName, "shared cluster role", roleDocument, iamClient)
+		if err != nil {
+			return errors.Wrap(err, "failed to create shared cluster role")
+		}
+		log.Infof("BDD >> created shared iam role: %s", awssdk.StringValue(role.Arn))
+
+		policy, err := PutManagedPolicy(roleName, clusterSharedPolicy, "shared cluster policy", policyDocument, iamClient)
+		if err != nil {
+			return errors.Wrap(err, "failed to create shared cluster managed policy")
+		}
+		log.Infof("BDD >> created shared iam policy: %s", awssdk.StringValue(policy.Arn))
+	case "remove":
+		err := DeleteManagedPolicy(clusterSharedPolicy, iamClient)
+		if err != nil {
+			return errors.Wrap(err, "failed to delete shared cluster role")
+		}
+
+		err = DeleteIAMRole(roleName, iamClient)
+		if err != nil {
+			return errors.Wrap(err, "failed to delete shared cluster managed policy")
+		}
+	}
 	return nil
 }
