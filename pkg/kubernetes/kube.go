@@ -903,24 +903,22 @@ func (kc *Client) VerifyInstanceGroups() error {
 	}
 
 	for _, ig := range igs.Items {
-		if !isInstanceGroupStatus(&ig, "ready") {
-			return errors.New("BDD >> failed while instanceGroup state")
+		currentStatus := getInstanceGroupStatus(&ig)
+		if !strings.EqualFold(currentStatus, "ready") {
+			return errors.Errorf("Expected Instance Group %s to be ready, but was '%s'", ig.GetName(), currentStatus)
+		} else {
+			log.Infof("Instance Group %s is ready", ig.GetName())
 		}
-		log.Infof("BDD >> Ig %v is valid", ig.GetName())
 	}
 
 	return nil
 }
 
-func isInstanceGroupStatus(instanceGroup *unstructured.Unstructured, status string) bool {
-	var instanceGroupCurrentState string
+func getInstanceGroupStatus(instanceGroup *unstructured.Unstructured) string {
 	if val, ok, _ := unstructured.NestedString(instanceGroup.UnstructuredContent(), "status", "currentState"); ok {
-		instanceGroupCurrentState = val
+		return val
 	}
-	if strings.EqualFold(instanceGroupCurrentState, status) {
-		return true
-	}
-	return false
+	return ""
 }
 
 func (kc *Client) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName string, namespace string, volumeClaimTemplatesName string) error {
