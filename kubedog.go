@@ -69,11 +69,11 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) efs-csi-role as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.EfsCsiRoleTrust)
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) ?([^"]*) as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.IamRoleTrust)
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) cluster shared iam role$`, kdt.AwsContext.ClusterSharedIamOperation)
-	kdt.scenarioContext.Step(`^the pods in namespace ([^"]*) with selector ([^"]*) has ([^"]*) in logs since ([^"]*) time and times out in (\S+) seconds`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHasThisSentenceInLogsSinceTime)
-	kdt.scenarioContext.Step(`^the pods in namespace ([^"]*) with selector ([^"]*) doesn't have ([^"]*) in logs since ([^"]*) time$`, kdt.KubeContext.NoMatchingStringInLogsSinceTime)
-	kdt.scenarioContext.Step(`^the pods in namespace ([^"]*) with selector ([^"]*) have no errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime)
-	kdt.scenarioContext.Step(`^the pods in namespace ([^"]*) with selector ([^"]*) have some errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime)
-	kdt.scenarioContext.Step(`^the pods with selector (\S+) in namespace (\S+) should have labels ([^"]*)$`, kdt.KubeContext.ThePodsInNamespaceShouldHaveLabels)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector ([^"]*) has ([^"]*) in logs since ([^"]*) time and times out in (\S+) seconds`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHasThisSentenceInLogsSinceTime)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector ([^"]*) doesn't have ([^"]*) in logs since ([^"]*) time$`, kdt.KubeContext.NoMatchingStringInLogsSinceTime)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector ([^"]*) have no errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector ([^"]*) have some errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) should have labels (\S+)$`, kdt.KubeContext.ThePodsInNamespaceShouldHaveLabels)
 
 	// AWS related steps
 	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
