@@ -898,8 +898,8 @@ func (kc *Client) ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(na
 	return nil
 }
 
-func (kc *Client) ThePodsInNamespaceShouldHaveLabels(selector string,
-	namespace string, labels string) error {
+func (kc *Client) ThePodsInNamespaceShouldHaveLabels(namespace string,
+	selector string, labels string) error {
 	podList, err := kc.ListPodsWithLabelSelector(namespace, selector)
 	if err != nil {
 		return fmt.Errorf("error getting pods with selector %q: %v", selector, err)

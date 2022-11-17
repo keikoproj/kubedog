@@ -767,8 +767,8 @@ func Test_ThePodsInNamespaceShouldHaveLabels(t *testing.T) {
 		KubeInterface kubernetes.Interface
 	}
 	type args struct {
-		selector  string
 		namespace string
+		selector  string
 		labels    string
 	}
 	tests := []struct {
@@ -819,7 +819,7 @@ func Test_ThePodsInNamespaceShouldHaveLabels(t *testing.T) {
 			kc := &Client{
 				KubeInterface: tt.fields.KubeInterface,
 			}
-			if err := kc.ThePodsInNamespaceShouldHaveLabels(tt.args.selector, tt.args.namespace, tt.args.labels); (err != nil) != tt.wantErr {
+			if err := kc.ThePodsInNamespaceShouldHaveLabels(tt.args.namespace, tt.args.selector, tt.args.labels); (err != nil) != tt.wantErr {
 				t.Errorf("ThePodsInNamespaceShouldHaveLabels() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
