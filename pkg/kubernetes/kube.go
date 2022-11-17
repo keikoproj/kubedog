@@ -18,6 +18,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -28,11 +29,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
+	"github.com/keikoproj/kubedog/pkg/common"
 
 	"github.com/pkg/errors"
+	vegeta "github.com/tsenart/vegeta/v12/lib"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -58,8 +60,9 @@ const (
 	OperationUpdate = "update"
 	OperationDelete = "delete"
 
-	ResourceStateCreated = "created"
-	ResourceStateDeleted = "deleted"
+	StateCreated  = "created"
+	StateDeleted  = "deleted"
+	StateUpgraded = "upgraded"
 
 	NodeStateReady = "ready"
 	NodeStateFound = "found"
@@ -70,10 +73,24 @@ const (
 	DefaultFilePath = "templates"
 )
 
+func (kc *Client) Validate() error {
+	commonMessage := "'AKubernetesCluster' sets this interface, try calling it before using this method"
+	if kc.DynamicInterface == nil {
+		return errors.Errorf("'Client.DynamicInterface' is nil. %s", commonMessage)
+	}
+	if kc.DiscoveryInterface == nil {
+		return errors.Errorf("'Client.DiscoveryInterface' is nil. %s", commonMessage)
+	}
+	if kc.KubeInterface == nil {
+		return errors.Errorf("'Client.KubeInterface' is nil. %s", commonMessage)
+	}
+	return nil
+}
+
 /*
 AKubernetesCluster sets the Kubernetes clients given a valid kube config file in ~/.kube or the path set in the environment variable KUBECONFIG.
 */
-func (kc *Client) AKubernetesCluster() error {
+func (kc *Client) KubernetesCluster() error {
 	var (
 		home, _        = os.UserHomeDir()
 		kubeconfigPath = filepath.Join(home, ".kube", "config")
@@ -142,10 +159,8 @@ func (kc *Client) ResourceOperationInNamespace(operation, resourceFileName, ns s
 }
 
 func (kc *Client) parseSingleResource(resourceFileName string) (util.K8sUnstructuredResource, error) {
-	if kc.DynamicInterface == nil {
-		return util.K8sUnstructuredResource{}, errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
-	} else if kc.DiscoveryInterface == nil {
-		return util.K8sUnstructuredResource{}, errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	if err := kc.Validate(); err != nil {
+		return util.K8sUnstructuredResource{}, err
 	}
 
 	resourcePath := kc.getResourcePath(resourceFileName)
@@ -194,10 +209,8 @@ func (kc *Client) MultiResourceOperationInNamespace(operation, resourceFileName,
 }
 
 func (kc *Client) parseMultipleResources(resourceFileName string) ([]util.K8sUnstructuredResource, error) {
-	if kc.DynamicInterface == nil {
-		return nil, errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
-	} else if kc.DiscoveryInterface == nil {
-		return nil, errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	if err := kc.Validate(); err != nil {
+		return nil, err
 	}
 
 	resourcePath := kc.getResourcePath(resourceFileName)
@@ -266,10 +279,8 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 		counter int
 	)
 
-	if kc.DynamicInterface == nil {
-		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
-	} else if kc.DiscoveryInterface == nil {
-		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	if err := kc.Validate(); err != nil {
+		return err
 	}
 
 	resourcePath := kc.getResourcePath(resourceFileName)
@@ -296,12 +307,12 @@ func (kc *Client) ResourceShouldBe(resourceFileName, state string) error {
 		}
 
 		switch state {
-		case ResourceStateDeleted:
+		case StateDeleted:
 			if !exists {
 				log.Infof("[KUBEDOG] %v/%v is deleted", resource.GetNamespace(), resource.GetName())
 				return nil
 			}
-		case ResourceStateCreated:
+		case StateCreated:
 			if exists {
 				log.Infof("[KUBEDOG] %v/%v is created", resource.GetNamespace(), resource.GetName())
 				return nil
@@ -318,10 +329,8 @@ ResourceShouldConvergeToSelector checks if the resource defined in resourceFileN
 func (kc *Client) ResourceShouldConvergeToSelector(resourceFileName, selector string) error {
 	var counter int
 
-	if kc.DynamicInterface == nil {
-		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
-	} else if kc.DiscoveryInterface == nil {
-		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	if err := kc.Validate(); err != nil {
+		return err
 	}
 
 	split := util.DeleteEmpty(strings.Split(selector, "="))
@@ -380,10 +389,8 @@ func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status stri
 		expectedStatus = strings.Title(status)
 	)
 
-	if kc.DynamicInterface == nil {
-		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
-	} else if kc.DiscoveryInterface == nil {
-		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	if err := kc.Validate(); err != nil {
+		return err
 	}
 
 	resourcePath := kc.getResourcePath(resourceFileName)
@@ -443,8 +450,8 @@ func (kc *Client) NodesWithSelectorShouldBe(n int, selector, state string) error
 		found   bool
 	)
 
-	if kc.KubeInterface == nil {
-		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	if err := kc.Validate(); err != nil {
+		return err
 	}
 
 	for {
@@ -506,10 +513,8 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 		//err          error
 	)
 
-	if kc.DynamicInterface == nil {
-		return errors.Errorf("'Client.DynamicInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
-	} else if kc.DiscoveryInterface == nil {
-		return errors.Errorf("'Client.DiscoveryInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	if err := kc.Validate(); err != nil {
+		return err
 	}
 
 	resourcePath := kc.getResourcePath(resourceFileName)
@@ -545,7 +550,7 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 	if err != nil {
 		return err
 	}
-	time.Sleep(3 * time.Second)
+	time.Sleep(kc.getWaiterInterval())
 	return nil
 }
 
@@ -556,7 +561,7 @@ func (kc *Client) DeleteAllTestResources() error {
 	resourcesPath := kc.getTemplatesPath()
 
 	// Getting context
-	err := kc.AKubernetesCluster()
+	err := kc.KubernetesCluster()
 	if err != nil {
 		return errors.Errorf("Failed getting the kubernetes client: %v", err)
 	}
@@ -634,8 +639,8 @@ ResourceInNamespace check if (deployment|service) in the related namespace
 func (kc *Client) ResourceInNamespace(resource, name, ns string) error {
 	var err error
 
-	if kc.KubeInterface == nil {
-		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	if err := kc.Validate(); err != nil {
+		return err
 	}
 
 	switch resource {
@@ -703,7 +708,6 @@ func (kc *Client) getResourcePath(resourceFileName string) string {
 /*
 Cluster scoped role and bindings are found.
 */
-
 func (kc *Client) ClusterRbacIsFound(resource, name string) error {
 	var err error
 	if kc.KubeInterface == nil {
@@ -726,7 +730,7 @@ func (kc *Client) ClusterRbacIsFound(resource, name string) error {
 }
 
 func (kc *Client) getWaiterInterval() time.Duration {
-	if kc.WaiterInterval >= 0 {
+	if kc.WaiterInterval > 0 {
 		return kc.WaiterInterval
 	}
 	return DefaultWaiterInterval
@@ -739,9 +743,9 @@ func (kc *Client) getWaiterTries() int {
 	return DefaultWaiterTries
 }
 
-func (kc *Client) PrintNodes() error {
+func (kc *Client) GetNodes() error {
 
-	var readyStatus = func(conditions []v1.NodeCondition) string {
+	var readyStatus = func(conditions []corev1.NodeCondition) string {
 		var status = false
 		var err error
 		for _, condition := range conditions {
@@ -774,12 +778,12 @@ func (kc *Client) PrintNodes() error {
 	return nil
 }
 
-func (kc *Client) PrintPods(namespace string) error {
-	return kc.PrintPodsWithSelector(namespace, "")
+func (kc *Client) GetPods(namespace string) error {
+	return kc.GetPodsWithSelector(namespace, "")
 }
 
-func (kc *Client) PrintPodsWithSelector(namespace, selector string) error {
-	var readyCount = func(conditions []v1.ContainerStatus) string {
+func (kc *Client) GetPodsWithSelector(namespace, selector string) error {
+	var readyCount = func(conditions []corev1.ContainerStatus) string {
 		var readyCount = 0
 		var containerCount = len(conditions)
 		for _, condition := range conditions {
@@ -820,7 +824,7 @@ func (kc *Client) daemonsetIsRunning(dsName, namespace string) error {
 		return nil
 	}, 10*time.Second).Should(gomega.Succeed(), func() string {
 		// Print Pods after failure
-		_ = kc.PrintPods(namespace)
+		_ = kc.GetPods(namespace)
 		return fmt.Sprintf("daemonset %s/%s is not updated.", namespace, dsName)
 	})
 
@@ -863,6 +867,183 @@ func (kc *Client) PersistentVolExists(volName, expectedPhase string) error {
 	phase := string(vol.Status.Phase)
 	if phase != expectedPhase {
 		return fmt.Errorf("persistentvolume had unexpected phase %v, expected phase %v", phase, expectedPhase)
+	}
+	return nil
+}
+func (kc *Client) SecretDelete(secretName, namespace string) error {
+	return kc.SecretOperationFromEnvironmentVariable(OperationDelete, secretName, namespace, "")
+}
+
+func (kc *Client) SecretOperationFromEnvironmentVariable(operation, secretName, namespace, environmentVariable string) error {
+	var (
+		secretValue string
+		ok          bool
+	)
+	if err := kc.Validate(); err != nil {
+		return err
+	}
+	if operation != OperationDelete {
+		secretValue, ok = os.LookupEnv(environmentVariable)
+		if !ok {
+			return errors.Errorf("couldn't lookup environment variable '%s'", environmentVariable)
+		}
+	}
+	switch operation {
+	case OperationCreate, OperationSubmit:
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: secretName,
+			},
+			Data: map[string][]byte{
+				environmentVariable: []byte(secretValue),
+			},
+		}
+		_, err := kc.KubeInterface.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+		if kerrors.IsAlreadyExists(err) {
+			log.Infof("secret '%s' already created", secretName)
+			return nil
+		}
+		return err
+	case OperationUpdate:
+		currentSecret, err := kc.KubeInterface.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		secret := currentSecret.DeepCopy()
+		if len(secret.Data) == 0 {
+			secret.Data = map[string][]byte{}
+		}
+		secret.Data[environmentVariable] = []byte(secretValue)
+		_, err = kc.KubeInterface.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+		return err
+	case OperationDelete:
+		err := kc.KubeInterface.CoreV1().Secrets(namespace).Delete(context.TODO(), secretName, metav1.DeleteOptions{})
+		if kerrors.IsNotFound(err) {
+			log.Infof("secret '%s' already deleted", secretName)
+			return nil
+		}
+		return err
+	default:
+		return fmt.Errorf("unsupported operation: '%s'", operation)
+	}
+}
+
+func (kc *Client) KubernetesClusterShouldBe(state string) error {
+	if err := kc.Validate(); err != nil {
+		return err
+	}
+	switch state {
+	case StateCreated, StateUpgraded:
+		if _, err := kc.KubeInterface.CoreV1().Pods(metav1.NamespaceSystem).List(context.TODO(), metav1.ListOptions{}); err != nil {
+			return err
+		}
+		return nil
+	case StateDeleted:
+		if err := kc.KubernetesCluster(); err == nil {
+			return errors.New("failed validating cluster delete, cluster is still available")
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported state: '%s'", state)
+	}
+}
+
+func (kc *Client) GetIngressEndpoint(name, namespace string, port int, path string) (string, error) {
+	var (
+		counter int
+	)
+	for {
+		log.Info("waiting for ingress availability")
+		if counter >= kc.getWaiterTries() {
+			return "", errors.New("waiter timed out waiting for resource state")
+		}
+		ingress, err := kc.GetIngress(name, namespace)
+		if err != nil {
+			return "", err
+		}
+		annotations := ingress.GetAnnotations()
+		albSubnets := annotations["service.beta.kubernetes.io/aws-load-balancer-subnets"]
+		log.Infof("Alb IngressSubnets associated are: %v", albSubnets)
+		var ingressReconciled bool
+		ingressStatus := ingress.Status.LoadBalancer.Ingress
+		if ingressStatus == nil {
+			log.Infof("ingress %v/%v is not ready yet", namespace, name)
+		} else {
+			ingressReconciled = true
+		}
+		if ingressReconciled {
+			hostname := ingressStatus[0].Hostname
+			endpoint := fmt.Sprintf("http://%v:%v%v", hostname, port, path)
+			return endpoint, nil
+		}
+		counter++
+		time.Sleep(kc.getWaiterInterval())
+	}
+}
+
+func (kc *Client) IngressAvailable(name, namespace string, port int, path string) error {
+	var (
+		counter int
+	)
+	endpoint, err := kc.GetIngressEndpoint(name, namespace, port, path)
+	if err != nil {
+		return err
+	}
+	for {
+		log.Info("waiting for ingress availability")
+		if counter >= kc.getWaiterTries() {
+			return errors.New("waiter timed out waiting for resource state")
+		}
+		log.Infof("waiting for endpoint %v to become available", endpoint)
+		client := http.Client{
+			Timeout: 10 * time.Second,
+		}
+		req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+		if err != nil {
+			return err
+		}
+		if resp, err := client.Do(req); resp != nil {
+			if resp.StatusCode == 200 {
+				log.Infof("endpoint %v is available", endpoint)
+				time.Sleep(kc.getWaiterInterval())
+				return nil
+			}
+		} else {
+			log.Infof("endpoint %v is not available yet: %v", endpoint, err)
+		}
+		counter++
+		time.Sleep(kc.getWaiterInterval())
+	}
+}
+
+func (kc *Client) SendTrafficToIngress(tps int, name, namespace string, port int, path string, duration int, durationUnits string, expectedErrors int) error {
+	endpoint, err := kc.GetIngressEndpoint(name, namespace, port, path)
+	if err != nil {
+		return err
+	}
+	log.Infof("sending traffic to %v with rate of %v tps for %v %s...", endpoint, tps, duration, durationUnits)
+	rate := vegeta.Rate{Freq: tps, Per: time.Second}
+	var d time.Duration
+	switch durationUnits {
+	case common.DurationMinutes:
+		d = time.Minute * time.Duration(duration)
+	case common.DurationSeconds:
+		d = time.Second * time.Duration(duration)
+	default:
+		return fmt.Errorf("unsupported duration units: '%s'", durationUnits)
+	}
+	targeter := vegeta.NewStaticTargeter(vegeta.Target{
+		Method: "GET",
+		URL:    endpoint,
+	})
+	attacker := vegeta.NewAttacker()
+	var metrics vegeta.Metrics
+	for res := range attacker.Attack(targeter, rate, d, namespace+"/"+name) {
+		metrics.Add(res)
+	}
+	metrics.Close()
+	if len(metrics.Errors) > expectedErrors {
+		return errors.Errorf("traffic test had '%v' errors but expected '%d'", metrics.Errors, expectedErrors)
 	}
 	return nil
 }
