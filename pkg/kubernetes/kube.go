@@ -16,23 +16,28 @@ limitations under the License.
 package kube
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	util "github.com/keikoproj/kubedog/internal/utilities"
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -47,7 +52,27 @@ type Client struct {
 	TemplateArguments  interface{}
 	WaiterInterval     time.Duration
 	WaiterTries        int
+	RememberedTimes    map[string]time.Time
 }
+
+// TODO: Move this when other prs are merged in
+var (
+	DefaultRetry = wait.Backoff{
+		Steps:    6,
+		Duration: 1000 * time.Millisecond,
+		Factor:   1.0,
+		Jitter:   0.1,
+	}
+
+	retriableErrors = []string{
+		"Unable to reach the kubernetes API",
+		"Unable to connect to the server",
+		"EOF",
+		"transport is closing",
+		"the object has been modified",
+		"an error on the server",
+	}
+)
 
 const (
 	OperationCreate = "create"
@@ -719,6 +744,238 @@ func (kc *Client) ClusterRbacIsFound(resource, name string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func init() {
+
+	// Register ginkgo.Fail as the Fail handler. This handler panics
+	// and subsequently auto recovers from the panic, which is what we need
+	// for gracefully exiting failures.
+	// https://github.com/onsi/ginkgo/blob/v1.16.5/ginkgo_dsl.go#L283-L303
+	gomega.RegisterFailHandler(ginkgo.Fail)
+}
+
+func (kc *Client) ThePodsInNamespaceWithSelectorHasThisSentenceInLogsSinceTime(namespace, selector, searchkeyword, sinceTime string, timeout int) error {
+	gomega.Eventually(func() error {
+		if kc.KubeInterface == nil {
+			return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+		}
+		since, ok := kc.RememberedTimes[sinceTime]
+		if !ok {
+			return fmt.Errorf("Time '%s' was not remembered", sinceTime)
+		}
+
+		pods, err := listPodsWithLabelSelector(kc.KubeInterface, namespace, selector)
+		if err != nil {
+			return err
+		}
+		if len(pods.Items) == 0 {
+			return fmt.Errorf("No pods matched selector '%s'", selector)
+		}
+		for _, pod := range pods.Items {
+			count, msg := findStringInPodLogs(kc, pod, since, searchkeyword)
+			if msg != nil {
+				return msg
+			}
+			if count == 0 {
+				return fmt.Errorf("Pod has no %s message in the logs", searchkeyword)
+			}
+		}
+		return nil
+	}, time.Duration(timeout)*time.Second).Should(gomega.Succeed(), func() string {
+		return fmt.Sprintf("Pod has no %s message in the logs", searchkeyword)
+	})
+	return nil
+}
+
+// ListPodsWithLabelSelector lists pods with a label selector
+func listPodsWithLabelSelector(client kubernetes.Interface, namespace, selector string) (*corev1.PodList, error) {
+	pods, err := retryOnError(&DefaultRetry, isRetriable, func() (interface{}, error) {
+		return client.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector})
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list pods")
+	}
+
+	return pods.(*corev1.PodList), nil
+}
+
+// TODO: Move this when other prs are merged in
+type condFunc func() (interface{}, error)
+
+// TODO: Move this when other prs are merged in
+func retryOnError(backoff *wait.Backoff, retryExpected func(error) bool, fn condFunc) (interface{}, error) {
+	var ex, lastErr error
+	var out interface{}
+	caller := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
+	err := wait.ExponentialBackoff(*backoff, func() (bool, error) {
+		out, ex = fn()
+		switch {
+		case ex == nil:
+			return true, nil
+		case retryExpected(ex):
+			lastErr = ex
+			log.Warnf("A caller %v retried due to exception: %v", caller, ex)
+			return false, nil
+		default:
+			return false, ex
+		}
+	})
+	if err == wait.ErrWaitTimeout {
+		err = lastErr
+	}
+	return out, err
+}
+
+// TODO: Move this when other prs are merged in
+func isRetriable(err error) bool {
+	for _, msg := range retriableErrors {
+		if strings.Contains(err.Error(), msg) {
+			return true
+		}
+	}
+	return false
+}
+
+func findStringInPodLogs(kc *Client, pod corev1.Pod,
+	since time.Time, stringsToFind ...string) (int, error) {
+
+	var sinceTime metav1.Time = metav1.NewTime(since)
+
+	foundCount := 0
+
+	for _, container := range pod.Spec.Containers {
+		podLogOpts := corev1.PodLogOptions{
+			SinceTime: &sinceTime,
+			Container: container.Name,
+		}
+
+		req := kc.KubeInterface.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
+		podLogs, err := req.Stream(context.Background())
+		if err != nil {
+			return 0, errors.Errorf("Error in opening stream for pod %s, container %s : %s", pod.Name, container.Name, string(err.Error()))
+		}
+
+		scanner := bufio.NewScanner(podLogs)
+		for scanner.Scan() {
+			line := scanner.Text()
+			for _, stringToFind := range stringsToFind {
+				if strings.Contains(line, stringToFind) {
+					foundCount += 1
+					log.Infof("Found matching string in line: '%s'", line)
+				}
+			}
+		}
+		_ = podLogs.Close()
+	}
+
+	return foundCount, nil
+}
+
+func (kc *Client) NoMatchingStringInLogsSinceTime(namespace,
+	selector, searchkeyword, sinceTime string) error {
+
+	if kc.KubeInterface == nil {
+		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	}
+
+	since, ok := kc.RememberedTimes[sinceTime]
+	if !ok {
+		return fmt.Errorf("Time '%s' was not remembered", sinceTime)
+	}
+
+	pods, err := listPodsWithLabelSelector(kc.KubeInterface, namespace, selector)
+	if err != nil {
+		return err
+	}
+
+	if len(pods.Items) == 0 {
+		return errors.Errorf("No pods matched selector '%s'", selector)
+	}
+	for _, pod := range pods.Items {
+		count, err := findStringInPodLogs(kc, pod, since, searchkeyword)
+		if err != nil {
+			return err
+		}
+		if count == 0 {
+			return nil
+		}
+	}
+	return fmt.Errorf("Pod has %s message in the logs", searchkeyword)
+}
+
+func (kc *Client) ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(namespace string,
+	selector string, sinceTime string) error {
+
+	if kc.KubeInterface == nil {
+		return errors.Errorf("'Client.KubeInterface' is nil. 'AKubernetesCluster' sets this interface, try calling it before using this method")
+	}
+
+	since, ok := kc.RememberedTimes[sinceTime]
+	if !ok {
+		return errors.Errorf("Time '%s' was not remembered", sinceTime)
+	}
+
+	pods, err := listPodsWithLabelSelector(kc.KubeInterface, namespace, selector)
+	if err != nil {
+		return err
+	}
+	if len(pods.Items) == 0 {
+		return errors.Errorf("No pods matched selector '%s'", selector)
+	}
+
+	for _, pod := range pods.Items {
+		errorStrings := []string{`"level":"error"`, "level=error"}
+		count, err := findStringInPodLogs(kc, pod, since, errorStrings...)
+		if err != nil {
+			return err
+		}
+		if count != 0 {
+			return errors.Errorf("Pod %s has %d errors", pod.Name, count)
+		}
+	}
+
+	return nil
+}
+
+func (kc *Client) ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(namespace string,
+	selector string, sinceTime string) error {
+	err := kc.ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(namespace, selector, sinceTime)
+	if err == nil {
+		return fmt.Errorf("logs found from selector %q in namespace %q have errors", selector, namespace)
+	}
+	return nil
+}
+
+func (kc *Client) ThePodInNamespaceShouldHaveLabels(podName string,
+	namespace string, labels string) error {
+	pod, err := kc.KubeInterface.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+	if err != nil {
+		return errors.New("Error fetching pod: " + err.Error())
+	}
+
+	inputLabels := make(map[string]string)
+	slc := strings.Split(labels, ",")
+	for _, item := range slc {
+		vals := strings.Split(item, "=")
+		if len(vals) != 2 {
+			continue
+		}
+
+		inputLabels[vals[0]] = vals[1]
+	}
+
+	for k, v := range inputLabels {
+		pV, ok := pod.Labels[k]
+		if !ok {
+			return errors.New(fmt.Sprintf("Label %s missing in pod/namespace %s", k, podName+"/"+namespace))
+		}
+		if v != pV {
+			return errors.New(fmt.Sprintf("Label value %s doesn't match expected %s for key %s in pod/namespace %s", pV, v, k, podName+"/"+namespace))
+		}
+	}
+
 	return nil
 }
 

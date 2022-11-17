@@ -61,6 +61,12 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:the )?(deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) ([^"]*) is in namespace ([^"]*)$`, kdt.KubeContext.ResourceInNamespace)
 	kdt.scenarioContext.Step(`^(?:I )?scale (?:the )?deployment ([^"]*) in namespace ([^"]*) to (\d+)$`, kdt.KubeContext.ScaleDeployment)
 	kdt.scenarioContext.Step(`^(?:the )?(clusterrole|clusterrolebinding) with name ([^"]*) should be found`, kdt.KubeContext.ClusterRbacIsFound)
+	kdt.scenarioContext.Step(`^the pods in namespace ([^"]*) with selector ([^"]*) has ([^"]*) in logs since ([^"]*) time and times out in (\S+) seconds`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHasThisSentenceInLogsSinceTime)
+	kdt.scenarioContext.Step(`^the pods in namespace ([^"]*) with selector ([^"]*) doesn't have ([^"]*) in logs since ([^"]*) time$`, kdt.KubeContext.NoMatchingStringInLogsSinceTime)
+	kdt.scenarioContext.Step(`^the pods in namespace ([^"]*) with selector ([^"]*) have no errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime)
+	kdt.scenarioContext.Step(`^the pods in namespace ([^"]*) with selector ([^"]*) have some errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime)
+	kdt.scenarioContext.Step(`^the pod ([^"]*) in namespace ([^"]*) should have labels ([^"]*)$`, kdt.KubeContext.ThePodInNamespaceShouldHaveLabels)
+
 	// AWS related steps
 	kdt.scenarioContext.Step(`^valid AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
 	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)

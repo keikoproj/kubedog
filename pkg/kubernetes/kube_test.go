@@ -16,13 +16,10 @@ package kube
 
 import (
 	"context"
-	"io/ioutil"
-	"path/filepath"
-	"testing"
-
 	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 	appsv1 "k8s.io/api/apps/v1"
 	hpa "k8s.io/api/autoscaling/v2beta2"
 	v1 "k8s.io/api/core/v1"
@@ -38,8 +35,11 @@ import (
 	fakeDiscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/dynamic"
 	fakeDynamic "k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	kTesting "k8s.io/client-go/testing"
+	"path/filepath"
+	"testing"
 )
 
 func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
@@ -723,6 +723,71 @@ func Test_unstructuredResourceOperation(t *testing.T) {
 			}
 			if err := kc.unstructuredResourceOperation(tt.funcArgs.operation, tt.funcArgs.ns, tt.funcArgs.unstructuredResource); (err != nil) != tt.wantErr {
 				t.Errorf("Client.unstructuredResourceOperation() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_ThePodsInNamespaceShouldHaveLabels(t *testing.T) {
+	ns := v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
+	pod := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-foo-xhhxj",
+			Namespace: "foo",
+			Labels: map[string]string{
+				"app":   "foo",
+				"label": "true",
+			},
+		},
+	}
+	clientNoErr := fake.NewSimpleClientset(&ns, &pod)
+
+	type fields struct {
+		KubeInterface kubernetes.Interface
+	}
+	type args struct {
+		podName   string
+		namespace string
+		labels    string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Pod should have labels",
+			fields: fields{
+				KubeInterface: clientNoErr,
+			},
+			args: args{
+				podName:   "pod-foo-xhhxj",
+				namespace: "foo",
+				labels:    "app=foo,label=true",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error from pod missing labels",
+			fields: fields{
+				KubeInterface: clientNoErr,
+			},
+			args: args{
+				podName:   "pod-foo-xhhxj",
+				namespace: "foo",
+				labels:    "app=not-foo",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			kc := &Client{
+				KubeInterface: tt.fields.KubeInterface,
+			}
+			if err := kc.ThePodInNamespaceShouldHaveLabels(tt.args.podName, tt.args.namespace, tt.args.labels); (err != nil) != tt.wantErr {
+				t.Errorf("ThePodsInNamespaceShouldHaveLabels() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
