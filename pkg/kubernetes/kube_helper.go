@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -65,4 +66,14 @@ func (kc *Client) GetPersistentVolume(name string) (*corev1.PersistentVolume, er
 		return nil, errors.Wrap(err, "failed to get persistentvolume")
 	}
 	return pvs.(*corev1.PersistentVolume), nil
+}
+
+func (kc *Client) GetIngress(name, namespace string) (*networkingv1.Ingress, error) {
+	ingress, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return kc.KubeInterface.NetworkingV1().Ingresses(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get clusterrolebinding '%v'", name)
+	}
+	return ingress.(*networkingv1.Ingress), nil
 }

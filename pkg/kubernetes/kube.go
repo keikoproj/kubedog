@@ -34,7 +34,6 @@ import (
 	vegeta "github.com/tsenart/vegeta/v12/lib"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -932,6 +931,9 @@ func (kc *Client) SecretOperationFromEnvironmentVariable(operation, secretName, 
 }
 
 func (kc *Client) KubernetesClusterShouldBe(state string) error {
+	if err := kc.Validate(); err != nil {
+		return err
+	}
 	switch state {
 	case StateCreated, StateUpgraded:
 		if _, err := kc.KubeInterface.CoreV1().Pods(metav1.NamespaceSystem).List(context.TODO(), metav1.ListOptions{}); err != nil {
@@ -946,16 +948,6 @@ func (kc *Client) KubernetesClusterShouldBe(state string) error {
 	default:
 		return fmt.Errorf("unsupported state: '%s'", state)
 	}
-}
-
-func (kc *Client) GetIngress(name, namespace string) (*networkingv1.Ingress, error) {
-	ingress, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
-		return kc.KubeInterface.NetworkingV1().Ingresses(namespace).Get(context.Background(), name, metav1.GetOptions{})
-	})
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get clusterrolebinding '%v'", name)
-	}
-	return ingress.(*networkingv1.Ingress), nil
 }
 
 func (kc *Client) GetIngressEndpoint(name, namespace string, port int, path string) (string, error) {

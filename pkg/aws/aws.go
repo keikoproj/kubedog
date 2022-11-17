@@ -21,7 +21,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -326,59 +325,18 @@ func (c *Client) GetEksVpc() (string, error) {
 	return aws.StringValue(result.Cluster.ResourcesVpcConfig.VpcId), nil
 }
 
-func (c *Client) DnsNameInHostedZoneID(dnsName string, hostedZoneID string) error {
-	time.Sleep(120 * time.Second)
+func (c *Client) DnsNameShouldOrNotInHostedZoneID(dnsName, shouldOrNot, hostedZoneID string) error {
+	switch shouldOrNot {
+	case "should":
+		return c.DnsNameInHostedZoneID(dnsName, hostedZoneID)
 
-	recordValue, err := c.GetDNSRecord(dnsName, hostedZoneID)
-	if err != nil {
-		if fmt.Sprintf("more than 1 records for hostedZoneID %s with dnsName %s", hostedZoneID, dnsName) == string(err.Error()) {
-			fmt.Printf("records for hostedZoneID %s with dnsName %s exists", hostedZoneID, dnsName)
-			return nil
-		} else if recordValue != "" {
-			fmt.Printf("records for hostedZoneID %s with dnsName %s exists", hostedZoneID, dnsName)
-			return nil
-		} else {
-			return errors.Errorf("records for hostedZoneID %s with dnsName %s doesn't exists", hostedZoneID, dnsName)
+	case "should not":
+		if err := c.DnsNameInHostedZoneID(dnsName, hostedZoneID); err == nil {
+			return errors.Errorf("unexpected DNS %s exists in hostedZoneID %s", hostedZoneID, dnsName)
 		}
+		log.Infof("records for hostedZoneID %s with dnsName %s doesn't exists", hostedZoneID, dnsName)
+		return nil
+	default:
+		return fmt.Errorf("invalid option '%s'. expected 'should' or 'should not'", shouldOrNot)
 	}
-	if recordValue != "" {
-		fmt.Printf("records for hostedZoneID %s with dnsName %s exists", hostedZoneID, dnsName)
-	}
-	return nil
-}
-
-func (c *Client) GetDNSRecord(dnsName string, hostedZoneID string) (string, error) {
-	params := &route53.ListResourceRecordSetsInput{
-		HostedZoneId:    aws.String(hostedZoneID),
-		MaxItems:        aws.String("1"),
-		StartRecordName: aws.String(dnsName),
-	}
-
-	resp, err := c.Route53Client.ListResourceRecordSets(params)
-	if err != nil {
-		return "", err
-	}
-	if len(resp.ResourceRecordSets) == 0 {
-		return "", errors.New(fmt.Sprintf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName))
-	}
-
-	recordSet := resp.ResourceRecordSets[0]
-	if len(recordSet.ResourceRecords) != 1 {
-		return "", errors.New(fmt.Sprintf("more than 1 records for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName))
-	}
-
-	if *recordSet.Name != dnsName {
-		return "", errors.New(fmt.Sprintf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName))
-	}
-
-	record := *(recordSet.ResourceRecords[0].Value)
-	return record, nil
-}
-
-func (c *Client) DnsNameNotInHostedZoneID(dnsName string, hostedZoneID string) error {
-	if err := c.DnsNameInHostedZoneID(dnsName, hostedZoneID); err == nil {
-		return errors.Errorf("unexpected DNS %s exists in hostedZoneID %s", hostedZoneID, dnsName)
-	}
-	fmt.Printf("records for hostedZoneID %s with dnsName %s doesn't exists", hostedZoneID, dnsName)
-	return nil
 }
