@@ -19,13 +19,14 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/onsi/ginkgo"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/onsi/ginkgo"
 
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
@@ -37,7 +38,6 @@ import (
 	vegeta "github.com/tsenart/vegeta/v12/lib"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
