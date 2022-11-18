@@ -21,7 +21,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [the] resource <any-characters-except-(")> [should] converge to selector <any-characters-except-(")>` kdt.KubeContext.ResourceShouldConvergeToSelector
 - `<GK> [the] resource <any-characters-except-(")> condition <any-characters-except-(")> should be (true|false)` kdt.KubeContext.ResourceConditionShouldBe
 - `<GK> [I] update [the] resource <any-characters-except-(")> with <any-characters-except-(")> set to <any-characters-except-(")>` kdt.KubeContext.UpdateResourceWithField
-- `<GK> <digits> node\(s\) with selector <any-characters-except-(")> should be (found|ready)` kdt.KubeContext.NodesWithSelectorShouldBe
+- `<GK> <digits> node(s) with selector <any-characters-except-(")> should be (found|ready)` kdt.KubeContext.NodesWithSelectorShouldBe
 - `<GK> [the] (deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) <any-characters-except-(")> is in namespace <any-characters-except-(")>` kdt.KubeContext.ResourceInNamespace
 - `<GK> [I] scale [the] deployment <any-characters-except-(")> in namespace <any-characters-except-(")> to <digits>` kdt.KubeContext.ScaleDeployment
 - `<GK> [the] (clusterrole|clusterrolebinding) with name <any-characters-except-(")> should be found` kdt.KubeContext.ClusterRbacIsFound
@@ -49,7 +49,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [there are] [valid] AWS Credentials` kdt.AwsContext.GetAWSCredsAndClients
 - `<GK> an Auto Scaling Group named <any-characters-except-(")>` kdt.AwsContext.AnASGNamed
 - `<GK> [I] update [the] current Auto Scaling Group with <any-characters-except-(")> set to <any-characters-except-(")>` kdt.AwsContext.UpdateFieldOfCurrentASG
-- `<GK> [the] current Auto Scaling Group [is] scaled to \(min, max\) = \(<digits>, <digits>\)` kdt.AwsContext.ScaleCurrentASG
+- `<GK> [the] current Auto Scaling Group [is] scaled to (min, max) = (<digits>, <digits>)` kdt.AwsContext.ScaleCurrentASG
 - `<GK> [the] DNS name <non-whitespace-characters> (should|should not) be created in hostedZoneID <non-whitespace-characters>` kdt.AwsContext.DnsNameShouldOrNotInHostedZoneID
 - `<GK> [I] (add|remove) [the] <non-whitespace-characters> role as trusted entity to iam role <any-characters-except-(")>` kdt.AwsContext.IamRoleTrust
 - `<GK> [I] (add|remove) ?<any-characters-except-(")> as trusted entity to iam role <any-characters-except-(")>` kdt.AwsContext.IamRoleTrust
