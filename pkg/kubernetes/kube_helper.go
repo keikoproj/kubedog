@@ -4,11 +4,13 @@ import (
 	"context"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
+	"github.com/keikoproj/kubedog/pkg/common"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // ListPodsWithLabelSelector lists pods with a label selector
@@ -66,6 +68,36 @@ func (kc *Client) GetPersistentVolume(name string) (*corev1.PersistentVolume, er
 		return nil, errors.Wrap(err, "failed to get persistentvolume")
 	}
 	return pvs.(*corev1.PersistentVolume), nil
+}
+
+func (kc *Client) ListInstanceGroups() (*unstructured.UnstructuredList, error) {
+	igs, err := kc.DynamicInterface.Resource(InstanceGroupResource).Namespace(InstanceGroupNamespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return igs, nil
+}
+
+// ListStatefulSets lists statefulsets
+func (kc *Client) ListStatefulSets(namespace string) (*appsv1.StatefulSetList, error) {
+	sts, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return kc.KubeInterface.AppsV1().StatefulSets(namespace).List(context.Background(), metav1.ListOptions{})
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list statefulsets")
+	}
+	return sts.(*appsv1.StatefulSetList), nil
+}
+
+// ListPersistentVolume lists pvs
+func (kc *Client) ListPersistentVolumes() (*corev1.PersistentVolumeList, error) {
+	pvs, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return kc.KubeInterface.CoreV1().PersistentVolumes().List(context.Background(), metav1.ListOptions{})
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list persistentvolumes")
+	}
+	return pvs.(*corev1.PersistentVolumeList), nil
 }
 
 func (kc *Client) GetIngress(name, namespace string) (*networkingv1.Ingress, error) {

@@ -35,9 +35,11 @@ import (
 	vegeta "github.com/tsenart/vegeta/v12/lib"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -52,6 +54,7 @@ type Client struct {
 	TemplateArguments  interface{}
 	WaiterInterval     time.Duration
 	WaiterTries        int
+	Timestamps         map[string]time.Time
 }
 
 const (
@@ -71,6 +74,25 @@ const (
 	DefaultWaiterTries    = 40
 
 	DefaultFilePath = "templates"
+)
+
+const (
+	// InstanceGroupNamespace is the default namespace to use of instance-group submission
+	InstanceGroupNamespace = "instance-manager"
+	// CustomResourceGroup is the group of the instance-manager API/custom resource definition
+	CustomResourceGroup = "instancemgr"
+	// CustomResourceAPIVersion is the version of the instance-manager API/custom resource definition
+	CustomResourceAPIVersion = "v1alpha1"
+	// CustomeResourceDomain is the domain of the instance-manager API/custom resource definition
+	CustomeResourceDomain = "keikoproj.io"
+	// CustomResourceKind is the resource kind (plural) of the instance-manager API/custom resource definition
+	CustomResourceKind = "instancegroups"
+)
+
+var (
+	// CustomResourceName is the name of the API/custom resource definition
+	CustomResourceName    = fmt.Sprintf("%v.%v", CustomResourceGroup, CustomeResourceDomain)
+	InstanceGroupResource = schema.GroupVersionResource{Group: CustomResourceName, Version: CustomResourceAPIVersion, Resource: CustomResourceKind}
 )
 
 func (kc *Client) Validate() error {
@@ -140,11 +162,7 @@ func (kc *Client) KubernetesCluster() error {
 ResourceOperation performs the given operation on the resource defined in resourceFileName. The operation could be “create”, “submit”, “delete”, or "update".
 */
 func (kc *Client) ResourceOperation(operation, resourceFileName string) error {
-	unstructuredResource, err := kc.parseSingleResource(resourceFileName)
-	if err != nil {
-		return err
-	}
-	return kc.unstructuredResourceOperation(operation, "", unstructuredResource)
+	return kc.ResourceOperationInNamespace(operation, resourceFileName, "")
 }
 
 /*
@@ -266,6 +284,21 @@ func (kc *Client) unstructuredResourceOperation(operation, ns string, unstructur
 		log.Infof("%s %s has been deleted from namespace %s", resource.GetKind(), resource.GetName(), ns)
 	default:
 		return fmt.Errorf("unsupported operation: %s", operation)
+	}
+	return nil
+}
+
+func (kc *Client) ResourceOperationWithResult(operation, resourceFileName, expectedResult string) error {
+	return kc.ResourceOperationWithResultInNamespace(operation, resourceFileName, "", expectedResult)
+}
+
+func (kc *Client) ResourceOperationWithResultInNamespace(operation, resourceFileName, namespace, expectedResult string) error {
+	var expectError = strings.EqualFold(expectedResult, "fail")
+	err := kc.ResourceOperationInNamespace(operation, resourceFileName, "")
+	if !expectError && err != nil {
+		return fmt.Errorf("unexpected error when %s %s: %s", operation, resourceFileName, err.Error())
+	} else if expectError && err == nil {
+		return fmt.Errorf("expected error when %s %s, but received none", operation, resourceFileName)
 	}
 	return nil
 }
@@ -870,6 +903,113 @@ func (kc *Client) PersistentVolExists(volName, expectedPhase string) error {
 	}
 	return nil
 }
+
+func (kc *Client) VerifyInstanceGroups() error {
+	igs, err := kc.ListInstanceGroups()
+	if err != nil {
+		return err
+	}
+
+	for _, ig := range igs.Items {
+		currentStatus := getInstanceGroupStatus(&ig)
+		if !strings.EqualFold(currentStatus, "ready") {
+			return errors.Errorf("Expected Instance Group %s to be ready, but was '%s'", ig.GetName(), currentStatus)
+		} else {
+			log.Infof("Instance Group %s is ready", ig.GetName())
+		}
+	}
+
+	return nil
+}
+
+func getInstanceGroupStatus(instanceGroup *unstructured.Unstructured) string {
+	if val, ok, _ := unstructured.NestedString(instanceGroup.UnstructuredContent(), "status", "currentState"); ok {
+		return val
+	}
+	return ""
+}
+
+func (kc *Client) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName string, namespace string, volumeClaimTemplatesName string) error {
+	var sfsvolumeClaimTemplatesName string
+	// Prometheus StatefulSets deployed, then validate volumeClaimTemplate name.
+	// Validation required:
+	// 	- To retain existing persistent volumes and not to loose any data.
+	//	- And avoid creating new name persistent volumes.
+	sfs, err := kc.ListStatefulSets(namespace)
+	if err != nil {
+		return err
+	}
+	for _, sfsItem := range sfs.Items {
+		if sfsItem.Name == statefulsetName {
+			pvcClaimRef := sfsItem.Spec.VolumeClaimTemplates
+			sfsvolumeClaimTemplatesName = pvcClaimRef[0].Name
+		}
+	}
+	if sfsvolumeClaimTemplatesName == "" {
+		return errors.Errorf("prometheus statefulset not deployed, name given: %v", volumeClaimTemplatesName)
+	} else if sfsvolumeClaimTemplatesName != volumeClaimTemplatesName {
+		return errors.Errorf("Prometheus volumeClaimTemplate name changed', got: %v", sfsvolumeClaimTemplatesName)
+	}
+	// Validate Persistent Volume label
+	requiredLabels := []string{"failure-domain.beta.kubernetes.io/zone", "topology.kubernetes.io/zone"}
+	err = kc.validatePVLabels(volumeClaimTemplatesName, requiredLabels)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (kc *Client) validatePVLabels(volumeClaimTemplatesName string, requiredLabels []string) error {
+	// Get PersistentVolume list
+	pv, err := kc.ListPersistentVolumes()
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, item := range pv.Items {
+		pvcname := item.Spec.ClaimRef.Name
+		if strings.Contains(pvcname, volumeClaimTemplatesName) {
+			for _, label := range requiredLabels {
+				if item.Labels[label] == "" {
+					return errors.Errorf("Prometheus volume %s does not have label %s", pvcname, item.Labels[label])
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (kc *Client) PodsWithSelectorHaveRestartCountLessThan(namespace string, selector string, expectedRestartCountLessThan int) error {
+	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
+	if err != nil {
+		return err
+	}
+
+	if len(pods.Items) == 0 {
+		return errors.Errorf("No pods matched selector '%s'", selector)
+	}
+
+	for _, pod := range pods.Items {
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			log.Infof("Container '%s' of pod '%s' on node '%s' restarted %d times",
+				containerStatus.Name, pod.Name, pod.Spec.NodeName, containerStatus.RestartCount)
+			if int(containerStatus.RestartCount) >= expectedRestartCountLessThan {
+				return errors.Errorf("Container '%s' of pod '%s' restarted %d times",
+					containerStatus.Name, pod.Name, containerStatus.RestartCount)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (kc *Client) SetTimestamp(timestampName string) error {
+	now := time.Now()
+	kc.Timestamps[timestampName] = now
+	log.Infof("Memorizing '%s' time is %v", timestampName, now)
+	return nil
+}
+
 func (kc *Client) SecretDelete(secretName, namespace string) error {
 	return kc.SecretOperationFromEnvironmentVariable(OperationDelete, secretName, namespace, "")
 }
