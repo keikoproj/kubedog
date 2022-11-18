@@ -4,7 +4,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 ## Generic steps
 - `<GK> [I] wait for <digits> (minutes|seconds)` common.WaitFor
 - `<GK> the <non-whitespace-characters> command is available` common.CommandExists
-- `<GK> I run the <non-whitespace-characters> command with the <any-characters-except-(")> args the command (fails|succeeds)` common.RunCommand
+- `<GK> I run the <non-whitespace-characters> command with the <any-characters-except-(")> args and the command (fails|succeeds)` common.RunCommand
 
 ## Kubernetes steps
 - `<GK> ([a] Kubernetes cluster|[there are] [valid] Kubernetes Credentials)` kdt.KubeContext.KubernetesCluster
@@ -24,9 +24,6 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> <digits> node(s) with selector <any-characters-except-(")> should be (found|ready)` kdt.KubeContext.NodesWithSelectorShouldBe
 - `<GK> [the] (deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) <any-characters-except-(")> is in namespace <any-characters-except-(")>` kdt.KubeContext.ResourceInNamespace
 - `<GK> [I] scale [the] deployment <any-characters-except-(")> in namespace <any-characters-except-(")> to <digits>` kdt.KubeContext.ScaleDeployment
-- `<GK> [the] (clusterrole|clusterrolebinding) with name <any-characters-except-(")> should be found` kdt.KubeContext.ClusterRbacIsFound
-- `<GK> [I] (add|remove) ?<any-characters-except-(")> as trusted entity to iam role <any-characters-except-(")>` kdt.AwsContext.IamRoleTrust
-- `<GK> [I] (add|remove) cluster shared iam role` kdt.AwsContext.ClusterSharedIamOperation
 - `<GK> [I] verify InstanceGroups [are] in "ready" state` kdt.KubeContext.VerifyInstanceGroups
 - `<GK> [I] validate Prometheus Statefulset <any-characters-except-(")> in namespace <any-characters-except-(")> has volumeClaimTemplates name <any-characters-except-(")>` kdt.KubeContext.ValidatePrometheusVolumeClaimTemplatesName
 - `<GK> [the] pods in namespace <any-characters-except-(")> with selector <any-characters-except-(")> have restart count less than <digits>` kdt.KubeContext.PodsWithSelectorHaveRestartCountLessThan
@@ -52,5 +49,4 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [the] current Auto Scaling Group [is] scaled to (min, max) = (<digits>, <digits>)` kdt.AwsContext.ScaleCurrentASG
 - `<GK> [the] DNS name <non-whitespace-characters> (should|should not) be created in hostedZoneID <non-whitespace-characters>` kdt.AwsContext.DnsNameShouldOrNotInHostedZoneID
 - `<GK> [I] (add|remove) [the] <non-whitespace-characters> role as trusted entity to iam role <any-characters-except-(")>` kdt.AwsContext.IamRoleTrust
-- `<GK> [I] (add|remove) ?<any-characters-except-(")> as trusted entity to iam role <any-characters-except-(")>` kdt.AwsContext.IamRoleTrust
 - `<GK> [I] (add|remove) cluster shared iam role` kdt.AwsContext.ClusterSharedIamOperation
