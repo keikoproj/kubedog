@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -10,20 +11,25 @@ import (
 )
 
 const (
-	newLine                  = "\n"
-	sourceFilePath           = "../../kubedog.go"
-	actionIndicator          = "//syntax-generation"
-	actionDelimiter          = ":"
-	actionBegin              = "begin"
-	actionEnd                = "end"
-	actionTittle             = "tittle"
-	tittleBeginning          = "## "
-	processedStepBeginning   = "- "
-	stepIndicator            = "kdt.scenarioContext.Step"
-	stepDelimiter            = "`"
-	stepPrefix               = "^"
-	stepSuffix               = "$"
-	destinationFilePath      = "../../docs/syntax.md"
+	sourceFilePath         = "kubedog.go"
+	destinationFilePath    = "docs/syntax.md"
+	newLine                = "\n"
+	actionIndicator        = "//syntax-generation"
+	actionDelimiter        = ":"
+	actionBegin            = "begin"
+	actionEnd              = "end"
+	actionTittle           = "tittle"
+	tittleBeginning        = "## "
+	processedStepBeginning = "- "
+	stepIndicator          = "kdt.scenarioContext.Step"
+	stepDelimiter          = "`"
+	stepPrefix             = "^"
+	stepSuffix             = "$"
+	methodPrefix           = ","
+	methodSuffix           = ")"
+	markdownCodeDelimiter  = "`"
+	gherkinKeyword         = "<GK>"
+
 	destinationFileBeginning = "# Syntax" + newLine + "Below you will find the step syntax next to the name of the method it utilizes. Here GK stands for [Gherkin](https://cucumber.io/docs/gherkin/reference/#keywords) Keyword and words in brackets ([]) are optional:" + newLine
 )
 
@@ -47,11 +53,11 @@ func main() {
 	for fileScanner.Scan() {
 		line := fileScanner.Text()
 		if isBeginAction(line) {
-			log.Infof("found begin action as '%s'", line)
+			log.Debugf("found begin action as '%s'", line)
 			for fileScanner.Scan() {
 				line := fileScanner.Text()
 				if isEndAction(line) {
-					log.Infof("found end action as '%s'", line)
+					log.Debugf("found end action as '%s'", line)
 					break
 				}
 				rawSyntax = append(rawSyntax, line)
@@ -73,18 +79,17 @@ func generateSyntax(processedSyntax []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer f.Close()
-	log.Infof("writing to '%s':", destinationFilePath)
+	log.Infof("writing to '%s'", destinationFilePath)
 	if _, err := f.WriteString(destinationFileBeginning); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Print(destinationFileBeginning)
 	for _, processedLine := range processedSyntax {
 		if _, err := f.WriteString(processedLine); err != nil {
 			log.Fatal(err)
 		}
-		fmt.Print(processedLine)
 	}
+	f.Close()
+	printFile(destinationFilePath)
 }
 
 func processSyntax(rawSyntax []string) []string {
@@ -94,9 +99,11 @@ func processSyntax(rawSyntax []string) []string {
 		case strings.Contains(rawLine, actionIndicator):
 			tittle := mustGetTittle(rawLine)
 			processedTittle := newLine + tittleBeginning + tittle + newLine
+			log.Debugf("processed '%s' as: '%s'", rawLine, processedTittle)
 			processedSyntax = append(processedSyntax, processedTittle)
 		case strings.Contains(rawLine, stepIndicator):
 			processedStep := processedStepBeginning + processStep(rawLine) + newLine
+			log.Debugf("processed '%s' as: '%s'", rawLine, processedStep)
 			processedSyntax = append(processedSyntax, processedStep)
 		}
 	}
@@ -117,7 +124,10 @@ func processStep(rawStep string) string {
 	for replacee, replacer := range replacers {
 		processedStep = strings.ReplaceAll(processedStep, replacee, replacer)
 	}
-	return processedStep
+	method := rawStepSplit[2]
+	method = strings.TrimPrefix(method, methodPrefix)
+	method = strings.TrimSuffix(method, methodSuffix)
+	return markdownCodeDelimiter + gherkinKeyword + " " + processedStep + markdownCodeDelimiter + method
 }
 
 func mustGetTittle(line string) string {
@@ -148,9 +158,6 @@ func isAction(expectedAction, line string) bool {
 }
 
 func getAction(line string) (string, string) {
-	// if line == "" {
-	// 	log.Fatal("line cant be empty")
-	// }
 	if strings.Contains(line, actionIndicator) {
 		lineSplit := strings.Split(line, actionDelimiter)
 		if len(lineSplit) < 2 {
@@ -171,47 +178,14 @@ func getAction(line string) (string, string) {
 
 func printStringSlice(slice []string) {
 	for _, s := range slice {
-		fmt.Print(s)
+		fmt.Println(s)
 	}
 }
 
-/*
-	//syntax-generation:beginning
-	//syntax-generation:tittle:Generic steps
-	kdt.scenarioContext.Step(`^(?:I )?wait for (\d+) (minutes|seconds)$`, common.WaitFor)
-	//syntax-generation:tittle:Kubernetes steps
-	kdt.scenarioContext.Step(`^((?:a )?Kubernetes cluster|(?:there are )?(?:valid )?Kubernetes Credentials)$`, kdt.KubeContext.KubernetesCluster)
-	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+)$`, kdt.KubeContext.ResourceOperation)
-	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+) in (?:the )?([^"]*) namespace$`, kdt.KubeContext.ResourceOperationInNamespace)
-	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resources in (\S+)$`, kdt.KubeContext.MultiResourceOperation)
-	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resources in (\S+) in (?:the )?([^"]*) namespace$`, kdt.KubeContext.MultiResourceOperationInNamespace)
-	kdt.scenarioContext.Step(`^(?:I )?(create|submit|update) (?:the )?secret (\S+) in namespace (\S+) from (?:environment variable )?(\S+)$`, kdt.KubeContext.SecretOperationFromEnvironmentVariable)
-	kdt.scenarioContext.Step(`^(?:I )?delete (?:the )?secret (\S+) in namespace (\S+)$`, kdt.KubeContext.SecretDelete)
-	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) should be (created|deleted)$`, kdt.KubeContext.ResourceShouldBe)
-	kdt.scenarioContext.Step(`^(?:the )?Kubernetes cluster should be (created|deleted|upgraded)$`, kdt.KubeContext.KubernetesClusterShouldBe)
-	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) (?:should )?converge to selector ([^"]*)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
-	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) condition ([^"]*) should be (true|false)$`, kdt.KubeContext.ResourceConditionShouldBe)
-	kdt.scenarioContext.Step(`^(?:I )?update (?:the )?resource ([^"]*) with ([^"]*) set to ([^"]*)$`, kdt.KubeContext.UpdateResourceWithField)
-	kdt.scenarioContext.Step(`^(\d+) node\(s\) with selector ([^"]*) should be (found|ready)$`, kdt.KubeContext.NodesWithSelectorShouldBe)
-	kdt.scenarioContext.Step(`^(?:the )?(deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) ([^"]*) is in namespace ([^"]*)$`, kdt.KubeContext.ResourceInNamespace)
-	kdt.scenarioContext.Step(`^(?:I )?scale (?:the )?deployment ([^"]*) in namespace ([^"]*) to (\d+)$`, kdt.KubeContext.ScaleDeployment)
-	kdt.scenarioContext.Step(`^(?:the )?(clusterrole|clusterrolebinding) with name ([^"]*) should be found`, kdt.KubeContext.ClusterRbacIsFound)
-	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?nodes list$`, kdt.KubeContext.GetNodes)
-	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*) with selector ([^"]*)$`, kdt.KubeContext.GetPodsWithSelector)
-	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*)$`, kdt.KubeContext.GetPods)
-	kdt.scenarioContext.Step(`^(?:the )?(daemonset|deployment) ([^"]*) is running in namespace ([^"]*)$`, kdt.KubeContext.ResourceIsRunning)
-	kdt.scenarioContext.Step(`^(?:the )?persistentvolume ([^"]*) exists with status (Available|Bound|Released|Failed|Pending)$`, kdt.KubeContext.PersistentVolExists)
-	kdt.scenarioContext.Step(`^(?:the )?(clusterrole|clusterrolebinding) with name ([^"]*) should be found$`, kdt.KubeContext.ClusterRbacIsFound)
-	kdt.scenarioContext.Step(`^(?:the )?ingress (\S+) in (?:the )?namespace (\S+) (?:is )?(?:available )?on port (\d+) and path ([^"]*)$`, kdt.KubeContext.IngressAvailable)
-	kdt.scenarioContext.Step(`^(?:I )?send (\d+) tps to ingress (\S+) in (?:the )?namespace (\S+) (?:available )?on port (\d+) and path ([^"]*) for (\d+) (minutes|seconds) expecting (\d+) errors$`, kdt.KubeContext.SendTrafficToIngress)
-	//syntax-generation:tittle:AWS steps
-	kdt.scenarioContext.Step(`^(?:there are )?(?:valid )?AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
-	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
-	kdt.scenarioContext.Step(`^(?:I )?update (?:the )?current Auto Scaling Group with ([^"]*) set to ([^"]*)$`, kdt.AwsContext.UpdateFieldOfCurrentASG)
-	kdt.scenarioContext.Step(`^(?:the )?current Auto Scaling Group (?:is )?scaled to \(min, max\) = \((\d+), (\d+)\)$`, kdt.AwsContext.ScaleCurrentASG)
-	kdt.scenarioContext.Step(`^(?:the )?DNS name (\S+) (should|should not) be created in hostedZoneID (\S+)$`, kdt.AwsContext.DnsNameShouldOrNotInHostedZoneID)
-	kdt.scenarioContext.Step(`^(?:I )?(add|remove) (?:the )?(\S+) role as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.IamRoleTrust)
-	kdt.scenarioContext.Step(`^(?:I )?(add|remove) ?([^"]*) as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.IamRoleTrust)
-	kdt.scenarioContext.Step(`^(?:I )?(add|remove) cluster shared iam role$`, kdt.AwsContext.ClusterSharedIamOperation)
-	//syntax-generation:end
-*/
+func printFile(path string) {
+	file, err := ioutil.ReadFile(path)
+	if err != nil {
+		fmt.Printf("failed reading '%s': '%v'", path, err)
+	}
+	fmt.Println(string(file))
+}
