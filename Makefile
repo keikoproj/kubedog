@@ -1,23 +1,23 @@
 GO_LDFLAGS := -ldflags="-s -w"
 BINARY := kubedog
+COVER_FILE := coverage.txt
 
-all: style vet lint generate check-dirty-repo test build
+
+all: generate check-dirty-repo build
 
 .PHONY: generate
 generate:
 	go generate kubedog.go
 
-.PHONY: build
-build:
-	GOOS=linux GOARCH=amd64 go build $(GO_LDFLAGS) $(BUILDARGS) -o ${BINARY} ./
+build: test
+	GOOS=linux GOARCH=amd64 go build $(GO_LDFLAGS) -o ${BINARY} ./
 
-.PHONY: test
-test:
-	go test -v -race -timeout=300s -tags test -coverprofile=coverage.txt ./...
+test: fmt vet
+	go test -v -race -timeout=300s -tags test -coverprofile=${COVER_FILE} ./...
 
-.PHONY: style
-style:
-	gofmt -s -d -w .
+.PHONY: fmt
+fmt:
+	go fmt ./...
 
 .PHONY: vet
 vet:
@@ -30,15 +30,19 @@ lint:
 
 .PHONY: cover
 cover:
-	@$(MAKE) test TESTARGS="-tags test -coverprofile=coverage.txt"
-	@go tool cover -html=coverage.txt
+	@$(MAKE) test TESTARGS="-tags test -coverprofile=${COVER_FILE}"
+	@go tool cover -html=${COVER_FILE}
 
 .PHONY: check-dirty-repo
 check-dirty-repo:
-	@git diff --quiet HEAD || (echo 'Untracked files in git repo: ' && git status --short && false)
+	@git diff --quiet HEAD || (\
+	echo "Untracked files in git repo: " && \
+	git status --short && \
+	echo "- If 'docs/syntax.md' is up there, try running 'make generate' and commit the generated documentation" && \
+	echo "- If 'go.mod' is up there, try running 'go mod tidy' and commit the changes" && \false)
 
 .PHONY: clean
 clean:
 	@rm -f ${BINARY}
-	@rm -f coverage.txt
+	@rm -f ${COVER_FILE}
 
