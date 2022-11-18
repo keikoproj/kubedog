@@ -48,6 +48,9 @@ func (kdt *Test) Run() {
 	}
 
 	kdt.scenarioContext.Step(`^(?:I )?wait for (\d+) (minutes|seconds)$`, common.WaitFor)
+	kdt.scenarioContext.Step(`^the (\S+) command is available`, common.CommandExists)
+	kdt.scenarioContext.Step(`^I run the (\S+) command with the ([^"]*) args the command (fails|succeeds)`, common.RunCommand)
+
 	// Kubernetes related steps
 	kdt.scenarioContext.Step(`^((?:a )?Kubernetes cluster|(?:there are )?(?:valid )?Kubernetes Credentials)$`, kdt.KubeContext.KubernetesCluster)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+)$`, kdt.KubeContext.ResourceOperation)
@@ -81,6 +84,12 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:the )?(clusterrole|clusterrolebinding) with name ([^"]*) should be found$`, kdt.KubeContext.ClusterRbacIsFound)
 	kdt.scenarioContext.Step(`^(?:the )?ingress (\S+) in (?:the )?namespace (\S+) (?:is )?(?:available )?on port (\d+) and path ([^"]*)$`, kdt.KubeContext.IngressAvailable)
 	kdt.scenarioContext.Step(`^(?:I )?send (\d+) tps to ingress (\S+) in (?:the )?namespace (\S+) (?:available )?on port (\d+) and path ([^"]*) for (\d+) (minutes|seconds) expecting (\d+) errors$`, kdt.KubeContext.SendTrafficToIngress)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector ([^"]*) has ([^"]*) in logs since ([^"]*) time and times out in (\S+) seconds`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHasThisSentenceInLogsSinceTime)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector ([^"]*) doesn't have ([^"]*) in logs since ([^"]*) time$`, kdt.KubeContext.NoMatchingStringInLogsSinceTime)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector ([^"]*) have no errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector ([^"]*) have some errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) should have labels (\S+)$`, kdt.KubeContext.ThePodsInNamespaceShouldHaveLabels)
+
 	// AWS related steps
 	kdt.scenarioContext.Step(`^(?:there are )?(?:valid )?AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
 	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
