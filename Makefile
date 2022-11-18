@@ -1,24 +1,19 @@
-# Default Go linker flags.
 GO_LDFLAGS := -ldflags="-s -w"
-
-# Step Functions
 BINARY := kubedog
 
-.PHONY: all
-all: test build style vet lint
+all: style vet lint generate check-dirty-repo test build
+
+.PHONY: generate
+generate:
+	go generate kubedog.go
 
 .PHONY: build
 build:
 	GOOS=linux GOARCH=amd64 go build $(GO_LDFLAGS) $(BUILDARGS) -o ${BINARY} ./
 
-.PHONY: vendor
-vendor:
-	go mod tidy
-	go mod vendor
-
 .PHONY: test
 test:
-	go test -v -race -timeout=300s -tags test -coverprofile=coverage.out ./...
+	go test -v -race -timeout=300s -tags test -coverprofile=coverage.txt ./...
 
 .PHONY: style
 style:
@@ -30,22 +25,20 @@ vet:
 
 .PHONY: lint
 lint:
-	@echo "golint $(LINTARGS)"
-	@for pkg in $(shell go list ./...) ; do \
-		echo "golint $(LINTARGS) $$pkg" ; \
-	done
-
-.PHONY: goci
-goci:
 	@echo "golangci-lint"
 	golangci-lint run ./...
 
 .PHONY: cover
 cover:
-	@$(MAKE) test TESTARGS="-tags test -coverprofile=coverage.out"
-	@go tool cover -html=coverage.out
-	@rm -f coverage.out
+	@$(MAKE) test TESTARGS="-tags test -coverprofile=coverage.txt"
+	@go tool cover -html=coverage.txt
+
+.PHONY: check-dirty-repo
+check-dirty-repo:
+	@git diff --quiet HEAD || (echo 'Untracked files in git repo: ' && git status --short && false)
 
 .PHONY: clean
 clean:
-	@rm -rf ./build
+	@rm -f ${BINARY}
+	@rm -f coverage.txt
+

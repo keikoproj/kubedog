@@ -2,7 +2,7 @@ name: Test
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, GED-kubedog-agaro-3 ]
   pull_request:
     branches: [ master ]
 
@@ -26,10 +26,7 @@ jobs:
       run: go get -v -t -d ./...
 
     - name: Test
-      run: |
-        go fmt ./...
-        go vet ./...
-        go test -v ./pkg/... -coverprofile coverage.txt
+      run: make all
     
     - name: Codecov
       uses: codecov/codecov-action@v1

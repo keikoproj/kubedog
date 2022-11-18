@@ -372,6 +372,7 @@ func TestPositiveUpdateResourceWithField(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	expectedLabelValue, found, err := unstructured.NestedString(testResource.UnstructuredContent(), "metadata", "labels", "testUpdateKey")
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(found).To(gomega.BeTrue())
 	g.Expect(expectedLabelValue).To(gomega.Equal(testUpdateValue))
 }
