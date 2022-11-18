@@ -185,7 +185,7 @@ func printStringSlice(slice []string) {
 func printFile(path string) {
 	file, err := ioutil.ReadFile(path)
 	if err != nil {
-		fmt.Printf("failed reading '%s': '%v'", path, err)
+		log.Fatalf("failed reading '%s': '%v'", path, err)
 	}
 	fmt.Println(string(file))
 }
