@@ -71,8 +71,8 @@ func main() {
 	}
 	log.Infof("found raw syntax to process as:")
 	printStringSlice(rawSyntax)
-	processedSyntac := processSyntax(rawSyntax)
-	generateSyntax(processedSyntac)
+	processedSyntax := processSyntax(rawSyntax)
+	generateSyntax(processedSyntax)
 }
 
 func generateSyntax(processedSyntax []string) {
