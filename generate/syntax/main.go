@@ -11,25 +11,24 @@ import (
 )
 
 const (
-	sourceFilePath         = "kubedog.go"
-	destinationFilePath    = "docs/syntax.md"
-	newLine                = "\n"
-	actionIndicator        = "//syntax-generation"
-	actionDelimiter        = ":"
-	actionBegin            = "begin"
-	actionEnd              = "end"
-	actionTittle           = "tittle"
-	tittleBeginning        = "## "
-	processedStepBeginning = "- "
-	stepIndicator          = "kdt.scenarioContext.Step"
-	stepDelimiter          = "`"
-	stepPrefix             = "^"
-	stepSuffix             = "$"
-	methodPrefix           = ","
-	methodSuffix           = ")"
-	markdownCodeDelimiter  = "`"
-	gherkinKeyword         = "<GK>"
-
+	sourceFilePath           = "kubedog.go"
+	destinationFilePath      = "docs/syntax.md"
+	newLine                  = "\n"
+	actionIndicator          = "//syntax-generation"
+	actionDelimiter          = ":"
+	actionBegin              = "begin"
+	actionEnd                = "end"
+	actionTitle              = "title"
+	titleBeginning           = "## "
+	processedStepBeginning   = "- "
+	stepIndicator            = "kdt.scenarioContext.Step"
+	stepDelimiter            = "`"
+	stepPrefix               = "^"
+	stepSuffix               = "$"
+	methodPrefix             = ","
+	methodSuffix             = ")"
+	markdownCodeDelimiter    = "`"
+	gherkinKeyword           = "<GK>"
 	destinationFileBeginning = "# Syntax" + newLine + "Below you will find the step syntax next to the name of the method it utilizes. Here GK stands for [Gherkin](https://cucumber.io/docs/gherkin/reference/#keywords) Keyword and words in brackets ([]) are optional:" + newLine
 )
 
@@ -102,10 +101,10 @@ func processSyntax(rawSyntax []string) []string {
 	for _, rawLine := range rawSyntax {
 		switch {
 		case strings.Contains(rawLine, actionIndicator):
-			tittle := mustGetTittle(rawLine)
-			processedTittle := newLine + tittleBeginning + tittle + newLine
-			log.Debugf("processed '%s' as: '%s'", rawLine, processedTittle)
-			processedSyntax = append(processedSyntax, processedTittle)
+			title := mustGetTitle(rawLine)
+			processedTitle := newLine + titleBeginning + title + newLine
+			log.Debugf("processed '%s' as: '%s'", rawLine, processedTitle)
+			processedSyntax = append(processedSyntax, processedTitle)
 		case strings.Contains(rawLine, stepIndicator):
 			processedStep := processedStepBeginning + processStep(rawLine) + newLine
 			log.Debugf("processed '%s' as: '%s'", rawLine, processedStep)
@@ -135,13 +134,13 @@ func processStep(rawStep string) string {
 	return markdownCodeDelimiter + gherkinKeyword + " " + processedStep + markdownCodeDelimiter + method
 }
 
-func mustGetTittle(line string) string {
+func mustGetTitle(line string) string {
 	action, afterAction := getAction(line)
-	if action != actionTittle {
-		log.Fatalf("expected '%s' to contain '%s%s%s'", line, actionIndicator, actionDelimiter, actionTittle)
+	if action != actionTitle {
+		log.Fatalf("expected '%s' to contain '%s%s%s'", line, actionIndicator, actionDelimiter, actionTitle)
 	}
 	if afterAction == "" {
-		log.Fatalf("expected '%s' to contain '%s%s%s%s<tittle>'", line, actionIndicator, actionDelimiter, actionTittle, actionDelimiter)
+		log.Fatalf("expected '%s' to contain '%s%s%s%s<title>'", line, actionIndicator, actionDelimiter, actionTitle, actionDelimiter)
 	}
 	return afterAction
 }
