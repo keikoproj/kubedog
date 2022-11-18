@@ -25,6 +25,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+//go:generate go run generate/syntax/main.go
+
 type Test struct {
 	suiteContext    *godog.TestSuiteContext
 	scenarioContext *godog.ScenarioContext
@@ -47,11 +49,12 @@ func (kdt *Test) Run() {
 		os.Exit(testFailedStatus)
 	}
 
+	//syntax-generation:begin
+	//syntax-generation:tittle:Generic steps
 	kdt.scenarioContext.Step(`^(?:I )?wait for (\d+) (minutes|seconds)$`, common.WaitFor)
 	kdt.scenarioContext.Step(`^the (\S+) command is available`, common.CommandExists)
 	kdt.scenarioContext.Step(`^I run the (\S+) command with the ([^"]*) args the command (fails|succeeds)`, common.RunCommand)
-
-	// Kubernetes related steps
+	//syntax-generation:tittle:Kubernetes steps
 	kdt.scenarioContext.Step(`^((?:a )?Kubernetes cluster|(?:there are )?(?:valid )?Kubernetes Credentials)$`, kdt.KubeContext.KubernetesCluster)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+)$`, kdt.KubeContext.ResourceOperation)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+) in (?:the )?([^"]*) namespace$`, kdt.KubeContext.ResourceOperationInNamespace)
@@ -89,8 +92,7 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector ([^"]*) have no errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime)
 	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector ([^"]*) have some errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime)
 	kdt.scenarioContext.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) should have labels (\S+)$`, kdt.KubeContext.ThePodsInNamespaceShouldHaveLabels)
-
-	// AWS related steps
+	//syntax-generation:tittle:AWS steps
 	kdt.scenarioContext.Step(`^(?:there are )?(?:valid )?AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
 	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
 	kdt.scenarioContext.Step(`^(?:I )?update (?:the )?current Auto Scaling Group with ([^"]*) set to ([^"]*)$`, kdt.AwsContext.UpdateFieldOfCurrentASG)
@@ -99,6 +101,7 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) (?:the )?(\S+) role as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.IamRoleTrust)
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) ?([^"]*) as trusted entity to iam role ([^"]*)$`, kdt.AwsContext.IamRoleTrust)
 	kdt.scenarioContext.Step(`^(?:I )?(add|remove) cluster shared iam role$`, kdt.AwsContext.ClusterSharedIamOperation)
+	//syntax-generation:end
 }
 
 /*
