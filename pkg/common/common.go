@@ -16,15 +16,17 @@ limitations under the License.
 package common
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"text/template"
 	"time"
 
 	"github.com/pkg/errors"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -112,4 +114,37 @@ func WaitFor(duration int, durationUnits string) error {
 	default:
 		return fmt.Errorf("unsupported duration units: '%s'", durationUnits)
 	}
+}
+
+func CommandExists(command string) error {
+	if _, err := exec.LookPath(command); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func RunCommand(command string, args, successOrFail string) error {
+	// split to support args being passed from .feature file.
+	// slice param type not supported by godog.
+	splitArgs := strings.Split(args, " ")
+	toRun := exec.Command(command, splitArgs...)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	toRun.Stdout = &stdout
+	toRun.Stderr = &stderr
+
+	cmdStr := toRun.String()
+	log.Infof("Running command: %s", cmdStr)
+	err := toRun.Run()
+	if successOrFail == "succeeds" && err != nil {
+		return fmt.Errorf("command %s did not succeed: %s", cmdStr, stderr.String())
+	}
+
+	if successOrFail == "fails" && err == nil {
+		return fmt.Errorf("command %s succeeded but was expected to fail: %s", cmdStr, stdout.String())
+	}
+
+	return nil
 }

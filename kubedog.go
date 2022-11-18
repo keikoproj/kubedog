@@ -48,6 +48,9 @@ func (kdt *Test) Run() {
 	}
 
 	kdt.scenarioContext.Step(`^(?:I )?wait for (\d+) (minutes|seconds)$`, common.WaitFor)
+	kdt.scenarioContext.Step(`^the (\S+) command is available`, common.CommandExists)
+	kdt.scenarioContext.Step(`^I run the (\S+) command with the ([^"]*) args the command (fails|succeeds)`, common.RunCommand)
+
 	// Kubernetes related steps
 	kdt.scenarioContext.Step(`^((?:a )?Kubernetes cluster|(?:there are )?(?:valid )?Kubernetes Credentials)$`, kdt.KubeContext.KubernetesCluster)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+)$`, kdt.KubeContext.ResourceOperation)
