@@ -16,8 +16,10 @@ limitations under the License.
 package kube
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"github.com/onsi/ginkgo"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -52,6 +54,7 @@ type Client struct {
 	TemplateArguments  interface{}
 	WaiterInterval     time.Duration
 	WaiterTries        int
+	Timestamps         map[string]time.Time
 }
 
 const (
@@ -1045,5 +1048,205 @@ func (kc *Client) SendTrafficToIngress(tps int, name, namespace string, port int
 	if len(metrics.Errors) > expectedErrors {
 		return errors.Errorf("traffic test had '%v' errors but expected '%d'", metrics.Errors, expectedErrors)
 	}
+	return nil
+}
+
+func init() {
+
+	// Register ginkgo.Fail as the Fail handler. This handler panics
+	// and subsequently auto recovers from the panic, which is what we need
+	// for gracefully exiting failures.
+	// https://github.com/onsi/ginkgo/blob/v1.16.5/ginkgo_dsl.go#L283-L303
+	gomega.RegisterFailHandler(ginkgo.Fail)
+}
+
+func (kc *Client) ThePodsInNamespaceWithSelectorHasThisSentenceInLogsSinceTime(namespace, selector, searchkeyword, sinceTime string, timeout int) error {
+	gomega.Eventually(func() error {
+		if err := kc.Validate(); err != nil {
+			return err
+		}
+
+		since, ok := kc.Timestamps[sinceTime]
+		if !ok {
+			return fmt.Errorf("Time '%s' was not remembered", sinceTime)
+		}
+
+		pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
+		if err != nil {
+			return err
+		}
+		if len(pods.Items) == 0 {
+			return fmt.Errorf("No pods matched selector '%s'", selector)
+		}
+		for _, pod := range pods.Items {
+			count, msg := findStringInPodLogs(kc, pod, since, searchkeyword)
+			if msg != nil {
+				return msg
+			}
+			if count == 0 {
+				return fmt.Errorf("Pod has no %s message in the logs", searchkeyword)
+			}
+		}
+		return nil
+	}, time.Duration(timeout)*time.Second).Should(gomega.Succeed(), func() string {
+		return fmt.Sprintf("Pod has no %s message in the logs", searchkeyword)
+	})
+	return nil
+}
+
+func findStringInPodLogs(kc *Client, pod corev1.Pod,
+	since time.Time, stringsToFind ...string) (int, error) {
+
+	var sinceTime metav1.Time = metav1.NewTime(since)
+
+	foundCount := 0
+
+	for _, container := range pod.Spec.Containers {
+		podLogOpts := corev1.PodLogOptions{
+			SinceTime: &sinceTime,
+			Container: container.Name,
+		}
+
+		req := kc.KubeInterface.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
+		podLogs, err := req.Stream(context.Background())
+		if err != nil {
+			return 0, errors.Errorf("Error in opening stream for pod %s, container %s : %s", pod.Name, container.Name, string(err.Error()))
+		}
+
+		scanner := bufio.NewScanner(podLogs)
+		for scanner.Scan() {
+			line := scanner.Text()
+			for _, stringToFind := range stringsToFind {
+				if strings.Contains(line, stringToFind) {
+					foundCount += 1
+					log.Infof("Found matching string in line: '%s'", line)
+				}
+			}
+		}
+		_ = podLogs.Close()
+	}
+
+	return foundCount, nil
+}
+
+func (kc *Client) NoMatchingStringInLogsSinceTime(namespace,
+	selector, searchkeyword, sinceTime string) error {
+
+	if err := kc.Validate(); err != nil {
+		return err
+	}
+
+	since, ok := kc.Timestamps[sinceTime]
+	if !ok {
+		return fmt.Errorf("Time '%s' was not remembered", sinceTime)
+	}
+
+	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
+	if err != nil {
+		return err
+	}
+
+	if len(pods.Items) == 0 {
+		return errors.Errorf("No pods matched selector '%s'", selector)
+	}
+	for _, pod := range pods.Items {
+		count, err := findStringInPodLogs(kc, pod, since, searchkeyword)
+		if err != nil {
+			return err
+		}
+		if count == 0 {
+			return nil
+		}
+	}
+	return fmt.Errorf("Pod has %s message in the logs", searchkeyword)
+}
+
+func (kc *Client) ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(namespace string,
+	selector string, sinceTime string) error {
+
+	if err := kc.Validate(); err != nil {
+		return err
+	}
+
+	since, ok := kc.Timestamps[sinceTime]
+	if !ok {
+		return errors.Errorf("Time '%s' was not remembered", sinceTime)
+	}
+
+	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
+	if err != nil {
+		return err
+	}
+	if len(pods.Items) == 0 {
+		return errors.Errorf("No pods matched selector '%s'", selector)
+	}
+
+	for _, pod := range pods.Items {
+		errorStrings := []string{`"level":"error"`, "level=error"}
+		count, err := findStringInPodLogs(kc, pod, since, errorStrings...)
+		if err != nil {
+			return err
+		}
+		if count != 0 {
+			return errors.Errorf("Pod %s has %d errors", pod.Name, count)
+		}
+	}
+
+	return nil
+}
+
+func (kc *Client) ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(namespace string,
+	selector string, sinceTime string) error {
+
+	if err := kc.Validate(); err != nil {
+		return err
+	}
+
+	err := kc.ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(namespace, selector, sinceTime)
+	if err == nil {
+		return fmt.Errorf("logs found from selector %q in namespace %q have errors", selector, namespace)
+	}
+	return nil
+}
+
+func (kc *Client) ThePodsInNamespaceShouldHaveLabels(namespace string,
+	selector string, labels string) error {
+
+	if err := kc.Validate(); err != nil {
+		return err
+	}
+
+	podList, err := kc.ListPodsWithLabelSelector(namespace, selector)
+	if err != nil {
+		return fmt.Errorf("error getting pods with selector %q: %v", selector, err)
+	}
+
+	if len(podList.Items) == 0 {
+		return fmt.Errorf("No pods matched selector '%s'", selector)
+	}
+
+	for _, pod := range podList.Items {
+		inputLabels := make(map[string]string)
+		slc := strings.Split(labels, ",")
+		for _, item := range slc {
+			vals := strings.Split(item, "=")
+			if len(vals) != 2 {
+				continue
+			}
+
+			inputLabels[vals[0]] = vals[1]
+		}
+
+		for k, v := range inputLabels {
+			pV, ok := pod.Labels[k]
+			if !ok {
+				return fmt.Errorf("Label %s missing in pod/namespace %s", k, pod.Name+"/"+namespace)
+			}
+			if v != pV {
+				return fmt.Errorf("Label value %s doesn't match expected %s for key %s in pod/namespace %s", pV, v, k, pod.Name+"/"+namespace)
+			}
+		}
+	}
+
 	return nil
 }
