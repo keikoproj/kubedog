@@ -5,8 +5,7 @@ COVER_FILE := coverage.txt
 
 all: generate check-dirty-repo build
 
-.PHONY: generate
-generate:
+generate: download
 	go generate kubedog.go
 
 build: test
@@ -22,6 +21,10 @@ fmt:
 .PHONY: vet
 vet:
 	go vet $(VETARGS) ./...
+
+.PHONY: download
+download:
+	go mod download
 
 .PHONY: lint
 lint:

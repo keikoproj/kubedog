@@ -1,6 +1,8 @@
 name: Test
 on:
   push:
+    tags:
+      - v*
     branches:
       - master
       - GED-kubedog-agaro-3
