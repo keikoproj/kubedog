@@ -5,7 +5,6 @@ on:
       - v*
     branches:
       - master
-      - GED-kubedog-agaro-3
   pull_request:
 jobs:
   build:
