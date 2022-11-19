@@ -20,7 +20,7 @@ fmt:
 
 .PHONY: vet
 vet:
-	go vet $(VETARGS) ./...
+	go vet ./...
 
 .PHONY: download
 download:
@@ -33,7 +33,7 @@ lint:
 
 .PHONY: cover
 cover:
-	@$(MAKE) test TESTARGS="-tags test -coverprofile=${COVER_FILE}"
+	@$(MAKE) test
 	@go tool cover -html=${COVER_FILE}
 
 .PHONY: check-dirty-repo
