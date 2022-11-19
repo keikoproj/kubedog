@@ -1,4 +1,4 @@
-name: Test
+name: CI
 on:
   push:
     tags:
@@ -8,7 +8,7 @@ on:
   pull_request:
 jobs:
   build:
-    name: Unit Tests and Codecov
+    name: make all
     runs-on: ubuntu-latest
     steps:
     - name: Set up Go 1.x
