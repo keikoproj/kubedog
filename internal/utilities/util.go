@@ -43,7 +43,6 @@ const (
 	YamlSeparator                  = "\n---"
 	TrimTokens                     = "\n "
 	clusterNameEnvironmentVariable = "CLUSTER_NAME"
-	awsRegionEnvironmentVariable   = "AWS_REGION"
 )
 
 var (
