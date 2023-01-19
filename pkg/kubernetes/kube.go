@@ -12,7 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//Package kube provides steps implementations related to Kubernetes.
+// Package kube provides steps implementations related to Kubernetes.
 package kube
 
 import (
@@ -295,7 +295,11 @@ func (kc *Client) ResourceOperationWithResult(operation, resourceFileName, expec
 }
 
 func (kc *Client) ResourceOperationWithResultInNamespace(operation, resourceFileName, namespace, expectedResult string) error {
+	fmt.Print("* expectedResult *", expectedResult)
 	var expectError = strings.EqualFold(expectedResult, "fail")
+	fmt.Print("* expectError *", expectError)
+	fmt.Print("* resource File Name *", resourceFileName)
+	fmt.Print("* namespace *", namespace)
 	err := kc.ResourceOperationInNamespace(operation, resourceFileName, "")
 	if !expectError && err != nil {
 		return fmt.Errorf("unexpected error when %s %s: %s", operation, resourceFileName, err.Error())
@@ -973,6 +977,7 @@ func (kc *Client) validatePVLabels(volumeClaimTemplatesName string, requiredLabe
 		if strings.Contains(pvcname, volumeClaimTemplatesName) {
 			for _, label := range requiredLabels {
 				if item.Labels[label] == "" {
+					fmt.Print("----------label -----", label)
 					return errors.Errorf("Prometheus volume %s does not have label %s", pvcname, item.Labels[label])
 				}
 			}
