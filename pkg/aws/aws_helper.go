@@ -17,7 +17,7 @@ func (c *Client) GetDNSRecord(dnsName string, hostedZoneID string) (string, erro
 	}
 	resp, err := c.Route53Client.ListResourceRecordSets(params)
 	if err != nil {
-		return "", err
+		return "returning here", err
 	}
 	if len(resp.ResourceRecordSets) == 0 {
 		return "", fmt.Errorf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName)
