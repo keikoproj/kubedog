@@ -957,7 +957,7 @@ func (kc *Client) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName str
 		return errors.Errorf("Prometheus volumeClaimTemplate name changed', got: %v", sfsvolumeClaimTemplatesName)
 	}
 	// Validate Persistent Volume label
-	requiredLabels := []string{"failure-domain.beta.kubernetes.io/zone", "topology.kubernetes.io/zone"}
+	requiredLabels := []string{"topology.kubernetes.io/zone"}
 	err = kc.validatePVLabels(volumeClaimTemplatesName, requiredLabels)
 	if err != nil {
 		return err
