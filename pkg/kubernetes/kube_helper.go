@@ -79,6 +79,7 @@ func (kc *Client) ListInstanceGroups() (*unstructured.UnstructuredList, error) {
 
 // ListStatefulSets lists statefulsets
 func (kc *Client) ListStatefulSets(namespace string) (*appsv1.StatefulSetList, error) {
+	err := kc.KubernetesCluster()
 	sts, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.AppsV1().StatefulSets(namespace).List(context.Background(), metav1.ListOptions{})
 	})

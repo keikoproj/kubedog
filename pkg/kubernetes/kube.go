@@ -957,8 +957,7 @@ func (kc *Client) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName str
 		return errors.Errorf("Prometheus volumeClaimTemplate name changed', got: %v", sfsvolumeClaimTemplatesName)
 	}
 	// Validate Persistent Volume label
-	requiredLabels := []string{"topology.kubernetes.io/zone"}
-	err = kc.validatePVLabels(volumeClaimTemplatesName, requiredLabels)
+	err = kc.validatePrometheusPVLabels(volumeClaimTemplatesName)
 	if err != nil {
 		return err
 	}
@@ -966,8 +965,26 @@ func (kc *Client) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName str
 	return nil
 }
 
+func (kc *Client) validatePrometheusPVLabels(volumeClaimTemplatesName string) error {
+	// Get prometheus PersistentVolume list
+	pv, err := kc.ListPersistentVolumes()
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, item := range pv.Items {
+		pvcname := item.Spec.ClaimRef.Name
+		if pvcname == volumeClaimTemplatesName+"-prometheus-k8s-prometheus-0" || pvcname == volumeClaimTemplatesName+"-prometheus-k8s-prometheus-1" {
+			if k1, k2 := item.Labels["failure-domain.beta.kubernetes.io/zone"], item.Labels["topology.kubernetes.io/zone"]; k1 == "" && k2 == "" {
+				return errors.Errorf("Prometheus volumes does not exist label - kubernetes.io/zone")
+			}
+		}
+	}
+	return nil
+}
+
 func (kc *Client) validatePVLabels(volumeClaimTemplatesName string, requiredLabels []string) error {
 	// Get PersistentVolume list
+
 	pv, err := kc.ListPersistentVolumes()
 	if err != nil {
 		log.Fatal(err)
@@ -978,6 +995,8 @@ func (kc *Client) validatePVLabels(volumeClaimTemplatesName string, requiredLabe
 			for _, label := range requiredLabels {
 				if item.Labels[label] == "" {
 					return errors.Errorf("Prometheus volume %s does not have label (%s), requiredLabels= %s", pvcname, label, strings.Join(requiredLabels, ", "))
+				} else {
+					fmt.Printf(item.Labels[label], item.Name)
 				}
 			}
 		}
