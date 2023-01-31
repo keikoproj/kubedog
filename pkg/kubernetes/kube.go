@@ -252,7 +252,7 @@ func (kc *Client) unstructuredResourceOperation(operation, ns string, unstructur
 
 	switch operation {
 	case OperationCreate, OperationSubmit:
-		_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(ns).Create(context.Background(), resource, metav1.CreateOptions{})
+		_, err := kc.DynamicInterface.Resource(gvr.Resource).Create(context.Background(), resource, metav1.CreateOptions{})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
 				log.Infof("%s %s already created", resource.GetKind(), resource.GetName())
@@ -295,12 +295,8 @@ func (kc *Client) ResourceOperationWithResult(operation, resourceFileName, expec
 }
 
 func (kc *Client) ResourceOperationWithResultInNamespace(operation, resourceFileName, namespace, expectedResult string) error {
-	fmt.Print("* expectedResult *", expectedResult)
 	var expectError = strings.EqualFold(expectedResult, "fail")
-	fmt.Print("* expectError *", expectError)
-	fmt.Print("* resource File Name *", resourceFileName)
-	fmt.Print("* namespace *", namespace)
-	err := kc.ResourceOperationInNamespace(operation, resourceFileName, "")
+	err := kc.ResourceOperationInNamespace(operation, resourceFileName, namespace)
 	if !expectError && err != nil {
 		return fmt.Errorf("unexpected error when %s %s: %s", operation, resourceFileName, err.Error())
 	} else if expectError && err == nil {
