@@ -252,7 +252,8 @@ func (kc *Client) unstructuredResourceOperation(operation, ns string, unstructur
 
 	switch operation {
 	case OperationCreate, OperationSubmit:
-		_, err := kc.DynamicInterface.Resource(gvr.Resource).Create(context.Background(), resource, metav1.CreateOptions{})
+		fmt.Println("byyyee")
+		_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(ns).Create(context.Background(), resource, metav1.CreateOptions{})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
 				log.Infof("%s %s already created", resource.GetKind(), resource.GetName())
