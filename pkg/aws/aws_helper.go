@@ -17,17 +17,14 @@ func (c *Client) GetDNSRecord(dnsName string, hostedZoneID string) (string, erro
 	}
 	resp, err := c.Route53Client.ListResourceRecordSets(params)
 	if err != nil {
-		return "returning here", err
+		return "", err
 	}
 	if len(resp.ResourceRecordSets) == 0 {
 		return "", fmt.Errorf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName)
 	}
 	recordSet := resp.ResourceRecordSets[0]
 	if len(recordSet.ResourceRecords) != 1 {
-		return "", fmt.Errorf("not exactly 1 records for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName)
-	}
-	if aws.StringValue(recordSet.Name) != dnsName {
-		return "", fmt.Errorf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName)
+		return "", errors.New(fmt.Sprintf("more than 1 records for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName))
 	}
 	record := aws.StringValue(recordSet.ResourceRecords[0].Value)
 	if record == "" {
