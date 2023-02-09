@@ -23,17 +23,23 @@ func (c *Client) GetDNSRecord(dnsName string, hostedZoneID string) (string, erro
 		return "", fmt.Errorf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName)
 	}
 	recordSet := resp.ResourceRecordSets[0]
-	if len(recordSet.ResourceRecords) != 1 {
-		return "", fmt.Errorf("not exactly 1 records for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName)
+	if recordSet.AliasTarget != nil {
+		// adding . to end of dnsName bc DNS adds it to record Name
+		if *recordSet.Name != dnsName+"." {
+			return "", errors.New(fmt.Sprintf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName))
+		}
+		return "", err
+	} else {
+		if len(recordSet.ResourceRecords) != 1 {
+			return "", errors.New(fmt.Sprintf("more than 1 records for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName))
+		}
+
+		record := aws.StringValue(recordSet.ResourceRecords[0].Value)
+		if record == "" {
+			return "", fmt.Errorf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName)
+		}
+		return record, nil
 	}
-	if aws.StringValue(recordSet.Name) != dnsName {
-		return "", fmt.Errorf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName)
-	}
-	record := aws.StringValue(recordSet.ResourceRecords[0].Value)
-	if record == "" {
-		return "", fmt.Errorf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName)
-	}
-	return record, nil
 }
 
 func (c *Client) DnsNameInHostedZoneID(dnsName, hostedZoneID string) error {
