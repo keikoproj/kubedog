@@ -28,9 +28,9 @@ func (c *Client) GetDNSRecord(dnsName string, hostedZoneID string) (string, erro
 		if aliasRecordValue == "" {
 			return "", errors.New(fmt.Sprintf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName))
 		}
-		return "", err
+		return aliasRecordValue, nil
 	} else {
-		if len(recordSet.ResourceRecords) <= 0 {
+		if len(recordSet.ResourceRecords) == 0 {
 			return "", errors.New(fmt.Sprintf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName))
 		}
 
