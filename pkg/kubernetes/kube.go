@@ -57,6 +57,7 @@ type Client struct {
 	WaiterInterval     time.Duration
 	WaiterTries        int
 	Timestamps         map[string]time.Time
+	clientConfig       clientcmd.ClientConfig
 }
 
 const (
@@ -133,6 +134,10 @@ func (kc *Client) KubernetesCluster() error {
 		return err
 	}
 
+	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+		&clientcmd.ConfigOverrides{})
+
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
 		return err
@@ -153,6 +158,7 @@ func (kc *Client) KubernetesCluster() error {
 		return err
 	}
 
+	kc.clientConfig = clientConfig
 	kc.KubeInterface = client
 	kc.DynamicInterface = dynClient
 	kc.DiscoveryInterface = discoveryClient
@@ -250,9 +256,17 @@ func (kc *Client) unstructuredResourceOperation(operation, ns string, unstructur
 		ns = resource.GetNamespace()
 	}
 
+	if ns == "" {
+		namespace, _, err := kc.clientConfig.Namespace()
+		if err != nil {
+			return err
+		}
+		ns = namespace
+		log.Warn("Namespace not defined for '%s'/'%s', using namespace '%s' from current context", resource.GetKind(), resource.GetName(), ns)
+	}
+
 	switch operation {
 	case OperationCreate, OperationSubmit:
-		fmt.Println("byyyee")
 		_, err := kc.DynamicInterface.Resource(gvr.Resource).Namespace(ns).Create(context.Background(), resource, metav1.CreateOptions{})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
