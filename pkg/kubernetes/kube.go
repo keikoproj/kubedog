@@ -153,7 +153,6 @@ func (kc *Client) KubernetesCluster() error {
 		return err
 	}
 
-	kc.clientConfig = clientConfig
 	kc.KubeInterface = client
 	kc.DynamicInterface = dynClient
 	kc.DiscoveryInterface = discoveryClient
