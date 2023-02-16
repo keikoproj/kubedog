@@ -57,7 +57,6 @@ type Client struct {
 	WaiterInterval     time.Duration
 	WaiterTries        int
 	Timestamps         map[string]time.Time
-	clientConfig       clientcmd.ClientConfig
 }
 
 const (
@@ -133,10 +132,6 @@ func (kc *Client) KubernetesCluster() error {
 	if err != nil {
 		return err
 	}
-
-	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
-		&clientcmd.ConfigOverrides{})
 
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
@@ -255,15 +250,6 @@ func (kc *Client) unstructuredResourceOperation(operation, ns string, unstructur
 	if ns == "" {
 		ns = resource.GetNamespace()
 	}
-
-	// if ns == "" {
-	// 	namespace, _, err := kc.clientConfig.Namespace()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	ns = namespace
-	// 	log.Warn("Namespace not defined for '%s'/'%s', using namespace '%s' from current context", resource.GetKind(), resource.GetName(), ns)
-	// }
 
 	switch operation {
 	case OperationCreate, OperationSubmit:
