@@ -990,7 +990,7 @@ func (kc *Client) validatePVLabels(volumeClaimTemplatesName string, requiredLabe
 		if strings.Contains(pvcname, volumeClaimTemplatesName) {
 			for _, label := range requiredLabels {
 				if item.Labels[label] == "" {
-					return errors.Errorf("Prometheus volume %s does not have label (%s), requiredLabels= %s", pvcname, label, strings.Join(requiredLabels, ", "))
+					return errors.Errorf("Prometheus volume '%s' does not have label '%s'. Required labels: '%s'", pvcname, label, strings.Join(requiredLabels, ", "))
 				}
 			}
 		}
