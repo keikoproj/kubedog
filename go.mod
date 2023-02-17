@@ -10,6 +10,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/tsenart/vegeta/v12 v12.8.3
+	golang.org/x/text v0.3.7
 	k8s.io/api v0.22.17
 	k8s.io/apimachinery v0.22.17
 	k8s.io/client-go v0.22.17
