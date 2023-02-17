@@ -35,8 +35,7 @@ type Test struct {
 }
 
 const (
-	testSucceededStatus int = 0
-	testFailedStatus    int = 1
+	testFailedStatus int = 1
 )
 
 /*
