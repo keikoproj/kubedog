@@ -40,7 +40,8 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [the] pods in namespace <any-characters-except-(")> with selector <any-characters-except-(")> doesn't have <any-characters-except-(")> in logs since <any-characters-except-(")> time` kdt.KubeContext.NoMatchingStringInLogsSinceTime
 - `<GK> [the] pods in namespace <any-characters-except-(")> with selector <any-characters-except-(")> have no errors in logs since <any-characters-except-(")> time` kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime
 - `<GK> [the] pods in namespace <any-characters-except-(")> with selector <any-characters-except-(")> have some errors in logs since <any-characters-except-(")> time` kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime
-- `<GK> [the] pods in namespace <non-whitespace-characters> with selector <non-whitespace-characters> should have labels <non-whitespace-characters>` kdt.KubeContext.ThePodsInNamespaceShouldHaveLabels
+- `<GK> [the] pods in namespace <non-whitespace-characters> with selector <non-whitespace-characters> should have labels <non-whitespace-characters>` kdt.KubeContext.ThePodsInNamespaceWithSelectorShouldHaveLabels
+- `<GK> [the] pod <non-whitespace-characters> in namespace <non-whitespace-characters> should have labels <non-whitespace-characters>` kdt.KubeContext.ThePodsInNamespaceShouldHaveLabels
 
 ## AWS steps
 - `<GK> [there are] [valid] AWS Credentials` kdt.AwsContext.GetAWSCredsAndClients
