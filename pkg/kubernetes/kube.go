@@ -27,13 +27,14 @@ import (
 	"time"
 
 	"github.com/onsi/ginkgo"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/keikoproj/kubedog/pkg/common"
-
 	"github.com/pkg/errors"
 	vegeta "github.com/tsenart/vegeta/v12/lib"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -417,7 +418,7 @@ ResourceConditionShouldBe checks that the resource defined in resourceFileName h
 func (kc *Client) ResourceConditionShouldBe(resourceFileName, cType, status string) error {
 	var (
 		counter        int
-		expectedStatus = strings.Title(status)
+		expectedStatus = cases.Title(language.English).String(status)
 	)
 
 	if err := kc.Validate(); err != nil {
@@ -612,7 +613,10 @@ func (kc *Client) DeleteAllTestResources() error {
 		}
 		gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
-		kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
+		err = kc.DynamicInterface.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
+		if err != nil {
+			return err
+		}
 		log.Infof("[KUBEDOG] submitted deletion for %v/%v", resource.GetNamespace(), resource.GetName())
 		return nil
 	}
