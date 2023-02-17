@@ -253,10 +253,6 @@ func (kc *Client) unstructuredResourceOperation(operation, ns string, unstructur
 	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
 	if ns == "" {
-		ns = resource.GetNamespace()
-	}
-
-	if ns == "" {
 		namespace, _, err := kc.clientConfig.Namespace()
 		if err != nil {
 			return err
@@ -1382,7 +1378,43 @@ func (kc *Client) ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(na
 	return nil
 }
 
-func (kc *Client) ThePodsInNamespaceShouldHaveLabels(namespace string,
+func (kc *Client) ThePodsInNamespaceShouldHaveLabels(podName string,
+	namespace string, labels string) error {
+
+	if err := kc.Validate(); err != nil {
+		return err
+	}
+
+	pod, err := kc.KubeInterface.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+	if err != nil {
+		return errors.New("Error fetching pod: " + err.Error())
+	}
+
+	inputLabels := make(map[string]string)
+	slc := strings.Split(labels, ",")
+	for _, item := range slc {
+		vals := strings.Split(item, "=")
+		if len(vals) != 2 {
+			continue
+		}
+
+		inputLabels[vals[0]] = vals[1]
+	}
+
+	for k, v := range inputLabels {
+		pV, ok := pod.Labels[k]
+		if !ok {
+			return errors.New(fmt.Sprintf("Label %s missing in pod/namespace %s", k, podName+"/"+namespace))
+		}
+		if v != pV {
+			return errors.New(fmt.Sprintf("Label value %s doesn't match expected %s for key %s in pod/namespace %s", pV, v, k, podName+"/"+namespace))
+		}
+	}
+
+	return nil
+}
+
+func (kc *Client) ThePodsInNamespaceWithSelectorShouldHaveLabels(namespace string,
 	selector string, labels string) error {
 
 	if err := kc.Validate(); err != nil {
