@@ -974,28 +974,6 @@ func (kc *Client) validatePrometheusPVLabels(volumeClaimTemplatesName string) er
 	return nil
 }
 
-func (kc *Client) validatePVLabels(volumeClaimTemplatesName string, requiredLabels []string) error {
-	// Get PersistentVolume list
-
-	pv, err := kc.ListPersistentVolumes()
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, item := range pv.Items {
-		pvcname := item.Spec.ClaimRef.Name
-		if strings.Contains(pvcname, volumeClaimTemplatesName) {
-			for _, label := range requiredLabels {
-				if item.Labels[label] == "" {
-					return errors.Errorf("Prometheus volume %s does not have label (%s), requiredLabels= %s", pvcname, label, strings.Join(requiredLabels, ", "))
-				} else {
-					fmt.Printf(item.Labels[label], item.Name)
-				}
-			}
-		}
-	}
-	return nil
-}
-
 func (kc *Client) PodsWithSelectorHaveRestartCountLessThan(namespace string, selector string, expectedRestartCountLessThan int) error {
 	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
 	if err != nil {
