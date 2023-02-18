@@ -112,10 +112,28 @@ func GenerateFileFromTemplate(templatedFilePath string, templateArgs interface{}
 func WaitFor(duration int, durationUnits string) error {
 	switch durationUnits {
 	case DurationMinutes:
-		time.Sleep(time.Duration(duration) * time.Minute)
+		increment := 1
+		d := increment
+		for d <= duration {
+			time.Sleep(time.Duration(increment) * time.Minute)
+			log.Infof("waited '%d' out of '%d' '%s'", d, duration, durationUnits)
+			d += increment
+		}
 		return nil
 	case DurationSeconds:
-		time.Sleep(time.Duration(duration) * time.Second)
+		increment := 30
+		d := increment
+		for d <= duration {
+			time.Sleep(time.Duration(increment) * time.Second)
+			log.Infof("waited '%d' out of '%d' '%s'", d, duration, durationUnits)
+			d += increment
+		}
+		lastIncrement := duration - d + increment
+		if lastIncrement > 0 {
+			time.Sleep(time.Duration(lastIncrement) * time.Second)
+			d += lastIncrement - increment
+			log.Infof("waited '%d' out of '%d' '%s'", d, duration, durationUnits)
+		}
 		return nil
 	default:
 		return fmt.Errorf("unsupported duration units: '%s'", durationUnits)

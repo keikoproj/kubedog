@@ -62,7 +62,8 @@ var (
 	}
 )
 
-type condFunc func() (interface{}, error)
+type FuncToRetryWithReturn func() (interface{}, error)
+type FuncToRetry func() error
 
 type K8sUnstructuredResource struct {
 	GVR      *meta.RESTMapping
@@ -185,7 +186,7 @@ func IsRetriable(err error) bool {
 	return false
 }
 
-func RetryOnError(backoff *wait.Backoff, retryExpected func(error) bool, fn condFunc) (interface{}, error) {
+func RetryOnError(backoff *wait.Backoff, retryExpected func(error) bool, fn FuncToRetryWithReturn) (interface{}, error) {
 	var ex, lastErr error
 	var out interface{}
 	caller := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
@@ -206,6 +207,24 @@ func RetryOnError(backoff *wait.Backoff, retryExpected func(error) bool, fn cond
 		err = lastErr
 	}
 	return out, err
+}
+
+func Retry(backoff *wait.Backoff, tries int, fn FuncToRetry) error {
+	var (
+		counter int
+	)
+	_, err := RetryOnError(backoff, func(err error) bool {
+		if counter >= tries {
+			log.Errorf("exhausted all '%d' retries", tries-1)
+			return false
+		}
+		counter++
+		log.Warnf("failed. retry number '%d'. error: '%v'", counter, err)
+		return true
+	}, func() (interface{}, error) {
+		return nil, fn()
+	})
+	return err
 }
 
 func GetClusterName() (string, error) {
