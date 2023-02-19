@@ -1204,7 +1204,7 @@ func init() {
 }
 
 func (kc *Client) ThePodsInNamespaceWithSelectorHaveStringInLogsSinceTime(namespace, selector, searchkeyword, sinceTime string) error {
-	return util.Retry(&util.DefaultRetry, kc.getWaiterTries(), func() error {
+	return util.Retry(kc.getWaiterTries(), func() error {
 		if err := kc.Validate(); err != nil {
 			return err
 		}
