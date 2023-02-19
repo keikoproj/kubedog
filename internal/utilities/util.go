@@ -209,17 +209,10 @@ func RetryOnError(backoff *wait.Backoff, retryExpected func(error) bool, fn Func
 	return out, err
 }
 
-func Retry(backoff *wait.Backoff, tries int, fn FuncToRetry) error {
-	var (
-		counter int
-	)
-	_, err := RetryOnError(backoff, func(err error) bool {
-		if counter >= tries {
-			log.Errorf("exhausted all '%d' retries", tries-1)
-			return false
-		}
-		counter++
-		log.Warnf("failed. retry number '%d'. error: '%v'", counter, err)
+func Retry(tries int, fn FuncToRetry) error {
+	backoff := DefaultRetry
+	backoff.Steps = tries
+	_, err := RetryOnError(&backoff, func(err error) bool {
 		return true
 	}, func() (interface{}, error) {
 		return nil, fn()
