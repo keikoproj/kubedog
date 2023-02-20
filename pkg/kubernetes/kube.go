@@ -77,8 +77,8 @@ const (
 	DefaultWaiterTries    = 40
 
 	DefaultFilePath = "templates"
-	SomePodsKey     = "some"
-	AllPodsKey      = "all"
+	SomePodsKeyword = "some"
+	AllPodsKeyword  = "all"
 )
 
 const (
@@ -1231,17 +1231,17 @@ func (kc *Client) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(
 			}
 			podsCount += podCount
 			switch SomeOrAll {
-			case SomePodsKey:
+			case SomePodsKeyword:
 				if podCount != 0 {
-					log.Infof("'%s' pods required to have string in logs. pod '%s' has string '%s' in logs", SomePodsKey, pod.Name, searchkeyword)
+					log.Infof("'%s' pods required to have string in logs. pod '%s' has string '%s' in logs", SomePodsKeyword, pod.Name, searchkeyword)
 					return nil
 				}
-			case AllPodsKey:
+			case AllPodsKeyword:
 				if podCount == 0 {
-					return fmt.Errorf("'%s' pods required to have string in logs. pod '%s' does not have string '%s' in logs", AllPodsKey, pod.Name, searchkeyword)
+					return fmt.Errorf("'%s' pods required to have string in logs. pod '%s' does not have string '%s' in logs", AllPodsKeyword, pod.Name, searchkeyword)
 				}
 			default:
-				return fmt.Errorf("wrong input as '%s', expected '(%s|%s)'", SomeOrAll, SomePodsKey, AllPodsKey)
+				return fmt.Errorf("wrong input as '%s', expected '(%s|%s)'", SomeOrAll, SomePodsKeyword, AllPodsKeyword)
 			}
 		}
 		if podsCount == 0 {

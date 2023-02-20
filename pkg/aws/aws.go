@@ -192,10 +192,14 @@ func (c *Client) GetAWSCredsAndClients() error {
 
 func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
 	accountId := GetAccountNumber(c.STSClient)
+	clusterName, err := util.GetClusterName()
+	if err != nil {
+		return err
+	}
 
 	// Add efs-csi-role-<clustername> as trusted entity
-	var trustedEntityArn = fmt.Sprintf("arn:aws:iam::%s:role/%s",
-		accountId, entityName)
+	var trustedEntityArn = fmt.Sprintf("arn:aws:iam::%s:role/%s-%s",
+		accountId, entityName, clusterName)
 
 	type StatementEntry struct {
 		Effect    string
