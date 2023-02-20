@@ -77,6 +77,8 @@ const (
 	DefaultWaiterTries    = 40
 
 	DefaultFilePath = "templates"
+	SomePodsKey     = "some"
+	AllPodsKey      = "all"
 )
 
 const (
@@ -1203,7 +1205,7 @@ func init() {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 }
 
-func (kc *Client) ThePodsInNamespaceWithSelectorHaveStringInLogsSinceTime(namespace, selector, searchkeyword, sinceTime string) error {
+func (kc *Client) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(SomeOrAll, namespace, selector, searchkeyword, sinceTime string) error {
 	return util.Retry(kc.getWaiterTries(), func() error {
 		if err := kc.Validate(); err != nil {
 			return err
@@ -1221,14 +1223,29 @@ func (kc *Client) ThePodsInNamespaceWithSelectorHaveStringInLogsSinceTime(namesp
 		if len(pods.Items) == 0 {
 			return fmt.Errorf("no pods matched selector '%s'", selector)
 		}
+		var podsCount int
 		for _, pod := range pods.Items {
-			count, err := findStringInPodLogs(kc, pod, since, searchkeyword)
+			podCount, err := findStringInPodLogs(kc, pod, since, searchkeyword)
 			if err != nil {
 				return err
 			}
-			if count == 0 {
-				return fmt.Errorf("pod has no %s message in the logs", searchkeyword)
+			podsCount += podCount
+			switch SomeOrAll {
+			case SomePodsKey:
+				if podCount != 0 {
+					log.Infof("'%s' pods required to have string in logs. pod '%s' has string '%s' in logs", SomePodsKey, pod.Name, searchkeyword)
+					return nil
+				}
+			case AllPodsKey:
+				if podCount == 0 {
+					return fmt.Errorf("'%s' pods required to have string in logs. pod '%s' does not have string '%s' in logs", AllPodsKey, pod.Name, searchkeyword)
+				}
+			default:
+				return fmt.Errorf("wrong input as '%s', expected '(%s|%s)'", SomeOrAll, SomePodsKey, AllPodsKey)
 			}
+		}
+		if podsCount == 0 {
+			return fmt.Errorf("pods in namespace '%s' with selector '%s' do not have string '%s' in logs", namespace, selector, searchkeyword)
 		}
 		return nil
 	})
@@ -1255,7 +1272,7 @@ func findStringInPodLogs(kc *Client, pod corev1.Pod, since time.Time, stringsToF
 			for _, stringToFind := range stringsToFind {
 				if strings.Contains(line, stringToFind) {
 					foundCount += 1
-					log.Infof("Found matching string in line: '%s'", line)
+					log.Infof("Found string '%s' in line '%s' in container '%s' of pod '%s'", stringToFind, line, container.Name, pod.Name)
 				}
 			}
 		}
@@ -1264,14 +1281,14 @@ func findStringInPodLogs(kc *Client, pod corev1.Pod, since time.Time, stringsToF
 	return foundCount, nil
 }
 
-func (kc *Client) NoMatchingStringInLogsSinceTime(namespace, selector, searchkeyword, sinceTime string) error {
+func (kc *Client) SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(namespace, selector, searchkeyword, sinceTime string) error {
 	if err := kc.Validate(); err != nil {
 		return err
 	}
 
 	since, ok := kc.Timestamps[sinceTime]
 	if !ok {
-		return fmt.Errorf("Time '%s' was not remembered", sinceTime)
+		return fmt.Errorf("time '%s' was never stored", sinceTime)
 	}
 
 	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
@@ -1291,7 +1308,7 @@ func (kc *Client) NoMatchingStringInLogsSinceTime(namespace, selector, searchkey
 			return nil
 		}
 	}
-	return fmt.Errorf("Pod has '%s' message in the logs", searchkeyword)
+	return fmt.Errorf("pod has '%s' message in the logs", searchkeyword)
 }
 
 func (kc *Client) ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(namespace string, selector string, sinceTime string) error {
@@ -1301,7 +1318,7 @@ func (kc *Client) ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(name
 
 	since, ok := kc.Timestamps[sinceTime]
 	if !ok {
-		return errors.Errorf("Time '%s' was not remembered", sinceTime)
+		return errors.Errorf("time '%s' was never stored", sinceTime)
 	}
 
 	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
