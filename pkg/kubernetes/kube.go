@@ -1133,14 +1133,15 @@ func (kc *Client) IngressAvailable(name, namespace string, port int, path string
 	var (
 		counter int
 	)
-	endpoint, err := kc.GetIngressEndpoint(name, namespace, port, path)
-	if err != nil {
-		return err
-	}
+
 	for {
 		log.Info("waiting for ingress availability")
 		if counter >= kc.getWaiterTries() {
 			return errors.New("waiter timed out waiting for resource state")
+		}
+		endpoint, err := kc.GetIngressEndpoint(name, namespace, port, path)
+		if err != nil {
+			return err
 		}
 		log.Infof("waiting for endpoint %v to become available", endpoint)
 		client := http.Client{
