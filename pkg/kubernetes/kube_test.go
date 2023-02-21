@@ -853,7 +853,7 @@ func Test_ThePodsInNamespaceWithSelectorShouldHaveLabels(t *testing.T) {
 				DiscoveryInterface: tt.fields.DiscoveryInterface,
 			}
 			if err := kc.ThePodsInNamespaceWithSelectorShouldHaveLabels(tt.args.namespace, tt.args.selector, tt.args.labels); (err != nil) != tt.wantErr {
-				t.Errorf("ThePodsInNamespaceShouldHaveLabels() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ThePodsInNamespaceWithSelectorShouldHaveLabels() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
