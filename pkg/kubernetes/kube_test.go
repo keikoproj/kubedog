@@ -749,7 +749,7 @@ func Test_unstructuredResourceOperation(t *testing.T) {
 	}
 }
 
-func Test_ThePodsInNamespaceShouldHaveLabels(t *testing.T) {
+func Test_ThePodsInNamespaceWithSelectorShouldHaveLabels(t *testing.T) {
 	ns := v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
 	podWithLabels1 := v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
@@ -852,7 +852,7 @@ func Test_ThePodsInNamespaceShouldHaveLabels(t *testing.T) {
 				DynamicInterface:   tt.fields.DynamicInterface,
 				DiscoveryInterface: tt.fields.DiscoveryInterface,
 			}
-			if err := kc.ThePodsInNamespaceShouldHaveLabels(tt.args.namespace, tt.args.selector, tt.args.labels); (err != nil) != tt.wantErr {
+			if err := kc.ThePodsInNamespaceWithSelectorShouldHaveLabels(tt.args.namespace, tt.args.selector, tt.args.labels); (err != nil) != tt.wantErr {
 				t.Errorf("ThePodsInNamespaceShouldHaveLabels() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
