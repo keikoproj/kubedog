@@ -209,15 +209,8 @@ func RetryOnError(backoff *wait.Backoff, retryExpected func(error) bool, fn Func
 	return out, err
 }
 
-func Retry(tries int, fn FuncToRetry) error {
-	backoff := wait.Backoff{
-		Duration: 2 * time.Second,
-		Factor:   2.0,
-		Jitter:   0.5,
-		Steps:    tries,
-		Cap:      10 * time.Minute,
-	}
-	_, err := RetryOnError(&backoff, func(err error) bool {
+func RetryOnAnyError(backoff *wait.Backoff, fn FuncToRetry) error {
+	_, err := RetryOnError(backoff, func(err error) bool {
 		return true
 	}, func() (interface{}, error) {
 		return nil, fn()

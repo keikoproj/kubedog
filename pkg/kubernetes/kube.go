@@ -43,6 +43,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -1261,7 +1262,14 @@ func init() {
 }
 
 func (kc *Client) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(SomeOrAll, namespace, selector, searchkeyword, sinceTime string) error {
-	return util.Retry(kc.getWaiterTries(), func() error {
+	expBackoff := &wait.Backoff{
+		Duration: 2 * time.Second,
+		Factor:   2.0,
+		Jitter:   0.5,
+		Steps:    kc.getWaiterTries(),
+		Cap:      10 * time.Minute,
+	}
+	return util.RetryOnAnyError(expBackoff, func() error {
 		if err := kc.Validate(); err != nil {
 			return err
 		}
