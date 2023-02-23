@@ -591,10 +591,18 @@ func (kc *Client) UpdateResourceWithField(resourceFileName, key string, value st
 }
 
 /*
-DeleteAllTestResources deletes all the resources defined by yaml files in the path given by FilesPath, if FilesPath is empty, it will look for the files in ./templates. Meant to be use in the before/after suite/scenario/step hooks
+DeleteAllTestResources deletes all the resources defined by yaml files in the path given by FilesPath: if FilesPath is empty, it will look for the files in ./templates. Meant to be use in the before/after suite/scenario/step hooks
 */
 func (kc *Client) DeleteAllTestResources() error {
 	resourcesPath := kc.getTemplatesPath()
+
+	return kc.DeleteResourcesAtPath(resourcesPath)
+}
+
+/*
+DeleteResourcesAtPath deletes all the resources defined by yaml files in the path provided
+*/
+func (kc *Client) DeleteResourcesAtPath(resourcesPath string) error {
 
 	// Getting context
 	err := kc.KubernetesCluster()
