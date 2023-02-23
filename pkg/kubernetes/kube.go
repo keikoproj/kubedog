@@ -12,7 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//Package kube provides steps implementations related to Kubernetes.
+// Package kube provides steps implementations related to Kubernetes.
 package kube
 
 import (
@@ -297,7 +297,7 @@ func (kc *Client) ResourceOperationWithResult(operation, resourceFileName, expec
 
 func (kc *Client) ResourceOperationWithResultInNamespace(operation, resourceFileName, namespace, expectedResult string) error {
 	var expectError = strings.EqualFold(expectedResult, "fail")
-	err := kc.ResourceOperationInNamespace(operation, resourceFileName, "")
+	err := kc.ResourceOperationInNamespace(operation, resourceFileName, namespace)
 	if !expectError && err != nil {
 		return fmt.Errorf("unexpected error when %s %s: %s", operation, resourceFileName, err.Error())
 	} else if expectError && err == nil {
@@ -957,8 +957,7 @@ func (kc *Client) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName str
 		return errors.Errorf("Prometheus volumeClaimTemplate name changed', got: %v", sfsvolumeClaimTemplatesName)
 	}
 	// Validate Persistent Volume label
-	requiredLabels := []string{"failure-domain.beta.kubernetes.io/zone", "topology.kubernetes.io/zone"}
-	err = kc.validatePVLabels(volumeClaimTemplatesName, requiredLabels)
+	err = kc.validatePrometheusPVLabels(volumeClaimTemplatesName)
 	if err != nil {
 		return err
 	}
@@ -966,19 +965,17 @@ func (kc *Client) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName str
 	return nil
 }
 
-func (kc *Client) validatePVLabels(volumeClaimTemplatesName string, requiredLabels []string) error {
-	// Get PersistentVolume list
+func (kc *Client) validatePrometheusPVLabels(volumeClaimTemplatesName string) error {
+	// Get prometheus PersistentVolume list
 	pv, err := kc.ListPersistentVolumes()
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, item := range pv.Items {
 		pvcname := item.Spec.ClaimRef.Name
-		if strings.Contains(pvcname, volumeClaimTemplatesName) {
-			for _, label := range requiredLabels {
-				if item.Labels[label] == "" {
-					return errors.Errorf("Prometheus volume %s does not have label %s", pvcname, item.Labels[label])
-				}
+		if pvcname == volumeClaimTemplatesName+"-prometheus-k8s-prometheus-0" || pvcname == volumeClaimTemplatesName+"-prometheus-k8s-prometheus-1" {
+			if k1, k2 := item.Labels["failure-domain.beta.kubernetes.io/zone"], item.Labels["topology.kubernetes.io/zone"]; k1 == "" && k2 == "" {
+				return errors.Errorf("Prometheus volumes does not exist label - kubernetes.io/zone")
 			}
 		}
 	}
@@ -1352,7 +1349,43 @@ func (kc *Client) ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(na
 	return nil
 }
 
-func (kc *Client) ThePodsInNamespaceShouldHaveLabels(namespace string,
+func (kc *Client) ThePodsInNamespaceShouldHaveLabels(podName string,
+	namespace string, labels string) error {
+
+	if err := kc.Validate(); err != nil {
+		return err
+	}
+
+	pod, err := kc.KubeInterface.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+	if err != nil {
+		return errors.New("Error fetching pod: " + err.Error())
+	}
+
+	inputLabels := make(map[string]string)
+	slc := strings.Split(labels, ",")
+	for _, item := range slc {
+		vals := strings.Split(item, "=")
+		if len(vals) != 2 {
+			continue
+		}
+
+		inputLabels[vals[0]] = vals[1]
+	}
+
+	for k, v := range inputLabels {
+		pV, ok := pod.Labels[k]
+		if !ok {
+			return errors.New(fmt.Sprintf("Label %s missing in pod/namespace %s", k, podName+"/"+namespace))
+		}
+		if v != pV {
+			return errors.New(fmt.Sprintf("Label value %s doesn't match expected %s for key %s in pod/namespace %s", pV, v, k, podName+"/"+namespace))
+		}
+	}
+
+	return nil
+}
+
+func (kc *Client) ThePodsInNamespaceWithSelectorShouldHaveLabels(namespace string,
 	selector string, labels string) error {
 
 	if err := kc.Validate(); err != nil {

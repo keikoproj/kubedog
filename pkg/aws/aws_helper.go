@@ -23,6 +23,7 @@ func (c *Client) GetDNSRecord(dnsName string, hostedZoneID string) (string, erro
 		return "", fmt.Errorf("no record set exists for hostedZoneID %v with dnsName %v", hostedZoneID, dnsName)
 	}
 	recordSet := resp.ResourceRecordSets[0]
+
 	if recordSet.AliasTarget != nil {
 		aliasRecordValue := aws.StringValue(recordSet.AliasTarget.DNSName)
 		if aliasRecordValue == "" {
