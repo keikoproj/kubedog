@@ -1,51 +1,51 @@
-# Default Go linker flags.
 GO_LDFLAGS := -ldflags="-s -w"
-
-# Step Functions
 BINARY := kubedog
+COVER_FILE := coverage.txt
 
-.PHONY: all
-all: test build style vet lint
 
-.PHONY: build
-build:
-	GOOS=linux GOARCH=amd64 go build $(GO_LDFLAGS) $(BUILDARGS) -o ${BINARY} ./
+all: generate check-dirty-repo build
 
-.PHONY: vendor
-vendor:
-	go mod tidy
-	go mod vendor
+generate: download
+	go generate kubedog.go
 
-.PHONY: test
-test:
-	go test -v -race -timeout=300s -tags test -coverprofile=coverage.out ./...
+build: test
+	GOOS=linux GOARCH=amd64 go build $(GO_LDFLAGS) -o ${BINARY} ./
 
-.PHONY: style
-style:
-	gofmt -s -d -w .
+test: fmt vet
+	go test -v -race -timeout=300s -tags test -coverprofile=${COVER_FILE} ./...
+
+.PHONY: fmt
+fmt:
+	go fmt ./...
 
 .PHONY: vet
 vet:
-	go vet $(VETARGS) ./...
+	go vet ./...
+
+.PHONY: download
+download:
+	go mod download
 
 .PHONY: lint
 lint:
-	@echo "golint $(LINTARGS)"
-	@for pkg in $(shell go list ./...) ; do \
-		echo "golint $(LINTARGS) $$pkg" ; \
-	done
-
-.PHONY: goci
-goci:
 	@echo "golangci-lint"
 	golangci-lint run ./...
 
 .PHONY: cover
 cover:
-	@$(MAKE) test TESTARGS="-tags test -coverprofile=coverage.out"
-	@go tool cover -html=coverage.out
-	@rm -f coverage.out
+	@$(MAKE) test
+	@go tool cover -html=${COVER_FILE}
+
+.PHONY: check-dirty-repo
+check-dirty-repo:
+	@git diff --quiet HEAD || (\
+	echo "Untracked files in git repo: " && \
+	git status --short && \
+	echo "- If 'docs/syntax.md' is up there, try running 'make generate' and commit the generated documentation" && \
+	echo "- If 'go.mod' is up there, try running 'go mod tidy' and commit the changes" && \false)
 
 .PHONY: clean
 clean:
-	@rm -rf ./build
+	@rm -f ${BINARY}
+	@rm -f ${COVER_FILE}
+

@@ -20,21 +20,49 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime"
+	"strings"
 	"text/template"
+	"time"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/restmapper"
 )
 
-const YamlSeparator = "\n---"
-const TrimTokens = "\n "
+const (
+	YamlSeparator                  = "\n---"
+	TrimTokens                     = "\n "
+	clusterNameEnvironmentVariable = "CLUSTER_NAME"
+)
+
+var (
+	DefaultRetry = wait.Backoff{
+		Steps:    6,
+		Duration: 1000 * time.Millisecond,
+		Factor:   1.0,
+		Jitter:   0.1,
+	}
+	retriableErrors = []string{
+		"Unable to reach the kubernetes API",
+		"Unable to connect to the server",
+		"EOF",
+		"transport is closing",
+		"the object has been modified",
+		"an error on the server",
+	}
+)
+
+type condFunc func() (interface{}, error)
 
 type K8sUnstructuredResource struct {
 	GVR      *meta.RESTMapping
@@ -146,4 +174,47 @@ func GetResourceFromString(resourceString string, dc discovery.DiscoveryInterfac
 		return K8sUnstructuredResource{nil, resource}, err
 	}
 	return K8sUnstructuredResource{gvr, resource}, err
+}
+
+func IsRetriable(err error) bool {
+	for _, msg := range retriableErrors {
+		if strings.Contains(err.Error(), msg) {
+			return true
+		}
+	}
+	return false
+}
+
+func RetryOnError(backoff *wait.Backoff, retryExpected func(error) bool, fn condFunc) (interface{}, error) {
+	var ex, lastErr error
+	var out interface{}
+	caller := runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name()
+	err := wait.ExponentialBackoff(*backoff, func() (bool, error) {
+		out, ex = fn()
+		switch {
+		case ex == nil:
+			return true, nil
+		case retryExpected(ex):
+			lastErr = ex
+			log.Warnf("A caller %v retried due to exception: %v", caller, ex)
+			return false, nil
+		default:
+			return false, ex
+		}
+	})
+	if err == wait.ErrWaitTimeout {
+		err = lastErr
+	}
+	return out, err
+}
+
+func GetClusterName() (string, error) {
+	return GetEnvironmentVariable(clusterNameEnvironmentVariable)
+}
+
+func GetEnvironmentVariable(envName string) (string, error) {
+	if envValue, ok := os.LookupEnv(envName); ok {
+		return envValue, nil
+	}
+	return "", fmt.Errorf("could not get environment variable '%s'", envName)
 }

@@ -4,7 +4,7 @@
 *.test
 test/templates/generated_*
 kubedog
-coverage.out
+coverage.txt
 
 # ignore edit files
 .*~

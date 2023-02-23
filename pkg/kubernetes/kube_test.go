@@ -38,6 +38,7 @@ import (
 	fakeDiscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/dynamic"
 	fakeDynamic "k8s.io/client-go/dynamic/fake"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	kTesting "k8s.io/client-go/testing"
 )
@@ -51,6 +52,9 @@ func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 		testReadyLabel    = map[string]string{"testing-ShouldBeReady": "some-value"}
 		testFoundLabel    = map[string]string{"testing-ShouldBeFound": "some-value"}
 		fakeClient        *fake.Clientset
+		dynScheme         = runtime.NewScheme()
+		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(dynScheme)
+		fakeDiscovery     = &fakeDiscovery.FakeDiscovery{}
 	)
 
 	fakeClient = fake.NewSimpleClientset(&v1.Node{
@@ -74,8 +78,10 @@ func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 	})
 
 	kc := Client{
-		KubeInterface: fakeClient,
-		FilesPath:     "../../test/templates",
+		KubeInterface:      fakeClient,
+		DiscoveryInterface: fakeDiscovery,
+		DynamicInterface:   fakeDynamicClient,
+		FilesPath:          "../../test/templates",
 	}
 
 	err := kc.NodesWithSelectorShouldBe(1, testReadySelector, NodeStateReady)
@@ -92,6 +98,7 @@ func TestPositiveResourceOperation(t *testing.T) {
 		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(dynScheme)
 		testResource      *unstructured.Unstructured
 		fakeDiscovery     = fakeDiscovery.FakeDiscovery{}
+		fakeClient        *fake.Clientset
 	)
 
 	const fileName = "test-resourcefile.yaml"
@@ -105,6 +112,7 @@ func TestPositiveResourceOperation(t *testing.T) {
 	fakeDiscovery.Resources = append(fakeDiscovery.Resources, newTestAPIResourceList(testResource.GetAPIVersion(), testResource.GetName(), testResource.GetKind()))
 
 	kc := Client{
+		KubeInterface:      fakeClient,
 		DynamicInterface:   fakeDynamicClient,
 		DiscoveryInterface: &fakeDiscovery,
 		FilesPath:          "../../test/templates",
@@ -194,6 +202,7 @@ func TestPositiveResourceShouldBe(t *testing.T) {
 		dynScheme           = runtime.NewScheme()
 		fakeDynamicClient   = fakeDynamic.NewSimpleDynamicClient(dynScheme)
 		fakeDiscovery       = fakeDiscovery.FakeDiscovery{}
+		fakeClient          *fake.Clientset
 		testResource        *unstructured.Unstructured
 		createdReactionFunc = func(action kTesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, testResource, nil
@@ -218,10 +227,11 @@ func TestPositiveResourceShouldBe(t *testing.T) {
 	kc := Client{
 		DynamicInterface:   fakeDynamicClient,
 		DiscoveryInterface: &fakeDiscovery,
+		KubeInterface:      fakeClient,
 		FilesPath:          "../../test/templates",
 	}
 
-	err = kc.ResourceShouldBe(fileName, ResourceStateCreated)
+	err = kc.ResourceShouldBe(fileName, StateCreated)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	fakeDiscovery.ReactionChain[0] = &kTesting.SimpleReactor{
@@ -230,7 +240,7 @@ func TestPositiveResourceShouldBe(t *testing.T) {
 		Reaction: deletedReactionFunc,
 	}
 
-	err = kc.ResourceShouldBe(fileName, ResourceStateDeleted)
+	err = kc.ResourceShouldBe(fileName, StateDeleted)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
@@ -241,6 +251,7 @@ func TestPositiveResourceShouldConvergeToSelector(t *testing.T) {
 		g                 = gomega.NewWithT(t)
 		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(runtime.NewScheme())
 		fakeDiscovery     = fakeDiscovery.FakeDiscovery{}
+		fakeClient        *fake.Clientset
 		testResource      *unstructured.Unstructured
 		getReactionFunc   = func(action kTesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, testResource, nil
@@ -265,6 +276,7 @@ func TestPositiveResourceShouldConvergeToSelector(t *testing.T) {
 	kc := Client{
 		DynamicInterface:   fakeDynamicClient,
 		DiscoveryInterface: &fakeDiscovery,
+		KubeInterface:      fakeClient,
 		FilesPath:          "../../test/templates",
 	}
 
@@ -279,6 +291,7 @@ func TestPositiveResourceConditionShouldBe(t *testing.T) {
 		g                 = gomega.NewWithT(t)
 		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(runtime.NewScheme())
 		fakeDiscovery     = fakeDiscovery.FakeDiscovery{}
+		fakeClient        *fake.Clientset
 		testResource      *unstructured.Unstructured
 		getReactionFunc   = func(action kTesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, testResource, nil
@@ -304,6 +317,7 @@ func TestPositiveResourceConditionShouldBe(t *testing.T) {
 	kc := Client{
 		DynamicInterface:   fakeDynamicClient,
 		DiscoveryInterface: &fakeDiscovery,
+		KubeInterface:      fakeClient,
 		FilesPath:          "../../test/templates",
 	}
 
@@ -325,6 +339,7 @@ func TestPositiveUpdateResourceWithField(t *testing.T) {
 		g                 = gomega.NewWithT(t)
 		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(runtime.NewScheme())
 		fakeDiscovery     = fakeDiscovery.FakeDiscovery{}
+		fakeClient        *fake.Clientset
 		testResource      *unstructured.Unstructured
 		getReactionFunc   = func(action kTesting.Action) (handled bool, ret runtime.Object, err error) {
 			return true, testResource, nil
@@ -349,6 +364,7 @@ func TestPositiveUpdateResourceWithField(t *testing.T) {
 	kc := Client{
 		DynamicInterface:   fakeDynamicClient,
 		DiscoveryInterface: &fakeDiscovery,
+		KubeInterface:      fakeClient,
 		FilesPath:          "../../test/templates",
 	}
 
@@ -356,16 +372,19 @@ func TestPositiveUpdateResourceWithField(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	expectedLabelValue, found, err := unstructured.NestedString(testResource.UnstructuredContent(), "metadata", "labels", "testUpdateKey")
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	g.Expect(found).To(gomega.BeTrue())
 	g.Expect(expectedLabelValue).To(gomega.Equal(testUpdateValue))
 }
 
 func TestResourceInNamespace(t *testing.T) {
 	var (
-		err            error
-		g              = gomega.NewWithT(t)
-		fakeKubeClient = fake.NewSimpleClientset()
-		namespace      = "test_ns"
+		err               error
+		g                 = gomega.NewWithT(t)
+		fakeKubeClient    = fake.NewSimpleClientset()
+		namespace         = "test_ns"
+		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(runtime.NewScheme())
+		fakeDiscovery     = &fakeDiscovery.FakeDiscovery{}
 	)
 
 	tests := []struct {
@@ -403,7 +422,9 @@ func TestResourceInNamespace(t *testing.T) {
 	}
 
 	kc := Client{
-		KubeInterface: fakeKubeClient,
+		KubeInterface:      fakeKubeClient,
+		DynamicInterface:   fakeDynamicClient,
+		DiscoveryInterface: fakeDiscovery,
 	}
 
 	_, _ = kc.KubeInterface.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
@@ -723,6 +744,116 @@ func Test_unstructuredResourceOperation(t *testing.T) {
 			}
 			if err := kc.unstructuredResourceOperation(tt.funcArgs.operation, tt.funcArgs.ns, tt.funcArgs.unstructuredResource); (err != nil) != tt.wantErr {
 				t.Errorf("Client.unstructuredResourceOperation() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_ThePodsInNamespaceWithSelectorShouldHaveLabels(t *testing.T) {
+	ns := v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
+	podWithLabels1 := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-foo-xhhxj",
+			Namespace: "foo",
+			Labels: map[string]string{
+				"app":   "foo",
+				"label": "true",
+			},
+		},
+	}
+	podWithLabels2 := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-foo-xhhzd",
+			Namespace: "foo",
+			Labels: map[string]string{
+				"app":   "foo",
+				"label": "true",
+			},
+		},
+	}
+	podMissingLabel := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-foo-xhhzr",
+			Namespace: "foo",
+			Labels: map[string]string{
+				"app": "foo",
+			},
+		},
+	}
+	clientNoErr := fake.NewSimpleClientset(&ns, &podWithLabels1, &podWithLabels2)
+	clientErr := fake.NewSimpleClientset(&ns, &podWithLabels1, &podWithLabels2, &podMissingLabel)
+	dynScheme := runtime.NewScheme()
+	fakeDynamicClient := fakeDynamic.NewSimpleDynamicClient(dynScheme)
+	fakeDiscoveryClient := fakeDiscovery.FakeDiscovery{}
+
+	type fields struct {
+		KubeInterface      kubernetes.Interface
+		DynamicInterface   dynamic.Interface
+		DiscoveryInterface *fakeDiscovery.FakeDiscovery
+	}
+	type args struct {
+		namespace string
+		selector  string
+		labels    string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "No pods found",
+			fields: fields{
+				KubeInterface:      clientErr,
+				DiscoveryInterface: &fakeDiscoveryClient,
+				DynamicInterface:   fakeDynamicClient,
+			},
+			args: args{
+				selector:  "app=doesnotexist",
+				namespace: "foo",
+				labels:    "app=foo,label=true",
+			},
+			wantErr: true,
+		},
+		{
+			name: "Pods should have labels",
+			fields: fields{
+				KubeInterface:      clientNoErr,
+				DiscoveryInterface: &fakeDiscoveryClient,
+				DynamicInterface:   fakeDynamicClient,
+			},
+			args: args{
+				selector:  "app=foo",
+				namespace: "foo",
+				labels:    "app=foo,label=true",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Error from pod missing label",
+			fields: fields{
+				KubeInterface:      clientErr,
+				DiscoveryInterface: &fakeDiscoveryClient,
+				DynamicInterface:   fakeDynamicClient,
+			},
+			args: args{
+				selector:  "app=foo",
+				namespace: "foo",
+				labels:    "app=foo,label=true",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			kc := &Client{
+				KubeInterface:      tt.fields.KubeInterface,
+				DynamicInterface:   tt.fields.DynamicInterface,
+				DiscoveryInterface: tt.fields.DiscoveryInterface,
+			}
+			if err := kc.ThePodsInNamespaceWithSelectorShouldHaveLabels(tt.args.namespace, tt.args.selector, tt.args.labels); (err != nil) != tt.wantErr {
+				t.Errorf("ThePodsInNamespaceWithSelectorShouldHaveLabels() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
