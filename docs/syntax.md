@@ -12,8 +12,8 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [I] (create|submit|delete|update) [the] resource <non-whitespace-characters> in [the] <any-characters-except-(")> namespace` kdt.KubeContext.ResourceOperationInNamespace
 - `<GK> [I] (create|submit|delete|update) [the] resources in <non-whitespace-characters>` kdt.KubeContext.MultiResourceOperation
 - `<GK> [I] (create|submit|delete|update) [the] resources in <non-whitespace-characters> in [the] <any-characters-except-(")> namespace` kdt.KubeContext.MultiResourceOperationInNamespace
-- `<GK> [if |when] I (create|submit|delete|update) [the] resource <non-whitespace-characters>, the operation should (succeed|fail)` kdt.KubeContext.ResourceOperationWithResult
-- `<GK> [if |when] I (create|submit|delete|update) [the] resource <non-whitespace-characters> in [the] <any-characters-except-(")> namespace, the operation should (succeed|fail)` kdt.KubeContext.ResourceOperationWithResultInNamespace
+- `<GK> [I] (create|submit|delete|update) [the] resource <non-whitespace-characters>, the operation should (succeed|fail)` kdt.KubeContext.ResourceOperationWithResult
+- `<GK> [I] (create|submit|delete|update) [the] resource <non-whitespace-characters> in [the] <any-characters-except-(")> namespace, the operation should (succeed|fail)` kdt.KubeContext.ResourceOperationWithResultInNamespace
 - `<GK> [I] (create|submit|update) [the] secret <non-whitespace-characters> in namespace <non-whitespace-characters> from [environment variable] <non-whitespace-characters>` kdt.KubeContext.SecretOperationFromEnvironmentVariable
 - `<GK> [I] delete [the] secret <non-whitespace-characters> in namespace <non-whitespace-characters>` kdt.KubeContext.SecretDelete
 - `<GK> [the] resource <any-characters-except-(")> should be (created|deleted)` kdt.KubeContext.ResourceShouldBe
@@ -21,7 +21,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [the] resource <any-characters-except-(")> [should] converge to selector <non-whitespace-characters>` kdt.KubeContext.ResourceShouldConvergeToSelector
 - `<GK> [the] resource <any-characters-except-(")> condition <any-characters-except-(")> should be (true|false)` kdt.KubeContext.ResourceConditionShouldBe
 - `<GK> [I] update [the] resource <any-characters-except-(")> with <any-characters-except-(")> set to <any-characters-except-(")>` kdt.KubeContext.UpdateResourceWithField
-- `<GK> <digits> node[s)? with selector <non-whitespace-characters> should be (found|ready)` kdt.KubeContext.NodesWithSelectorShouldBe
+- `<GK> <digits> node[s] with selector <non-whitespace-characters> should be (found|ready)` kdt.KubeContext.NodesWithSelectorShouldBe
 - `<GK> [the] (deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) <any-characters-except-(")> is in namespace <any-characters-except-(")>` kdt.KubeContext.ResourceInNamespace
 - `<GK> [I] scale [the] deployment <any-characters-except-(")> in namespace <any-characters-except-(")> to <digits>` kdt.KubeContext.ScaleDeployment
 - `<GK> [I] verify InstanceGroups [are] in "ready" state` kdt.KubeContext.VerifyInstanceGroups
@@ -35,7 +35,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [the] persistentvolume <any-characters-except-(")> exists with status (Available|Bound|Released|Failed|Pending)` kdt.KubeContext.PersistentVolExists
 - `<GK> [the] (clusterrole|clusterrolebinding) with name <any-characters-except-(")> should be found` kdt.KubeContext.ClusterRbacIsFound
 - `<GK> [the] ingress <non-whitespace-characters> in [the] namespace <non-whitespace-characters> [is] [available] on port <digits> and path <any-characters-except-(")>` kdt.KubeContext.OldIngressAvailable
-- `<GK> [I] send <digits> tps to ingress <non-whitespace-characters> in [the] namespace <non-whitespace-characters> [available] on port <digits> and path <any-characters-except-(")> for <digits> (minutes|seconds) expecting up to <digits> error(:?s)?` kdt.KubeContext.SendTrafficToIngress
+- `<GK> [I] send <digits> tps to ingress <non-whitespace-characters> in [the] namespace <non-whitespace-characters> [available] on port <digits> and path <any-characters-except-(")> for <digits> (minutes|seconds) expecting up to <digits> error(:?s]` kdt.KubeContext.SendTrafficToIngress
 - `<GK> (some|all) pods in namespace <non-whitespace-characters> with selector <non-whitespace-characters> have "<any-characters-except-(")>" in logs since <any-characters-except-(")> time` kdt.KubeContext.SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime
 - `<GK> some pods in namespace <non-whitespace-characters> with selector <non-whitespace-characters> don't have "<any-characters-except-(")>" in logs since <any-characters-except-(")> time` kdt.KubeContext.SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime
 - `<GK> [the] pods in namespace <non-whitespace-characters> with selector <non-whitespace-characters> have no errors in logs since <any-characters-except-(")> time` kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime
