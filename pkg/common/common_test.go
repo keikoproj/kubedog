@@ -15,7 +15,6 @@ limitations under the License.
 package common
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -231,7 +230,7 @@ func TestGenerateFileFromTemplate(t *testing.T) {
 	}
 
 	fileToString := func(filePath string) string {
-		file, _ := ioutil.ReadFile(filePath)
+		file, _ := os.ReadFile(filePath)
 		return string(file)
 	}
 

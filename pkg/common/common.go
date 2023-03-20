@@ -18,7 +18,6 @@ package common
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -98,8 +97,7 @@ func GenerateFileFromTemplate(templatedFilePath string, templateArgs interface{}
 	if err != nil {
 		return "", errors.Errorf("Error executing template '%v' against '%s': %v", templateArgs, templatedFilePath, err)
 	}
-
-	generated, err := ioutil.ReadFile(generatedFilePath)
+	generated, err := os.ReadFile(generatedFilePath)
 	if err != nil {
 		return "", errors.Errorf("Error reading generated file '%s': %v", generatedFilePath, err)
 	}
