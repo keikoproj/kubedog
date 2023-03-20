@@ -12,7 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//Package aws provides steps implementations related to AWS.
+// Package aws provides steps implementations related to AWS.
 package aws
 
 import (
@@ -192,10 +192,14 @@ func (c *Client) GetAWSCredsAndClients() error {
 
 func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
 	accountId := GetAccountNumber(c.STSClient)
+	clusterName, err := util.GetClusterName()
+	if err != nil {
+		return err
+	}
 
 	// Add efs-csi-role-<clustername> as trusted entity
-	var trustedEntityArn = fmt.Sprintf("arn:aws:iam::%s:role/%s",
-		accountId, entityName)
+	var trustedEntityArn = fmt.Sprintf("arn:aws:iam::%s:role/%s-%s",
+		accountId, entityName, clusterName)
 
 	type StatementEntry struct {
 		Effect    string
@@ -280,15 +284,15 @@ func (c *Client) ClusterSharedIamOperation(operation string) error {
 	}
 	roleName := fmt.Sprintf("shared.%s", clusterName)
 
-	// for trusted entity
-	clusterSharedrole := fmt.Sprintf(iamFmt, accountId, "role", roleName)
-	rootIAM := fmt.Sprintf("arn:aws:iam::%s:%s", accountId, "root")
-	clusterSharedPolicy := fmt.Sprintf(iamFmt, accountId, "policy", roleName)
-	assumeRoleDoc := `{"Version":"2012-10-17","Statement":[{"Effect": "Allow", "Action": "sts:AssumeRole", "Principal": {"AWS": "%s"}}]}`
-	roleDocument := []byte(fmt.Sprintf(assumeRoleDoc, rootIAM))
 	policyDocT := `{"Version":"2012-10-17","Statement":[{"Effect": "Allow", "Action": "sts:AssumeRole", "Resource": "%s"}]}`
+	clusterSharedrole := fmt.Sprintf(iamFmt, accountId, "role", roleName)
 	policyDocument := []byte(fmt.Sprintf(policyDocT, clusterSharedrole))
 
+	rootIAM := fmt.Sprintf("arn:aws:iam::%s:%s", accountId, "root")
+	assumeRoleDoc := `{"Version":"2012-10-17","Statement":[{"Effect": "Allow", "Action": "sts:AssumeRole", "Principal": {"AWS": "%s"}}]}`
+	roleDocument := []byte(fmt.Sprintf(assumeRoleDoc, rootIAM))
+
+	clusterSharedPolicy := fmt.Sprintf(iamFmt, accountId, "policy", roleName)
 	switch operation {
 	case "add":
 		role, err := PutIAMRole(roleName, "shared cluster role", roleDocument, c.IAMClient)
