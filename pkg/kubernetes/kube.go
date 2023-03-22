@@ -1138,61 +1138,6 @@ func (kc *Client) GetIngressEndpoint(name, namespace string, port int, path stri
 	}
 }
 
-func (kc *Client) OldIngressAvailable(name, namespace string, port int, path string) error {
-	var (
-		counter int
-	)
-
-	for {
-		log.Info("BDD >> waiting for ingress availability")
-
-		if counter >= kc.getWaiterTries() {
-			return errors.New("waiter timed out waiting for resource state")
-		}
-		ingress, err := kc.GetIngress(name, namespace)
-		if err != nil {
-			return err
-		}
-		annotations := ingress.GetAnnotations()
-		albSubnets := annotations["service.beta.kubernetes.io/aws-load-balancer-subnets"]
-		log.Infof("Alb IngressSubnets associated are: %v", albSubnets)
-		var ingressReconciled bool
-		ingressStatus := ingress.Status.LoadBalancer.Ingress
-		if ingressStatus == nil {
-			log.Infof("BDD >> ingress %v/%v is not ready yet", namespace, name)
-		} else {
-			ingressReconciled = true
-		}
-
-		if ingressReconciled {
-			hostname := ingressStatus[0].Hostname
-			endpoint := fmt.Sprintf("http://%v:%v%v", hostname, port, path)
-
-			log.Infof("BDD >> waiting for endpoint %v to become available", endpoint)
-			client := http.Client{
-				Timeout: 10 * time.Second,
-			}
-			req, err := http.NewRequest(http.MethodGet, endpoint, nil)
-			if err != nil {
-				return err
-			}
-
-			if resp, err := client.Do(req); resp != nil {
-				if resp.StatusCode == 200 {
-					log.Infof("BDD >> endpoint %v is available", endpoint)
-					time.Sleep(time.Second * 30)
-					return nil
-				}
-			} else {
-				log.Infof("BDD >> endpoint %v is not available yet: %v", endpoint, err)
-			}
-		}
-
-		counter++
-		time.Sleep(kc.getWaiterInterval())
-	}
-}
-
 func (kc *Client) IngressAvailable(name, namespace string, port int, path string) error {
 	var (
 		counter int
