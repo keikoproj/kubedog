@@ -32,17 +32,18 @@ const (
 	destinationFileBeginning = "# Syntax" + newLine + "Below you will find the step syntax next to the name of the method it utilizes. Here GK stands for [Gherkin](https://cucumber.io/docs/gherkin/reference/#keywords) Keyword and words in brackets ([]) are optional:" + newLine
 )
 
-type replacee string
-type replacer string
-
-var replacers = map[replacee]replacer{
-	`(?:`:     `[`,
-	` )?`:     `] `,
-	`(\d+)`:   `<digits>`,
-	`(\S+)`:   `<non-whitespace-characters>`,
-	`([^"]*)`: `<any-characters-except-(")>`,
-	`\(`:      `(`,
-	`\)`:      `)`,
+var replacers = []struct {
+	replacee string
+	replacer string
+}{
+	{`(?:`, `[`},
+	{` )?`, `] `},
+	{`)?`, `]`},
+	{`(\d+)`, `<digits>`},
+	{`(\S+)`, `<non-whitespace-characters>`},
+	{`([^"]*)`, `<any-characters-except-(")>`},
+	{`\(`, `(`},
+	{`\)`, `)`},
 }
 
 func main() {
@@ -125,8 +126,8 @@ func processStep(rawStep string) string {
 	processedStep := rawStepSplit[1]
 	processedStep = strings.TrimPrefix(processedStep, stepPrefix)
 	processedStep = strings.TrimSuffix(processedStep, stepSuffix)
-	for replaceeValue, replacerValue := range replacers {
-		processedStep = strings.ReplaceAll(processedStep, string(replaceeValue), string(replacerValue))
+	for _, r := range replacers {
+		processedStep = strings.ReplaceAll(processedStep, r.replacee, r.replacer)
 	}
 	method := rawStepSplit[2]
 	method = strings.TrimPrefix(method, methodPrefix)
