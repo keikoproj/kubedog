@@ -30,7 +30,7 @@ import (
 type Test struct {
 	suiteContext    *godog.TestSuiteContext
 	scenarioContext *godog.ScenarioContext
-	KubeContext     kube.Client
+	KubeContext     kube.ClientSet
 	AwsContext      aws.Client
 }
 
@@ -53,7 +53,7 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^the (\S+) command is available$`, common.CommandExists)
 	kdt.scenarioContext.Step(`^I run the (\S+) command with the ([^"]*) args and the command (fails|succeeds)$`, common.RunCommand)
 	//syntax-generation:title:Kubernetes steps
-	kdt.scenarioContext.Step(`^((?:a )?Kubernetes cluster|(?:there are )?(?:valid )?Kubernetes Credentials)$`, kdt.KubeContext.KubernetesCluster)
+	kdt.scenarioContext.Step(`^((?:a )?Kubernetes cluster|(?:there are )?(?:valid )?Kubernetes Credentials)$`, kdt.KubeContext.DiscoverClients)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+)$`, kdt.KubeContext.ResourceOperation)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+) in (?:the )?([^"]*) namespace$`, kdt.KubeContext.ResourceOperationInNamespace)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resources in (\S+)$`, kdt.KubeContext.MultiResourceOperation)
@@ -84,10 +84,10 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:I )?send (\d+) tps to ingress (\S+) in (?:the )?namespace (\S+) (?:available )?on port (\d+) and path ([^"]*) for (\d+) (minutes|seconds) expecting up to (\d+) error(?:s)?$`, kdt.KubeContext.SendTrafficToIngress)
 	kdt.scenarioContext.Step(`^(some|all) pods in namespace (\S+) with selector (\S+) have "([^"]*)" in logs since ([^"]*) time$`, kdt.KubeContext.SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime)
 	kdt.scenarioContext.Step(`^some pods in namespace (\S+) with selector (\S+) don't have "([^"]*)" in logs since ([^"]*) time$`, kdt.KubeContext.SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime)
-	kdt.scenarioContext.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) have no errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime)
-	kdt.scenarioContext.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) have some errors in logs since ([^"]*) time$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime)
-	kdt.scenarioContext.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) should have labels (\S+)$`, kdt.KubeContext.ThePodsInNamespaceWithSelectorShouldHaveLabels)
-	kdt.scenarioContext.Step(`^(?:the )?pod (\S+) in namespace (\S+) should have labels (\S+)$`, kdt.KubeContext.ThePodsInNamespaceShouldHaveLabels)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) have no errors in logs since ([^"]*) time$`, kdt.KubeContext.PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) have some errors in logs since ([^"]*) time$`, kdt.KubeContext.PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime)
+	kdt.scenarioContext.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) should have labels (\S+)$`, kdt.KubeContext.PodsInNamespaceWithSelectorShouldHaveLabels)
+	kdt.scenarioContext.Step(`^(?:the )?pod (\S+) in namespace (\S+) should have labels (\S+)$`, kdt.KubeContext.PodsInNamespaceShouldHaveLabels)
 	//syntax-generation:title:AWS steps
 	kdt.scenarioContext.Step(`^(?:there are )?(?:valid )?AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
 	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)

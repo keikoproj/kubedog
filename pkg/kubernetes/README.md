@@ -3,7 +3,7 @@
 The kube package provides steps implementations related to Kubernetes.
 
 ## Templated Kubernetes manifests
-All the steps implementations of this package use the [`"text/template"`](https://golang.org/pkg/text/template/) library to support templated `yaml` files. Simply assign the data structure that contains your template's arguments to `TemplateArguments` within the `KubeContext` object of your `Test` instance:
+All the steps implementations of this package use the [`"text/template"`](https://golang.org/pkg/text/template/) library to support templated `yaml` files. Assign the data structure that contains your template's arguments to `TemplateArguments` within the `KubeContext` object of your `Test` instance:
 
 ``` go
 // Data structure with your template's arguments

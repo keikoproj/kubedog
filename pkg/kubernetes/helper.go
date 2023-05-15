@@ -2,6 +2,7 @@ package kube
 
 import (
 	"context"
+	"fmt"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/pkg/errors"
@@ -10,10 +11,11 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 // ListPodsWithLabelSelector lists pods with a label selector
-func (kc *Client) ListPodsWithLabelSelector(namespace, selector string) (*corev1.PodList, error) {
+func (kc *ClientSet) ListPodsWithLabelSelector(namespace, selector string) (*corev1.PodList, error) {
 	pods, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector})
 	})
@@ -25,7 +27,7 @@ func (kc *Client) ListPodsWithLabelSelector(namespace, selector string) (*corev1
 }
 
 // ListNodes lists nodes
-func (kc *Client) ListNodes() (*corev1.NodeList, error) {
+func (kc *ClientSet) ListNodes() (*corev1.NodeList, error) {
 	nodes, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	})
@@ -37,7 +39,7 @@ func (kc *Client) ListNodes() (*corev1.NodeList, error) {
 }
 
 // GetDaemonset gets a daemonset
-func (kc *Client) GetDaemonset(name, namespace string) (*appsv1.DaemonSet, error) {
+func (kc *ClientSet) GetDaemonset(name, namespace string) (*appsv1.DaemonSet, error) {
 	ds, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.AppsV1().DaemonSets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	})
@@ -48,7 +50,7 @@ func (kc *Client) GetDaemonset(name, namespace string) (*appsv1.DaemonSet, error
 }
 
 // GetDeployment gets a deployment
-func (kc *Client) GetDeployment(name, namespace string) (*appsv1.Deployment, error) {
+func (kc *ClientSet) GetDeployment(name, namespace string) (*appsv1.Deployment, error) {
 	deploy, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	})
@@ -59,7 +61,7 @@ func (kc *Client) GetDeployment(name, namespace string) (*appsv1.Deployment, err
 }
 
 // GetPersistentVolume gets a pv
-func (kc *Client) GetPersistentVolume(name string) (*corev1.PersistentVolume, error) {
+func (kc *ClientSet) GetPersistentVolume(name string) (*corev1.PersistentVolume, error) {
 	pvs, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.CoreV1().PersistentVolumes().Get(context.Background(), name, metav1.GetOptions{})
 	})
@@ -69,8 +71,19 @@ func (kc *Client) GetPersistentVolume(name string) (*corev1.PersistentVolume, er
 	return pvs.(*corev1.PersistentVolume), nil
 }
 
-func (kc *Client) ListInstanceGroups() (*unstructured.UnstructuredList, error) {
-	igs, err := kc.DynamicInterface.Resource(InstanceGroupResource).Namespace(InstanceGroupNamespace).List(context.Background(), metav1.ListOptions{})
+func (kc *ClientSet) ListInstanceGroups() (*unstructured.UnstructuredList, error) {
+	const (
+		instanceGroupNamespace   = "instance-manager"
+		customResourceGroup      = "instancemgr"
+		customResourceAPIVersion = "v1alpha1"
+		customeResourceDomain    = "keikoproj.io"
+		customResourceKind       = "instancegroups"
+	)
+	var (
+		customResourceName    = fmt.Sprintf("%v.%v", customResourceGroup, customeResourceDomain)
+		instanceGroupResource = schema.GroupVersionResource{Group: customResourceName, Version: customResourceAPIVersion, Resource: customResourceKind}
+	)
+	igs, err := kc.DynamicInterface.Resource(instanceGroupResource).Namespace(instanceGroupNamespace).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +91,7 @@ func (kc *Client) ListInstanceGroups() (*unstructured.UnstructuredList, error) {
 }
 
 // ListStatefulSets lists statefulsets
-func (kc *Client) ListStatefulSets(namespace string) (*appsv1.StatefulSetList, error) {
+func (kc *ClientSet) ListStatefulSets(namespace string) (*appsv1.StatefulSetList, error) {
 	sts, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.AppsV1().StatefulSets(namespace).List(context.Background(), metav1.ListOptions{})
 	})
@@ -89,7 +102,7 @@ func (kc *Client) ListStatefulSets(namespace string) (*appsv1.StatefulSetList, e
 }
 
 // ListPersistentVolume lists pvs
-func (kc *Client) ListPersistentVolumes() (*corev1.PersistentVolumeList, error) {
+func (kc *ClientSet) ListPersistentVolumes() (*corev1.PersistentVolumeList, error) {
 	pvs, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.CoreV1().PersistentVolumes().List(context.Background(), metav1.ListOptions{})
 	})
@@ -99,7 +112,7 @@ func (kc *Client) ListPersistentVolumes() (*corev1.PersistentVolumeList, error) 
 	return pvs.(*corev1.PersistentVolumeList), nil
 }
 
-func (kc *Client) GetIngress(name, namespace string) (*networkingv1.Ingress, error) {
+func (kc *ClientSet) GetIngress(name, namespace string) (*networkingv1.Ingress, error) {
 	ingress, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
 		return kc.KubeInterface.NetworkingV1().Ingresses(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	})

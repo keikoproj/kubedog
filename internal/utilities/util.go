@@ -39,6 +39,8 @@ import (
 	"k8s.io/client-go/restmapper"
 )
 
+// TODO: most of this needs to be moved to unstructured and to the packages where they are used
+
 const (
 	YamlSeparator                  = "\n---"
 	TrimTokens                     = "\n "
@@ -107,6 +109,9 @@ func DeleteEmpty(s []string) []string {
 
 // find the corresponding GVR (available in *meta.RESTMapping) for gvk
 func FindGVR(gvk *schema.GroupVersionKind, dc discovery.DiscoveryInterface) (*meta.RESTMapping, error) {
+	if dc == nil {
+		return nil, errors.Errorf("'k8s.io/client-go/discovery.DiscoveryInterface' is nil.")
+	}
 
 	CachedDiscoveryInterface := memory.NewMemCacheClient(dc)
 	DeferredDiscoveryRESTMapper := restmapper.NewDeferredDiscoveryRESTMapper(CachedDiscoveryInterface)
