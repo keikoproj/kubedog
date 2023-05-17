@@ -55,6 +55,10 @@ type WaiterConfig struct {
 	interval time.Duration
 }
 
+func NewWaiterConfig(tries int, interval time.Duration) WaiterConfig {
+	return WaiterConfig{tries: tries, interval: interval}
+}
+
 func (w WaiterConfig) getInterval() time.Duration {
 	defaultWaiterInterval := time.Second * 30
 	if w.interval > 0 {
@@ -176,9 +180,9 @@ func ResourceOperationWithResult(dynamicClient dynamic.Interface, unstructuredRe
 	return ResourceOperationWithResultInNamespace(dynamicClient, unstructuredResource, operation, "", expectedResult)
 }
 
-func ResourceOperationWithResultInNamespace(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, operation, namespace, expectedResult string) error {
+func ResourceOperationWithResultInNamespace(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, operation, ns, expectedResult string) error {
 	var expectError = strings.EqualFold(expectedResult, "fail")
-	err := ResourceOperationInNamespace(dynamicClient, unstructuredResource, operation, namespace)
+	err := ResourceOperationInNamespace(dynamicClient, unstructuredResource, operation, ns)
 	if !expectError && err != nil {
 		return fmt.Errorf("unexpected error when '%s' '%s': '%s'", operation, unstructuredResource.Resource.GetName(), err.Error())
 	} else if expectError && err == nil {
@@ -279,10 +283,10 @@ func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, unstructu
 	return nil
 }
 
-func ResourceConditionShouldBe(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, w WaiterConfig, cType, status string) error {
+func ResourceConditionShouldBe(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, w WaiterConfig, conditionType, conditionValue string) error {
 	var (
 		counter        int
-		expectedStatus = cases.Title(language.English).String(status)
+		expectedStatus = cases.Title(language.English).String(conditionValue)
 	)
 
 	if err := validateDynamicClient(dynamicClient); err != nil {
@@ -295,7 +299,7 @@ func ResourceConditionShouldBe(dynamicClient dynamic.Interface, unstructuredReso
 		if counter >= w.getTries() {
 			return errors.New("waiter timed out waiting for resource state")
 		}
-		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", resource.GetNamespace(), resource.GetName(), cType, expectedStatus)
+		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", resource.GetNamespace(), resource.GetName(), conditionType, expectedStatus)
 		cr, err := dynamicClient.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -319,7 +323,7 @@ func ResourceConditionShouldBe(dynamicClient dynamic.Interface, unstructuredReso
 				if !ok {
 					continue
 				}
-				if condType == cType {
+				if condType == conditionType {
 					status := condition["status"].(string)
 					if corev1.ConditionStatus(status) == corev1.ConditionStatus(expectedStatus) {
 						return nil

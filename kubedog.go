@@ -53,20 +53,23 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^the (\S+) command is available$`, common.CommandExists)
 	kdt.scenarioContext.Step(`^I run the (\S+) command with the ([^"]*) args and the command (fails|succeeds)$`, common.RunCommand)
 	//syntax-generation:title:Kubernetes steps
-	kdt.scenarioContext.Step(`^((?:a )?Kubernetes cluster|(?:there are )?(?:valid )?Kubernetes Credentials)$`, kdt.KubeContext.DiscoverClients)
+	// TODO: implement syntax-generation:subtitle
+	//syntax-generation:subtitle:Unstructured Resources
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+)$`, kdt.KubeContext.ResourceOperation)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+) in (?:the )?([^"]*) namespace$`, kdt.KubeContext.ResourceOperationInNamespace)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resources in (\S+)$`, kdt.KubeContext.MultiResourceOperation)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resources in (\S+) in (?:the )?([^"]*) namespace$`, kdt.KubeContext.MultiResourceOperationInNamespace)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+), the operation should (succeed|fail)$`, kdt.KubeContext.ResourceOperationWithResult)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+) in (?:the )?([^"]*) namespace, the operation should (succeed|fail)$`, kdt.KubeContext.ResourceOperationWithResultInNamespace)
-	kdt.scenarioContext.Step(`^(?:I )?(create|submit|update) (?:the )?secret (\S+) in namespace (\S+) from (?:environment variable )?(\S+)$`, kdt.KubeContext.SecretOperationFromEnvironmentVariable)
-	kdt.scenarioContext.Step(`^(?:I )?delete (?:the )?secret (\S+) in namespace (\S+)$`, kdt.KubeContext.SecretDelete)
 	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) should be (created|deleted)$`, kdt.KubeContext.ResourceShouldBe)
-	kdt.scenarioContext.Step(`^(?:the )?Kubernetes cluster should be (created|deleted|upgraded)$`, kdt.KubeContext.KubernetesClusterShouldBe)
 	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) (?:should )?converge to selector (\S+)$`, kdt.KubeContext.ResourceShouldConvergeToSelector)
 	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) condition ([^"]*) should be (true|false)$`, kdt.KubeContext.ResourceConditionShouldBe)
 	kdt.scenarioContext.Step(`^(?:I )?update (?:the )?resource ([^"]*) with ([^"]*) set to ([^"]*)$`, kdt.KubeContext.UpdateResourceWithField)
+	//syntax-generation:subtitle: <organize other steps>
+	kdt.scenarioContext.Step(`^((?:a )?Kubernetes cluster|(?:there are )?(?:valid )?Kubernetes Credentials)$`, kdt.KubeContext.DiscoverClients)
+	kdt.scenarioContext.Step(`^(?:the )?Kubernetes cluster should be (created|deleted|upgraded)$`, kdt.KubeContext.KubernetesClusterShouldBe)
+	kdt.scenarioContext.Step(`^(?:I )?(create|submit|update) (?:the )?secret (\S+) in namespace (\S+) from (?:environment variable )?(\S+)$`, kdt.KubeContext.SecretOperationFromEnvironmentVariable)
+	kdt.scenarioContext.Step(`^(?:I )?delete (?:the )?secret (\S+) in namespace (\S+)$`, kdt.KubeContext.SecretDelete)
 	kdt.scenarioContext.Step(`^(\d+) node(?:s)? with selector (\S+) should be (found|ready)$`, kdt.KubeContext.NodesWithSelectorShouldBe)
 	kdt.scenarioContext.Step(`^(?:the )?(deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) ([^"]*) is in namespace ([^"]*)$`, kdt.KubeContext.ResourceInNamespace)
 	kdt.scenarioContext.Step(`^(?:I )?scale (?:the )?deployment ([^"]*) in namespace ([^"]*) to (\d+)$`, kdt.KubeContext.ScaleDeployment)
