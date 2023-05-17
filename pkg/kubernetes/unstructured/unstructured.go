@@ -75,9 +75,6 @@ func (w WaiterConfig) getTries() int {
 	return defaultWaiterTries
 }
 
-//kc.TemplateArguments
-
-// TODO: maybe make this its own pkg and have them take the client as input?
 func ResourceOperation(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, operation string) error {
 	return ResourceOperationInNamespace(dynamicClient, unstructuredResource, operation, "")
 }

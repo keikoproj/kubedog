@@ -6,6 +6,7 @@ import (
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -14,6 +15,39 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+func (kc *ClientSet) GetPods(namespace string) error {
+	return kc.GetPodsWithSelector(namespace, "")
+}
+
+func (kc *ClientSet) GetPodsWithSelector(namespace, selector string) error {
+	var readyCount = func(conditions []corev1.ContainerStatus) string {
+		var readyCount = 0
+		var containerCount = len(conditions)
+		for _, condition := range conditions {
+			if condition.Ready {
+				readyCount++
+			}
+		}
+		return fmt.Sprintf("%d/%d", readyCount, containerCount)
+	}
+	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
+	if err != nil {
+		return err
+	}
+
+	if len(pods.Items) == 0 {
+		return errors.Errorf("No pods matched selector '%s'", selector)
+	}
+	tableFormat := "%-64s%-12s%-24s"
+	log.Infof(tableFormat, "NAME", "READY", "STATUS")
+	for _, pod := range pods.Items {
+		log.Infof(tableFormat,
+			pod.Name, readyCount(pod.Status.ContainerStatuses), pod.Status.Phase)
+	}
+	return nil
+}
+
+// TODO: implemented twice
 // ListPodsWithLabelSelector lists pods with a label selector
 func (kc *ClientSet) ListPodsWithLabelSelector(namespace, selector string) (*corev1.PodList, error) {
 	pods, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {

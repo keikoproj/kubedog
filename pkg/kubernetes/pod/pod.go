@@ -1,4 +1,4 @@
-package kube
+package pod
 
 import (
 	"bufio"
@@ -13,42 +13,25 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 )
 
-func (kc *ClientSet) GetPods(namespace string) error {
-	return kc.GetPodsWithSelector(namespace, "")
-}
-
-func (kc *ClientSet) GetPodsWithSelector(namespace, selector string) error {
-	var readyCount = func(conditions []corev1.ContainerStatus) string {
-		var readyCount = 0
-		var containerCount = len(conditions)
-		for _, condition := range conditions {
-			if condition.Ready {
-				readyCount++
-			}
-		}
-		return fmt.Sprintf("%d/%d", readyCount, containerCount)
+func listPodsWithLabelSelector(KubeClientset kubernetes.Interface, namespace, selector string) (*corev1.PodList, error) {
+	if err := validateClientset(KubeClientset); err != nil {
+		return nil, err
 	}
-	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
+	pods, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return KubeClientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector})
+	})
 	if err != nil {
-		return err
+		return nil, errors.Wrap(err, "failed to list pods")
 	}
 
-	if len(pods.Items) == 0 {
-		return errors.Errorf("No pods matched selector '%s'", selector)
-	}
-	tableFormat := "%-64s%-12s%-24s"
-	log.Infof(tableFormat, "NAME", "READY", "STATUS")
-	for _, pod := range pods.Items {
-		log.Infof(tableFormat,
-			pod.Name, readyCount(pod.Status.ContainerStatuses), pod.Status.Phase)
-	}
-	return nil
+	return pods.(*corev1.PodList), nil
 }
 
-func (kc *ClientSet) PodsWithSelectorHaveRestartCountLessThan(namespace string, selector string, expectedRestartCountLessThan int) error {
-	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
+func PodsWithSelectorHaveRestartCountLessThan(KubeClientset kubernetes.Interface, namespace string, selector string, expectedRestartCountLessThan int) error {
+	pods, err := listPodsWithLabelSelector(KubeClientset, namespace, selector)
 	if err != nil {
 		return err
 	}
@@ -71,25 +54,9 @@ func (kc *ClientSet) PodsWithSelectorHaveRestartCountLessThan(namespace string, 
 	return nil
 }
 
-func (kc *ClientSet) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(SomeOrAll, namespace, selector, searchkeyword, sinceTime string) error {
-	expBackoff := &wait.Backoff{
-		Duration: 2 * time.Second,
-		Factor:   2.0,
-		Jitter:   0.5,
-		Steps:    kc.getWaiterTries(),
-		Cap:      10 * time.Minute,
-	}
-	return util.RetryOnAnyError(expBackoff, func() error {
-		if err := kc.Validate(); err != nil {
-			return err
-		}
-
-		since, ok := kc.Timestamps[sinceTime]
-		if !ok {
-			return fmt.Errorf("time '%s' was never stored", sinceTime)
-		}
-
-		pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
+func SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(KubeClientset kubernetes.Interface, expBackoff wait.Backoff, SomeOrAll, namespace, selector, searchkeyword string, since time.Time) error {
+	return util.RetryOnAnyError(&expBackoff, func() error {
+		pods, err := listPodsWithLabelSelector(KubeClientset, namespace, selector)
 		if err != nil {
 			return err
 		}
@@ -103,7 +70,7 @@ func (kc *ClientSet) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTi
 		)
 		var podsCount int
 		for _, pod := range pods.Items {
-			podCount, err := findStringInPodLogs(kc, pod, since, searchkeyword)
+			podCount, err := findStringInPodLogs(KubeClientset, pod, since, searchkeyword)
 			if err != nil {
 				return err
 			}
@@ -129,17 +96,29 @@ func (kc *ClientSet) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTi
 	})
 }
 
-// TODO: why this takes the clientset instead of being a method?
-func findStringInPodLogs(kc *ClientSet, pod corev1.Pod, since time.Time, stringsToFind ...string) (int, error) {
-	var sinceTime metav1.Time = metav1.NewTime(since)
+func GetDefaultExpBackoff(steps int) wait.Backoff {
+	return wait.Backoff{
+		Duration: 2 * time.Second,
+		Factor:   2.0,
+		Jitter:   0.5,
+		Steps:    steps,
+		Cap:      10 * time.Minute,
+	}
+}
+
+func findStringInPodLogs(KubeClientset kubernetes.Interface, pod corev1.Pod, since time.Time, stringsToFind ...string) (int, error) {
 	foundCount := 0
+	if err := validateClientset(KubeClientset); err != nil {
+		return foundCount, err
+	}
+	var sinceTime metav1.Time = metav1.NewTime(since)
 	for _, container := range pod.Spec.Containers {
 		podLogOpts := corev1.PodLogOptions{
 			SinceTime: &sinceTime,
 			Container: container.Name,
 		}
 
-		req := kc.KubeInterface.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
+		req := KubeClientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
 		podLogs, err := req.Stream(context.Background())
 		if err != nil {
 			return 0, errors.Errorf("Error in opening stream for pod '%s', container '%s' : '%s'", pod.Name, container.Name, string(err.Error()))
@@ -160,17 +139,8 @@ func findStringInPodLogs(kc *ClientSet, pod corev1.Pod, since time.Time, strings
 	return foundCount, nil
 }
 
-func (kc *ClientSet) SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(namespace, selector, searchkeyword, sinceTime string) error {
-	if err := kc.Validate(); err != nil {
-		return err
-	}
-
-	since, ok := kc.Timestamps[sinceTime]
-	if !ok {
-		return fmt.Errorf("time '%s' was never stored", sinceTime)
-	}
-
-	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
+func SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(KubeClientset kubernetes.Interface, namespace, selector, searchkeyword string, since time.Time) error {
+	pods, err := listPodsWithLabelSelector(KubeClientset, namespace, selector)
 	if err != nil {
 		return err
 	}
@@ -179,7 +149,7 @@ func (kc *ClientSet) SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTim
 		return errors.Errorf("No pods matched selector '%s'", selector)
 	}
 	for _, pod := range pods.Items {
-		count, err := findStringInPodLogs(kc, pod, since, searchkeyword)
+		count, err := findStringInPodLogs(KubeClientset, pod, since, searchkeyword)
 		if err != nil {
 			return err
 		}
@@ -190,17 +160,8 @@ func (kc *ClientSet) SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTim
 	return fmt.Errorf("pod has '%s' message in the logs", searchkeyword)
 }
 
-func (kc *ClientSet) PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(namespace string, selector string, sinceTime string) error {
-	if err := kc.Validate(); err != nil {
-		return err
-	}
-
-	since, ok := kc.Timestamps[sinceTime]
-	if !ok {
-		return errors.Errorf("time '%s' was never stored", sinceTime)
-	}
-
-	pods, err := kc.ListPodsWithLabelSelector(namespace, selector)
+func PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(KubeClientset kubernetes.Interface, namespace string, selector string, since time.Time) error {
+	pods, err := listPodsWithLabelSelector(KubeClientset, namespace, selector)
 	if err != nil {
 		return err
 	}
@@ -210,7 +171,7 @@ func (kc *ClientSet) PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(name
 
 	for _, pod := range pods.Items {
 		errorStrings := []string{`"level":"error"`, "level=error"}
-		count, err := findStringInPodLogs(kc, pod, since, errorStrings...)
+		count, err := findStringInPodLogs(KubeClientset, pod, since, errorStrings...)
 		if err != nil {
 			return err
 		}
@@ -222,21 +183,20 @@ func (kc *ClientSet) PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(name
 	return nil
 }
 
-func (kc *ClientSet) PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(namespace string, selector string, sinceTime string) error {
-	err := kc.PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(namespace, selector, sinceTime)
+func PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(KubeClientset kubernetes.Interface, namespace string, selector string, since time.Time) error {
+	err := PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(KubeClientset, namespace, selector, since)
 	if err == nil {
 		return fmt.Errorf("logs found from selector %q in namespace %q have errors", selector, namespace)
 	}
 	return nil
 }
 
-func (kc *ClientSet) PodsInNamespaceShouldHaveLabels(podName string, namespace string, labels string) error {
-
-	if err := kc.Validate(); err != nil {
+func PodsInNamespaceShouldHaveLabels(KubeClientset kubernetes.Interface, podName string, namespace string, labels string) error {
+	if err := validateClientset(KubeClientset); err != nil {
 		return err
 	}
 
-	pod, err := kc.KubeInterface.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
+	pod, err := KubeClientset.CoreV1().Pods(namespace).Get(context.Background(), podName, metav1.GetOptions{})
 	if err != nil {
 		return errors.New("Error fetching pod: " + err.Error())
 	}
@@ -265,13 +225,8 @@ func (kc *ClientSet) PodsInNamespaceShouldHaveLabels(podName string, namespace s
 	return nil
 }
 
-func (kc *ClientSet) PodsInNamespaceWithSelectorShouldHaveLabels(namespace string, selector string, labels string) error {
-
-	if err := kc.Validate(); err != nil {
-		return err
-	}
-
-	podList, err := kc.ListPodsWithLabelSelector(namespace, selector)
+func PodsInNamespaceWithSelectorShouldHaveLabels(KubeClientset kubernetes.Interface, namespace string, selector string, labels string) error {
+	podList, err := listPodsWithLabelSelector(KubeClientset, namespace, selector)
 	if err != nil {
 		return fmt.Errorf("error getting pods with selector %q: %v", selector, err)
 	}
@@ -303,5 +258,12 @@ func (kc *ClientSet) PodsInNamespaceWithSelectorShouldHaveLabels(namespace strin
 		}
 	}
 
+	return nil
+}
+
+func validateClientset(KubeClientset kubernetes.Interface) error {
+	if KubeClientset == nil {
+		return errors.Errorf("'k8s.io/client-go/kubernetes.Interface' is nil.")
+	}
 	return nil
 }
