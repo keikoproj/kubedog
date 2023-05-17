@@ -15,7 +15,7 @@ limitations under the License.
 package unstructured
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -411,13 +411,13 @@ func TestResourceOperationInNamespace(t *testing.T) {
 }
 
 func resourcePath(resourceFileName string) string {
-	return filepath.Join("../../test/templates", resourceFileName)
+	return filepath.Join("../../../test/templates", resourceFileName)
 }
 
 // TODO: do not return error, receive t *testing.T and fail instead
 func resourceFromYaml(resourceFileName string) (*unstructured.Unstructured, error) {
 	resourcePath := resourcePath(resourceFileName)
-	d, err := ioutil.ReadFile(resourcePath)
+	d, err := os.ReadFile(resourcePath)
 	if err != nil {
 		return nil, err
 	}
