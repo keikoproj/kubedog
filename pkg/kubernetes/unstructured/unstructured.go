@@ -37,13 +37,13 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-func ResourceOperation(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, operation string) error {
-	return ResourceOperationInNamespace(dynamicClient, unstructuredResource, operation, "")
+func ResourceOperation(dynamicClient dynamic.Interface, resource unstructuredResource, operation string) error {
+	return ResourceOperationInNamespace(dynamicClient, resource, operation, "")
 }
 
-func MultiResourceOperation(dynamicClient dynamic.Interface, unstructuredResources []util.K8sUnstructuredResource, operation string) error {
-	for _, unstructuredResource := range unstructuredResources {
-		err := ResourceOperationInNamespace(dynamicClient, unstructuredResource, operation, "")
+func MultiResourceOperation(dynamicClient dynamic.Interface, resources []unstructuredResource, operation string) error {
+	for _, resource := range resources {
+		err := ResourceOperationInNamespace(dynamicClient, resource, operation, "")
 		if err != nil {
 			return err
 		}
@@ -51,9 +51,9 @@ func MultiResourceOperation(dynamicClient dynamic.Interface, unstructuredResourc
 	return nil
 }
 
-func MultiResourceOperationInNamespace(dynamicClient dynamic.Interface, unstructuredResources []util.K8sUnstructuredResource, operation, namespace string) error {
-	for _, unstructuredResource := range unstructuredResources {
-		err := ResourceOperationInNamespace(dynamicClient, unstructuredResource, operation, namespace)
+func MultiResourceOperationInNamespace(dynamicClient dynamic.Interface, resources []unstructuredResource, operation, namespace string) error {
+	for _, resource := range resources {
+		err := ResourceOperationInNamespace(dynamicClient, resource, operation, namespace)
 		if err != nil {
 			return err
 		}
@@ -61,73 +61,73 @@ func MultiResourceOperationInNamespace(dynamicClient dynamic.Interface, unstruct
 	return nil
 }
 
-func ResourceOperationInNamespace(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, operation, namespace string) error {
+func ResourceOperationInNamespace(dynamicClient dynamic.Interface, resource unstructuredResource, operation, namespace string) error {
 	if err := validateDynamicClient(dynamicClient); err != nil {
 		return err
 	}
 
-	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
+	gvr, unstruct := resource.GVR, resource.Resource
 
 	if namespace == "" {
-		namespace = resource.GetNamespace()
+		namespace = unstruct.GetNamespace()
 	}
 
 	switch operation {
 	case common.OperationCreate, common.OperationSubmit:
-		_, err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Create(context.Background(), resource, metav1.CreateOptions{})
+		_, err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Create(context.Background(), unstruct, metav1.CreateOptions{})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
-				log.Infof("%s %s already created", resource.GetKind(), resource.GetName())
+				log.Infof("%s %s already created", unstruct.GetKind(), unstruct.GetName())
 				break
 			}
 			return err
 		}
-		log.Infof("%s %s has been created in namespace %s", resource.GetKind(), resource.GetName(), namespace)
+		log.Infof("%s %s has been created in namespace %s", unstruct.GetKind(), unstruct.GetName(), namespace)
 	case common.OperationUpdate:
-		currentResourceVersion, err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
+		currentResourceVersion, err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
-		resource.SetResourceVersion(currentResourceVersion.DeepCopy().GetResourceVersion())
+		unstruct.SetResourceVersion(currentResourceVersion.DeepCopy().GetResourceVersion())
 
-		_, err = dynamicClient.Resource(gvr.Resource).Namespace(namespace).Update(context.Background(), resource, metav1.UpdateOptions{})
+		_, err = dynamicClient.Resource(gvr.Resource).Namespace(namespace).Update(context.Background(), unstruct, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
-		log.Infof("%s %s has been updated in namespace %s", resource.GetKind(), resource.GetName(), namespace)
+		log.Infof("%s %s has been updated in namespace %s", unstruct.GetKind(), unstruct.GetName(), namespace)
 	case common.OperationDelete:
-		err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
+		err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Delete(context.Background(), unstruct.GetName(), metav1.DeleteOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
-				log.Infof("%s %s already deleted", resource.GetKind(), resource.GetName())
+				log.Infof("%s %s already deleted", unstruct.GetKind(), unstruct.GetName())
 				break
 			}
 			return err
 		}
-		log.Infof("%s %s has been deleted from namespace %s", resource.GetKind(), resource.GetName(), namespace)
+		log.Infof("%s %s has been deleted from namespace %s", unstruct.GetKind(), unstruct.GetName(), namespace)
 	default:
 		return fmt.Errorf("unsupported operation: %s", operation)
 	}
 	return nil
 }
 
-func ResourceOperationWithResult(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, operation, expectedResult string) error {
-	return ResourceOperationWithResultInNamespace(dynamicClient, unstructuredResource, operation, "", expectedResult)
+func ResourceOperationWithResult(dynamicClient dynamic.Interface, resource unstructuredResource, operation, expectedResult string) error {
+	return ResourceOperationWithResultInNamespace(dynamicClient, resource, operation, "", expectedResult)
 }
 
-func ResourceOperationWithResultInNamespace(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, operation, namespace, expectedResult string) error {
+func ResourceOperationWithResultInNamespace(dynamicClient dynamic.Interface, resource unstructuredResource, operation, namespace, expectedResult string) error {
 	var expectError = strings.EqualFold(expectedResult, "fail")
-	err := ResourceOperationInNamespace(dynamicClient, unstructuredResource, operation, namespace)
+	err := ResourceOperationInNamespace(dynamicClient, resource, operation, namespace)
 	if !expectError && err != nil {
-		return fmt.Errorf("unexpected error when '%s' '%s': '%s'", operation, unstructuredResource.Resource.GetName(), err.Error())
+		return fmt.Errorf("unexpected error when '%s' '%s': '%s'", operation, resource.Resource.GetName(), err.Error())
 	} else if expectError && err == nil {
-		return fmt.Errorf("expected error when '%s' '%s', but received none", operation, unstructuredResource.Resource.GetName())
+		return fmt.Errorf("expected error when '%s' '%s', but received none", operation, resource.Resource.GetName())
 	}
 	return nil
 }
 
-func ResourceShouldBe(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, w common.WaiterConfig, state string) error {
+func ResourceShouldBe(dynamicClient dynamic.Interface, resource unstructuredResource, w common.WaiterConfig, state string) error {
 	var (
 		exists  bool
 		counter int
@@ -137,32 +137,32 @@ func ResourceShouldBe(dynamicClient dynamic.Interface, unstructuredResource util
 		return err
 	}
 
-	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
+	gvr, unstruct := resource.GVR, resource.Resource
 	for {
 		exists = true
 		if counter >= w.GetTries() {
 			return errors.New("waiter timed out waiting for resource state")
 		}
-		log.Infof("[KUBEDOG] waiting for resource %v/%v to become %v", resource.GetNamespace(), resource.GetName(), state)
+		log.Infof("[KUBEDOG] waiting for resource %v/%v to become %v", unstruct.GetNamespace(), unstruct.GetName(), state)
 
-		_, err := dynamicClient.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
+		_, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
 				return err
 			}
-			log.Infof("[KUBEDOG] %v/%v is not found: %v", resource.GetNamespace(), resource.GetName(), err)
+			log.Infof("[KUBEDOG] %v/%v is not found: %v", unstruct.GetNamespace(), unstruct.GetName(), err)
 			exists = false
 		}
 
 		switch state {
 		case common.StateDeleted:
 			if !exists {
-				log.Infof("[KUBEDOG] %v/%v is deleted", resource.GetNamespace(), resource.GetName())
+				log.Infof("[KUBEDOG] %v/%v is deleted", unstruct.GetNamespace(), unstruct.GetName())
 				return nil
 			}
 		case common.StateCreated:
 			if exists {
-				log.Infof("[KUBEDOG] %v/%v is created", resource.GetNamespace(), resource.GetName())
+				log.Infof("[KUBEDOG] %v/%v is created", unstruct.GetNamespace(), unstruct.GetName())
 				return nil
 			}
 		}
@@ -171,7 +171,7 @@ func ResourceShouldBe(dynamicClient dynamic.Interface, unstructuredResource util
 	}
 }
 
-func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, w common.WaiterConfig, selector string) error {
+func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, resource unstructuredResource, w common.WaiterConfig, selector string) error {
 	var counter int
 
 	if err := validateDynamicClient(dynamicClient); err != nil {
@@ -191,15 +191,15 @@ func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, unstructu
 		return errors.Errorf("Found empty 'key' in selector '%s' of form '<key>=<value>'", selector)
 	}
 
-	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
+	gvr, unstruct := resource.GVR, resource.Resource
 
 	for {
 		if counter >= w.GetTries() {
 			return errors.New("waiter timed out waiting for resource")
 		}
 		//TODO: configure the logger to output "[KUBEDOG]" instead typing it in each log
-		log.Infof("[KUBEDOG] waiting for resource %v/%v to converge to %v=%v", resource.GetNamespace(), resource.GetName(), key, value)
-		cr, err := dynamicClient.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
+		log.Infof("[KUBEDOG] waiting for resource %v/%v to converge to %v=%v", unstruct.GetNamespace(), unstruct.GetName(), key, value)
+		cr, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -219,7 +219,7 @@ func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, unstructu
 	return nil
 }
 
-func ResourceConditionShouldBe(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, w common.WaiterConfig, conditionType, conditionValue string) error {
+func ResourceConditionShouldBe(dynamicClient dynamic.Interface, resource unstructuredResource, w common.WaiterConfig, conditionType, conditionValue string) error {
 	var (
 		counter        int
 		expectedStatus = cases.Title(language.English).String(conditionValue)
@@ -229,14 +229,14 @@ func ResourceConditionShouldBe(dynamicClient dynamic.Interface, unstructuredReso
 		return err
 	}
 
-	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
+	gvr, unstruct := resource.GVR, resource.Resource
 
 	for {
 		if counter >= w.GetTries() {
 			return errors.New("waiter timed out waiting for resource state")
 		}
-		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", resource.GetNamespace(), resource.GetName(), conditionType, expectedStatus)
-		cr, err := dynamicClient.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
+		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", unstruct.GetNamespace(), unstruct.GetName(), conditionType, expectedStatus)
+		cr, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -272,7 +272,7 @@ func ResourceConditionShouldBe(dynamicClient dynamic.Interface, unstructuredReso
 	}
 }
 
-func UpdateResourceWithField(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, key string, value string) error {
+func UpdateResourceWithField(dynamicClient dynamic.Interface, resource unstructuredResource, key string, value string) error {
 	var (
 		keySlice     = util.DeleteEmpty(strings.Split(key, "."))
 		overrideType bool
@@ -284,7 +284,7 @@ func UpdateResourceWithField(dynamicClient dynamic.Interface, unstructuredResour
 		return err
 	}
 
-	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
+	gvr, unstruct := resource.GVR, resource.Resource
 
 	n, err := strconv.ParseInt(value, 10, 64)
 	if err == nil {
@@ -292,7 +292,7 @@ func UpdateResourceWithField(dynamicClient dynamic.Interface, unstructuredResour
 		intValue = n
 	}
 
-	updateTarget, err := dynamicClient.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
+	updateTarget, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -308,7 +308,7 @@ func UpdateResourceWithField(dynamicClient dynamic.Interface, unstructuredResour
 		}
 	}
 
-	_, err = dynamicClient.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Update(context.Background(), updateTarget, metav1.UpdateOptions{})
+	_, err = dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Update(context.Background(), updateTarget, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -329,17 +329,17 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 			return nil
 		}
 
-		unstructuredResources, err := GetResources(dc, TemplateArguments, path)
+		resources, err := GetResources(dc, TemplateArguments, path)
 		if err != nil {
 			return err
 		}
-		for _, unstructuredResource := range unstructuredResources {
-			gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
-			err = dynamicClient.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
+		for _, resource := range resources {
+			gvr, unstruct := resource.GVR, resource.Resource
+			err = dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Delete(context.Background(), unstruct.GetName(), metav1.DeleteOptions{})
 			if err != nil {
 				return err
 			}
-			log.Infof("[KUBEDOG] submitted deletion for %v/%v", resource.GetNamespace(), resource.GetName())
+			log.Infof("[KUBEDOG] submitted deletion for %v/%v", unstruct.GetNamespace(), unstruct.GetName())
 		}
 		return nil
 	}
@@ -357,21 +357,21 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 			return nil
 		}
 
-		unstructuredResources, err := GetResources(dc, TemplateArguments, path)
+		resources, err := GetResources(dc, TemplateArguments, path)
 		if err != nil {
 			return err
 		}
-		for _, unstructuredResource := range unstructuredResources {
-			gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
+		for _, resource := range resources {
+			gvr, unstruct := resource.GVR, resource.Resource
 			for {
 				if counter >= w.GetTries() {
 					return errors.New("waiter timed out waiting for deletion")
 				}
-				log.Infof("[KUBEDOG] waiting for resource deletion of %v/%v", resource.GetNamespace(), resource.GetName())
-				_, err := dynamicClient.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
+				log.Infof("[KUBEDOG] waiting for resource deletion of %v/%v", unstruct.GetNamespace(), unstruct.GetName())
+				_, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
 				if err != nil {
 					if kerrors.IsNotFound(err) {
-						log.Infof("[KUBEDOG] resource %v/%v is deleted", resource.GetNamespace(), resource.GetName())
+						log.Infof("[KUBEDOG] resource %v/%v is deleted", unstruct.GetNamespace(), unstruct.GetName())
 						break
 					}
 				}

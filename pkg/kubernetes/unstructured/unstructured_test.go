@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
@@ -262,9 +261,9 @@ func TestResourceOperationInNamespace(t *testing.T) {
 		DynamicInterface dynamic.Interface
 	}
 	type funcArgs struct {
-		operation            string
-		namespace            string
-		unstructuredResource util.K8sUnstructuredResource
+		operation string
+		namespace string
+		resource  unstructuredResource
 	}
 
 	resourceNoNs, err := resourceFromYaml("../../test/templates/resource-without-namespace.yaml")
@@ -304,7 +303,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			funcArgs: funcArgs{
 				operation: "create",
 				namespace: "test-namespace",
-				unstructuredResource: util.K8sUnstructuredResource{
+				resource: unstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNoNs,
 				},
@@ -319,7 +318,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			funcArgs: funcArgs{
 				operation: "update",
 				namespace: "test-namespace",
-				unstructuredResource: util.K8sUnstructuredResource{
+				resource: unstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNoNsUpdate,
 				},
@@ -334,7 +333,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			funcArgs: funcArgs{
 				operation: "delete",
 				namespace: "test-namespace",
-				unstructuredResource: util.K8sUnstructuredResource{
+				resource: unstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNoNs,
 				},
@@ -348,7 +347,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			},
 			funcArgs: funcArgs{
 				operation: "create",
-				unstructuredResource: util.K8sUnstructuredResource{
+				resource: unstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNs,
 				},
@@ -362,7 +361,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			},
 			funcArgs: funcArgs{
 				operation: "update",
-				unstructuredResource: util.K8sUnstructuredResource{
+				resource: unstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNsUpdate,
 				},
@@ -377,7 +376,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			funcArgs: funcArgs{
 				operation: "create",
 				namespace: "override-namespace",
-				unstructuredResource: util.K8sUnstructuredResource{
+				resource: unstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNs,
 				},
@@ -391,7 +390,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			},
 			funcArgs: funcArgs{
 				operation: "invalid",
-				unstructuredResource: util.K8sUnstructuredResource{
+				resource: unstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNs,
 				},
@@ -404,8 +403,8 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			// kc := &ClientSet{
 			// 	DynamicInterface: tt.clientFields.DynamicInterface,
 			// }
-			if err := ResourceOperationInNamespace(tt.clientFields.DynamicInterface, tt.funcArgs.unstructuredResource, tt.funcArgs.operation, tt.funcArgs.namespace); (err != nil) != tt.wantErr {
-				t.Errorf("ClientSet.unstructuredResourceOperation() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ResourceOperationInNamespace(tt.clientFields.DynamicInterface, tt.funcArgs.resource, tt.funcArgs.operation, tt.funcArgs.namespace); (err != nil) != tt.wantErr {
+				t.Errorf("ResourceOperationInNamespace() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

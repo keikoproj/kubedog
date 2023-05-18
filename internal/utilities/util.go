@@ -15,35 +15,23 @@ limitations under the License.
 package util
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/discovery/cached/memory"
-	"k8s.io/client-go/restmapper"
 )
 
 // TODO: most of this needs to be moved to unstructured and to the packages where they are used
 
 const (
-	YamlSeparator                  = "\n---"
-	TrimTokens                     = "\n "
 	clusterNameEnvironmentVariable = "CLUSTER_NAME"
 )
 
@@ -66,11 +54,6 @@ var (
 
 type FuncToRetryWithReturn func() (interface{}, error)
 type FuncToRetry func() error
-
-type K8sUnstructuredResource struct {
-	GVR      *meta.RESTMapping
-	Resource *unstructured.Unstructured
-}
 
 func IsNodeReady(n corev1.Node) bool {
 	for _, condition := range n.Status.Conditions {
@@ -105,81 +88,6 @@ func DeleteEmpty(s []string) []string {
 		}
 	}
 	return r
-}
-
-// find the corresponding GVR (available in *meta.RESTMapping) for gvk
-func FindGVR(gvk *schema.GroupVersionKind, dc discovery.DiscoveryInterface) (*meta.RESTMapping, error) {
-	if dc == nil {
-		return nil, errors.Errorf("'k8s.io/client-go/discovery.DiscoveryInterface' is nil.")
-	}
-
-	CachedDiscoveryInterface := memory.NewMemCacheClient(dc)
-	DeferredDiscoveryRESTMapper := restmapper.NewDeferredDiscoveryRESTMapper(CachedDiscoveryInterface)
-	RESTMapping, err := DeferredDiscoveryRESTMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return RESTMapping, nil
-}
-
-func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface, args interface{}) (K8sUnstructuredResource, error) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return K8sUnstructuredResource{nil, nil}, err
-	}
-	return GetResourceFromString(string(data), dc, args)
-}
-
-func GetResourcesFromYaml(path string, dc discovery.DiscoveryInterface, args interface{}) ([]K8sUnstructuredResource, error) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	manifests := bytes.Split(data, []byte(YamlSeparator))
-	resourceList := make([]K8sUnstructuredResource, 0)
-	for _, manifest := range manifests {
-		if len(bytes.Trim(manifest, TrimTokens)) == 0 {
-			continue
-		}
-		unstructuredResource, err := GetResourceFromString(string(manifest), dc, args)
-		if err != nil {
-			return nil, err
-		}
-		resourceList = append(resourceList, unstructuredResource)
-	}
-	return resourceList, err
-}
-
-func GetResourceFromString(resourceString string, dc discovery.DiscoveryInterface, args interface{}) (K8sUnstructuredResource, error) {
-	resource := &unstructured.Unstructured{}
-	var renderBuffer bytes.Buffer
-
-	if args != nil {
-		template, err := template.New("Resource").Parse(resourceString)
-		if err != nil {
-			return K8sUnstructuredResource{nil, resource}, err
-		}
-
-		err = template.Execute(&renderBuffer, &args)
-		if err != nil {
-			return K8sUnstructuredResource{nil, resource}, err
-		}
-	} else {
-		renderBuffer.WriteString(resourceString)
-	}
-
-	dec := serializer.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)
-	_, gvk, err := dec.Decode(renderBuffer.Bytes(), nil, resource)
-	if err != nil {
-		return K8sUnstructuredResource{nil, resource}, err
-	}
-	gvr, err := FindGVR(gvk, dc)
-	if err != nil {
-		return K8sUnstructuredResource{nil, resource}, err
-	}
-	return K8sUnstructuredResource{gvr, resource}, err
 }
 
 func IsRetriable(err error) bool {
