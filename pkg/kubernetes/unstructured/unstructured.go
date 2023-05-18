@@ -315,7 +315,6 @@ func UpdateResourceWithField(dynamicClient dynamic.Interface, unstructuredResour
 	return nil
 }
 
-// TODO: this function has a bug, it would not delete properly files with multiple resources in them, see if using getResources instead of getResource would fix issue (not sure getResources can handle single files correctly)
 func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.DiscoveryInterface, TemplateArguments interface{}, w common.WaiterConfig, resourcesPath string) error {
 	if err := validateDynamicClient(dynamicClient); err != nil {
 		return err
@@ -330,17 +329,18 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 			return nil
 		}
 
-		unstructuredResource, err := GetResource(dc, TemplateArguments, path)
+		unstructuredResources, err := GetResources(dc, TemplateArguments, path)
 		if err != nil {
 			return err
 		}
-		gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
-
-		err = dynamicClient.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
-		if err != nil {
-			return err
+		for _, unstructuredResource := range unstructuredResources {
+			gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
+			err = dynamicClient.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
+			if err != nil {
+				return err
+			}
+			log.Infof("[KUBEDOG] submitted deletion for %v/%v", resource.GetNamespace(), resource.GetName())
 		}
-		log.Infof("[KUBEDOG] submitted deletion for %v/%v", resource.GetNamespace(), resource.GetName())
 		return nil
 	}
 
@@ -357,26 +357,27 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 			return nil
 		}
 
-		unstructuredResource, err := GetResource(dc, TemplateArguments, path)
+		unstructuredResources, err := GetResources(dc, TemplateArguments, path)
 		if err != nil {
 			return err
 		}
-		gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
-
-		for {
-			if counter >= w.GetTries() {
-				return errors.New("waiter timed out waiting for deletion")
-			}
-			log.Infof("[KUBEDOG] waiting for resource deletion of %v/%v", resource.GetNamespace(), resource.GetName())
-			_, err := dynamicClient.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
-			if err != nil {
-				if kerrors.IsNotFound(err) {
-					log.Infof("[KUBEDOG] resource %v/%v is deleted", resource.GetNamespace(), resource.GetName())
-					break
+		for _, unstructuredResource := range unstructuredResources {
+			gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
+			for {
+				if counter >= w.GetTries() {
+					return errors.New("waiter timed out waiting for deletion")
 				}
+				log.Infof("[KUBEDOG] waiting for resource deletion of %v/%v", resource.GetNamespace(), resource.GetName())
+				_, err := dynamicClient.Resource(gvr.Resource).Namespace(resource.GetNamespace()).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
+				if err != nil {
+					if kerrors.IsNotFound(err) {
+						log.Infof("[KUBEDOG] resource %v/%v is deleted", resource.GetNamespace(), resource.GetName())
+						break
+					}
+				}
+				counter++
+				time.Sleep(w.GetInterval())
 			}
-			counter++
-			time.Sleep(w.GetInterval())
 		}
 		return nil
 	}
