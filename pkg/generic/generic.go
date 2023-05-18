@@ -13,7 +13,7 @@ limitations under the License.
 */
 
 // Package common provides functions and steps implementations not specifically related to Kubernetes nor AWS.
-package common
+package generic
 
 import (
 	"bytes"

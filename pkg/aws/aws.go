@@ -34,8 +34,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
-	util "github.com/keikoproj/kubedog/internal/utilities"
-	"github.com/keikoproj/kubedog/pkg/common"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -51,8 +49,8 @@ type Client struct {
 }
 
 var (
-	ClusterAWSRegion = common.GetEnv("AWS_REGION", "us-west-2")
-	BDDClusterName   = common.GetEnv("CLUSTER_NAME", common.GetUsernamePrefix()+"kubedog-bdd")
+	ClusterAWSRegion = getEnvWithFallback("AWS_REGION", "us-west-2")
+	BDDClusterName   = getEnvWithFallback("CLUSTER_NAME", getUsernamePrefix()+"kubedog-bdd")
 )
 
 /*
@@ -73,7 +71,7 @@ func (c *Client) AnASGNamed(name string) error {
 	}
 
 	arn := aws.StringValue(out.AutoScalingGroups[0].AutoScalingGroupARN)
-	log.Infof("[KUBEDOG] Auto Scaling group: %v", arn)
+	log.Infof("Auto Scaling group: %v", arn)
 
 	c.LaunchConfigName = aws.StringValue(out.AutoScalingGroups[0].LaunchConfigurationName)
 	c.AsgName = name
@@ -179,7 +177,7 @@ func (c *Client) GetAWSCredsAndClients() error {
 	}
 
 	arn := aws.StringValue(identity.Arn)
-	log.Infof("[KUBEDOG] Credentials: %v", arn)
+	log.Infof("Credentials: %v", arn)
 
 	c.ASClient = autoscaling.New(sess)
 	c.EKSClient = eks.New(sess)
@@ -192,7 +190,7 @@ func (c *Client) GetAWSCredsAndClients() error {
 
 func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
 	accountId := GetAccountNumber(c.STSClient)
-	clusterName, err := util.GetClusterName()
+	clusterName, err := getClusterName()
 	if err != nil {
 		return err
 	}
@@ -278,7 +276,7 @@ func (c *Client) ClusterSharedIamOperation(operation string) error {
 		accountId = GetAccountNumber(c.STSClient)
 		iamFmt    = "arn:aws:iam::%s:%s/%s"
 	)
-	clusterName, err := util.GetClusterName()
+	clusterName, err := getClusterName()
 	if err != nil {
 		return err
 	}
@@ -321,7 +319,7 @@ func (c *Client) ClusterSharedIamOperation(operation string) error {
 }
 
 func (c *Client) GetEksVpc() (string, error) {
-	clusterName, err := util.GetClusterName()
+	clusterName, err := getClusterName()
 	if err != nil {
 		return "", err
 	}

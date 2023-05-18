@@ -143,26 +143,26 @@ func ResourceShouldBe(dynamicClient dynamic.Interface, resource unstructuredReso
 		if counter >= w.GetTries() {
 			return errors.New("waiter timed out waiting for resource state")
 		}
-		log.Infof("[KUBEDOG] waiting for resource %v/%v to become %v", unstruct.GetNamespace(), unstruct.GetName(), state)
+		log.Infof("waiting for resource %v/%v to become %v", unstruct.GetNamespace(), unstruct.GetName(), state)
 
 		_, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
 				return err
 			}
-			log.Infof("[KUBEDOG] %v/%v is not found: %v", unstruct.GetNamespace(), unstruct.GetName(), err)
+			log.Infof("%v/%v is not found: %v", unstruct.GetNamespace(), unstruct.GetName(), err)
 			exists = false
 		}
 
 		switch state {
 		case common.StateDeleted:
 			if !exists {
-				log.Infof("[KUBEDOG] %v/%v is deleted", unstruct.GetNamespace(), unstruct.GetName())
+				log.Infof("%v/%v is deleted", unstruct.GetNamespace(), unstruct.GetName())
 				return nil
 			}
 		case common.StateCreated:
 			if exists {
-				log.Infof("[KUBEDOG] %v/%v is created", unstruct.GetNamespace(), unstruct.GetName())
+				log.Infof("%v/%v is created", unstruct.GetNamespace(), unstruct.GetName())
 				return nil
 			}
 		}
@@ -197,8 +197,7 @@ func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, resource 
 		if counter >= w.GetTries() {
 			return errors.New("waiter timed out waiting for resource")
 		}
-		//TODO: configure the logger to output "[KUBEDOG]" instead typing it in each log
-		log.Infof("[KUBEDOG] waiting for resource %v/%v to converge to %v=%v", unstruct.GetNamespace(), unstruct.GetName(), key, value)
+		log.Infof("waiting for resource %v/%v to converge to %v=%v", unstruct.GetNamespace(), unstruct.GetName(), key, value)
 		cr, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -235,7 +234,7 @@ func ResourceConditionShouldBe(dynamicClient dynamic.Interface, resource unstruc
 		if counter >= w.GetTries() {
 			return errors.New("waiter timed out waiting for resource state")
 		}
-		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", unstruct.GetNamespace(), unstruct.GetName(), conditionType, expectedStatus)
+		log.Infof("waiting for resource %v/%v to meet condition %v=%v", unstruct.GetNamespace(), unstruct.GetName(), conditionType, expectedStatus)
 		cr, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -339,7 +338,7 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 			if err != nil {
 				return err
 			}
-			log.Infof("[KUBEDOG] submitted deletion for %v/%v", unstruct.GetNamespace(), unstruct.GetName())
+			log.Infof("submitted deletion for %v/%v", unstruct.GetNamespace(), unstruct.GetName())
 		}
 		return nil
 	}
@@ -367,11 +366,11 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 				if counter >= w.GetTries() {
 					return errors.New("waiter timed out waiting for deletion")
 				}
-				log.Infof("[KUBEDOG] waiting for resource deletion of %v/%v", unstruct.GetNamespace(), unstruct.GetName())
+				log.Infof("waiting for resource deletion of %v/%v", unstruct.GetNamespace(), unstruct.GetName())
 				_, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
 				if err != nil {
 					if kerrors.IsNotFound(err) {
-						log.Infof("[KUBEDOG] resource %v/%v is deleted", unstruct.GetNamespace(), unstruct.GetName())
+						log.Infof("resource %v/%v is deleted", unstruct.GetNamespace(), unstruct.GetName())
 						break
 					}
 				}

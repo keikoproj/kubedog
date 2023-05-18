@@ -25,14 +25,7 @@ import (
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-)
-
-// TODO: most of this needs to be moved to unstructured and to the packages where they are used
-
-const (
-	clusterNameEnvironmentVariable = "CLUSTER_NAME"
 )
 
 var (
@@ -54,17 +47,6 @@ var (
 
 type FuncToRetryWithReturn func() (interface{}, error)
 type FuncToRetry func() error
-
-func IsNodeReady(n corev1.Node) bool {
-	for _, condition := range n.Status.Conditions {
-		if condition.Type == "Ready" {
-			if condition.Status == "True" {
-				return true
-			}
-		}
-	}
-	return false
-}
 
 func PathToOSFile(relativePath string) (*os.File, error) {
 	path, err := filepath.Abs(relativePath)
@@ -129,15 +111,4 @@ func RetryOnAnyError(backoff *wait.Backoff, fn FuncToRetry) error {
 		return nil, fn()
 	})
 	return err
-}
-
-func GetClusterName() (string, error) {
-	return GetEnvironmentVariable(clusterNameEnvironmentVariable)
-}
-
-func GetEnvironmentVariable(envName string) (string, error) {
-	if envValue, ok := os.LookupEnv(envName); ok {
-		return envValue, nil
-	}
-	return "", fmt.Errorf("could not get environment variable '%s'", envName)
 }

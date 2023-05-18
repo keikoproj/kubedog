@@ -2,11 +2,17 @@ package aws
 
 import (
 	"fmt"
+	"os"
+	"os/user"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	clusterNameEnvironmentVariable = "CLUSTER_NAME"
 )
 
 func (c *Client) GetDNSRecord(dnsName string, hostedZoneID string) (string, error) {
@@ -55,4 +61,30 @@ func (c *Client) DnsNameInHostedZoneID(dnsName, hostedZoneID string) error {
 	}
 	log.Infof("records for hostedZoneID %s with dnsName %s exists", hostedZoneID, dnsName)
 	return nil
+}
+
+func getClusterName() (string, error) {
+	return getEnv(clusterNameEnvironmentVariable)
+}
+
+func getEnv(envName string) (string, error) {
+	if envValue, ok := os.LookupEnv(envName); ok {
+		return envValue, nil
+	}
+	return "", fmt.Errorf("could not get environment variable '%s'", envName)
+}
+
+func getEnvWithFallback(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}
+
+func getUsernamePrefix() string {
+	currUser, err := user.Current()
+	if err != nil || currUser.Username == "root" {
+		return ""
+	}
+	return currUser.Username + "-"
 }

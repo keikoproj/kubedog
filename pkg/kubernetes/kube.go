@@ -58,7 +58,7 @@ func (kc *ClientSet) DiscoverClients() error {
 	}
 
 	if _, err := os.Stat(kubeconfigPath); os.IsNotExist(err) {
-		return errors.Errorf("[KUBEDOG] expected kubeconfig to exist for create operation, '%v'", kubeconfigPath)
+		return errors.Errorf("expected kubeconfig to exist for create operation, '%v'", kubeconfigPath)
 	}
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)

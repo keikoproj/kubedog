@@ -20,7 +20,7 @@ import (
 
 	"github.com/cucumber/godog"
 	aws "github.com/keikoproj/kubedog/pkg/aws"
-	"github.com/keikoproj/kubedog/pkg/common"
+	"github.com/keikoproj/kubedog/pkg/generic"
 	kube "github.com/keikoproj/kubedog/pkg/kubernetes"
 	log "github.com/sirupsen/logrus"
 )
@@ -49,9 +49,9 @@ func (kdt *Test) Run() {
 	}
 	//syntax-generation:begin
 	//syntax-generation:title:Generic steps
-	kdt.scenarioContext.Step(`^(?:I )?wait (?:for )?(\d+) (minutes|seconds)$`, common.WaitFor)
-	kdt.scenarioContext.Step(`^the (\S+) command is available$`, common.CommandExists)
-	kdt.scenarioContext.Step(`^I run the (\S+) command with the ([^"]*) args and the command (fails|succeeds)$`, common.RunCommand)
+	kdt.scenarioContext.Step(`^(?:I )?wait (?:for )?(\d+) (minutes|seconds)$`, generic.WaitFor)
+	kdt.scenarioContext.Step(`^the (\S+) command is available$`, generic.CommandExists)
+	kdt.scenarioContext.Step(`^I run the (\S+) command with the ([^"]*) args and the command (fails|succeeds)$`, generic.RunCommand)
 	//syntax-generation:title:Kubernetes steps
 	// TODO: implement syntax-generation:subtitle and syntax-generation:sub-subtitle or maybe syntax-generation:title:<rank of the tittle> e.g syntax-generation:title:1 or syntax-generation:title:2 and the number is the number of # chars
 	kdt.scenarioContext.Step(`^((?:a )?Kubernetes cluster|(?:there are )?(?:valid )?Kubernetes Credentials)$`, kdt.KubeContext.DiscoverClients)

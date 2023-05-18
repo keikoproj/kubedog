@@ -75,17 +75,17 @@ func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.Wait
 		case common.StateFound:
 			nodesCount = len(nodes.Items)
 			if nodesCount == expectedNodes {
-				log.Infof("[KUBEDOG] found %v nodes", expectedNodes)
+				log.Infof("found %v nodes", expectedNodes)
 				found = true
 			}
 		case common.StateReady:
 			for _, node := range nodes.Items {
-				if util.IsNodeReady(node) {
+				if isNodeReady(node) {
 					nodesCount++
 				}
 			}
 			if nodesCount == expectedNodes {
-				log.Infof("[KUBEDOG] found %v ready nodes", expectedNodes)
+				log.Infof("found %v ready nodes", expectedNodes)
 				found = true
 			}
 		}
@@ -94,7 +94,7 @@ func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.Wait
 			break
 		}
 
-		log.Infof("[KUBEDOG] found %v nodes, waiting for %v nodes to be %v with selector %v", nodesCount, expectedNodes, state, selector)
+		log.Infof("found %v nodes, waiting for %v nodes to be %v with selector %v", nodesCount, expectedNodes, state, selector)
 
 		counter++
 		time.Sleep(w.GetInterval())

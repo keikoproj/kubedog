@@ -3,6 +3,7 @@ package structured
 import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -21,4 +22,15 @@ func validatePrometheusPVLabels(kubeClientset kubernetes.Interface, volumeClaimT
 		}
 	}
 	return nil
+}
+
+func isNodeReady(n corev1.Node) bool {
+	for _, condition := range n.Status.Conditions {
+		if condition.Type == "Ready" {
+			if condition.Status == "True" {
+				return true
+			}
+		}
+	}
+	return false
 }
