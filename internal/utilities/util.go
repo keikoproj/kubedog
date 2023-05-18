@@ -28,6 +28,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+const (
+	DurationMinutes = "minutes"
+	DurationSeconds = "seconds"
+)
+
 var (
 	DefaultRetry = wait.Backoff{
 		Steps:    6,

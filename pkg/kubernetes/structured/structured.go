@@ -38,12 +38,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// TODO: implemented twice (one in pkg/kubernetes/structured and one in pkg/common)
-const (
-	durationMinutes = "minutes"
-	durationSeconds = "seconds"
-)
-
 func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.WaiterConfig, expectedNodes int, selector, state string) error {
 	var (
 		counter int
@@ -361,9 +355,9 @@ func SendTrafficToIngress(kubeClientset kubernetes.Interface, w common.WaiterCon
 	rate := vegeta.Rate{Freq: tps, Per: time.Second}
 	var d time.Duration
 	switch durationUnits {
-	case durationMinutes:
+	case util.DurationMinutes:
 		d = time.Minute * time.Duration(duration)
-	case durationSeconds:
+	case util.DurationSeconds:
 		d = time.Second * time.Duration(duration)
 	default:
 		return fmt.Errorf("unsupported duration units: '%s'", durationUnits)

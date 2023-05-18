@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -47,12 +46,12 @@ var replacers = []struct {
 }
 
 func main() {
-	sourceFil, err := os.Open(sourceFilePath)
+	sourceFile, err := os.Open(sourceFilePath)
 	if err != nil {
 		log.Error(err)
 	}
-	defer sourceFil.Close()
-	fileScanner := bufio.NewScanner(sourceFil)
+	defer sourceFile.Close()
+	fileScanner := bufio.NewScanner(sourceFile)
 	fileScanner.Split(bufio.ScanLines)
 	rawSyntax := []string{}
 	for fileScanner.Scan() {
@@ -73,10 +72,10 @@ func main() {
 	log.Infof("found raw syntax to process as:")
 	printStringSlice(rawSyntax)
 	processedSyntax := processSyntax(rawSyntax)
-	generateSyntax(processedSyntax)
+	createSyntaxDocumentation(processedSyntax)
 }
 
-func generateSyntax(processedSyntax []string) {
+func createSyntaxDocumentation(processedSyntax []string) {
 	if err := os.Remove(destinationFilePath); err != nil {
 		log.Fatal(err)
 	}
@@ -188,7 +187,7 @@ func printStringSlice(slice []string) {
 }
 
 func printFile(path string) {
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalf("failed reading '%s': '%v'", path, err)
 	}

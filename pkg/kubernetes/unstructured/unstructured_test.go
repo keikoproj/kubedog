@@ -436,7 +436,7 @@ func resourceFromBytes(bytes []byte) (*unstructured.Unstructured, error) {
 	return resource, nil
 }
 
-// TODO: this is implemented twice, maybe have a test helper pkg?
+// TODO: used in diff test file, maybe have a test helper pkg?
 func newTestAPIResourceList(apiVersion, name, kind string) *metav1.APIResourceList {
 	return &metav1.APIResourceList{
 		GroupVersion: apiVersion,

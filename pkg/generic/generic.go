@@ -12,7 +12,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package common provides functions and steps implementations not specifically related to Kubernetes nor AWS.
 package generic
 
 import (
@@ -25,14 +24,9 @@ import (
 	"text/template"
 	"time"
 
+	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-)
-
-// TODO: implemented twice (one in pkg/kubernetes/structured and one in pkg/common)
-const (
-	durationMinutes = "minutes"
-	durationSeconds = "seconds"
 )
 
 type TemplateArgument struct {
@@ -41,8 +35,6 @@ type TemplateArgument struct {
 	Default             string
 	Mandatory           bool
 }
-
-type condFunc func() (interface{}, error)
 
 var (
 	KubernetesClusterTagKey = "KubernetesCluster"
@@ -110,7 +102,7 @@ func GenerateFileFromTemplate(templatedFilePath string, templateArgs interface{}
 
 func WaitFor(duration int, durationUnits string) error {
 	switch durationUnits {
-	case durationMinutes:
+	case util.DurationMinutes:
 		increment := 1
 		d := increment
 		for d <= duration {
@@ -119,7 +111,7 @@ func WaitFor(duration int, durationUnits string) error {
 			d += increment
 		}
 		return nil
-	case durationSeconds:
+	case util.DurationSeconds:
 		increment := 30
 		d := increment
 		for d <= duration {

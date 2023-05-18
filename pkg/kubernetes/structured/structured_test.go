@@ -202,20 +202,6 @@ func TestScaleDeployment(t *testing.T) {
 	g.Expect(s.Spec.Replicas).To(gomega.Equal(int32(2)))
 }
 
-// TODO: implemented twice. maybe have a test helper pkg?
-func newTestAPIResourceList(apiVersion, name, kind string) *metav1.APIResourceList {
-	return &metav1.APIResourceList{
-		GroupVersion: apiVersion,
-		APIResources: []metav1.APIResource{
-			{
-				Name:       name,
-				Kind:       kind,
-				Namespaced: true,
-			},
-		},
-	}
-}
-
 func TestClusterRoleAndBindingIsFound(t *testing.T) {
 	var (
 		err        error

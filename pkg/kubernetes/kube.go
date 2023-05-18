@@ -13,14 +13,11 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 )
-
-//TODO: break down this file into *_helper.go and *_unexported.go
 
 type ClientSet struct {
 	KubeInterface      kubernetes.Interface         //TODO: use pointers to actual client struct? this is not needed to mock anymore
@@ -31,20 +28,6 @@ type ClientSet struct {
 	WaiterInterval     time.Duration        //TODO: do not export this, there is a getter that enforces defaults
 	WaiterTries        int                  //TODO: do not export this, there is a getter that enforces defaults
 	Timestamps         map[string]time.Time //TODO: do not export this, implement getters and setters
-}
-
-func (kc *ClientSet) Validate() error {
-	commonMessage := "'DiscoverClients' sets this interface, try calling it before using this method"
-	if kc.DynamicInterface == nil {
-		return errors.Errorf("'ClientSet.DynamicInterface' is nil. %s", commonMessage)
-	}
-	if kc.DiscoveryInterface == nil {
-		return errors.Errorf("'ClientSet.DiscoveryInterface' is nil. %s", commonMessage)
-	}
-	if kc.KubeInterface == nil {
-		return errors.Errorf("'ClientSet.KubeInterface' is nil. %s", commonMessage)
-	}
-	return nil
 }
 
 func (kc *ClientSet) DiscoverClients() error {
@@ -103,59 +86,7 @@ func (kc *ClientSet) SetTimestamp(timestampName string) error {
 	return nil
 }
 
-func (kc *ClientSet) getTimestamp(timestampName string) (time.Time, error) {
-	commonErrorMessage := fmt.Sprintf("failed getting timestamp '%s'", timestampName)
-	if kc.Timestamps == nil {
-		return time.Time{}, errors.Errorf("%s: 'ClientSet.Timestamps' is nil", commonErrorMessage)
-	}
-	timestamp, ok := kc.Timestamps[timestampName]
-	if !ok {
-		return time.Time{}, errors.Errorf("%s: Timestamp not found", commonErrorMessage)
-	}
-	return timestamp, nil
-}
-
-func (kc *ClientSet) getResourcePath(resourceFileName string) string {
-	templatesPath := kc.getTemplatesPath()
-	return filepath.Join(templatesPath, resourceFileName)
-}
-
-func (kc *ClientSet) getTemplatesPath() string {
-	defaultFilePath := "templates"
-	if kc.FilesPath != "" {
-		return kc.FilesPath
-	}
-	return defaultFilePath
-}
-
-func (kc *ClientSet) getWaiterInterval() time.Duration {
-	defaultWaiterInterval := time.Second * 30
-	if kc.WaiterInterval > 0 {
-		return kc.WaiterInterval
-	}
-	return defaultWaiterInterval
-}
-
-func (kc *ClientSet) getWaiterTries() int {
-	defaultWaiterTries := 40
-	if kc.WaiterTries > 0 {
-		return kc.WaiterTries
-	}
-	return defaultWaiterTries
-}
-
-func (kc *ClientSet) getWaiterConfig() common.WaiterConfig {
-	return common.NewWaiterConfig(kc.getWaiterTries(), kc.getWaiterInterval())
-}
-
-func (kc *ClientSet) getExpBackoff() wait.Backoff {
-	return pod.GetExpBackoff(kc.getWaiterTries())
-}
-
 func (kc *ClientSet) KubernetesClusterShouldBe(state string) error {
-	if err := kc.Validate(); err != nil {
-		return err
-	}
 	switch state {
 	case common.StateCreated, common.StateUpgraded:
 		if err := pod.Pods(kc.KubeInterface, metav1.NamespaceSystem); err != nil {
