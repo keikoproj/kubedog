@@ -41,7 +41,7 @@ func ResourceOperation(dynamicClient dynamic.Interface, resource unstructuredRes
 	return ResourceOperationInNamespace(dynamicClient, resource, operation, "")
 }
 
-func MultiResourceOperation(dynamicClient dynamic.Interface, resources []unstructuredResource, operation string) error {
+func ResourcesOperation(dynamicClient dynamic.Interface, resources []unstructuredResource, operation string) error {
 	for _, resource := range resources {
 		err := ResourceOperationInNamespace(dynamicClient, resource, operation, "")
 		if err != nil {
@@ -51,7 +51,7 @@ func MultiResourceOperation(dynamicClient dynamic.Interface, resources []unstruc
 	return nil
 }
 
-func MultiResourceOperationInNamespace(dynamicClient dynamic.Interface, resources []unstructuredResource, operation, namespace string) error {
+func ResourcesOperationInNamespace(dynamicClient dynamic.Interface, resources []unstructuredResource, operation, namespace string) error {
 	for _, resource := range resources {
 		err := ResourceOperationInNamespace(dynamicClient, resource, operation, namespace)
 		if err != nil {

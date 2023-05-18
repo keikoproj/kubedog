@@ -1,7 +1,6 @@
 package kube
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,10 +20,12 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+//TODO: break down this file into *_helper.go and *_unexported.go
+
 type ClientSet struct {
-	KubeInterface      kubernetes.Interface
-	DynamicInterface   dynamic.Interface
-	DiscoveryInterface discovery.DiscoveryInterface
+	KubeInterface      kubernetes.Interface         //TODO: use pointers to actual client struct? this is not needed to mock anymore
+	DynamicInterface   dynamic.Interface            //TODO: use pointers to actual client struct? this is not needed to mock anymore
+	DiscoveryInterface discovery.DiscoveryInterface //TODO: use pointers to actual client struct? this is not needed to mock anymore
 	FilesPath          string
 	TemplateArguments  interface{}
 	WaiterInterval     time.Duration        //TODO: do not export this, there is a getter that enforces defaults
@@ -151,15 +152,14 @@ func (kc *ClientSet) getExpBackoff() wait.Backoff {
 	return pod.GetExpBackoff(kc.getWaiterTries())
 }
 
-// TODO: should this be here? if so use GetPods instead of making api call directly?
 func (kc *ClientSet) KubernetesClusterShouldBe(state string) error {
 	if err := kc.Validate(); err != nil {
 		return err
 	}
 	switch state {
 	case common.StateCreated, common.StateUpgraded:
-		if _, err := kc.KubeInterface.CoreV1().Pods(metav1.NamespaceSystem).List(context.TODO(), metav1.ListOptions{}); err != nil {
-			return err
+		if err := pod.Pods(kc.KubeInterface, metav1.NamespaceSystem); err != nil {
+			return errors.Errorf("failed validating cluster create/update, could not get pods: '%v'", err)
 		}
 		return nil
 	case common.StateDeleted:
@@ -192,20 +192,20 @@ func (kc *ClientSet) ResourceOperationInNamespace(operation, resourceFileName, n
 	return unstruct.ResourceOperationInNamespace(kc.DynamicInterface, resource, operation, namespace)
 }
 
-func (kc *ClientSet) MultiResourceOperation(operation, resourcesFileName string) error {
+func (kc *ClientSet) ResourcesOperation(operation, resourcesFileName string) error {
 	resources, err := unstruct.GetResources(kc.DiscoveryInterface, kc.TemplateArguments, kc.getResourcePath(resourcesFileName))
 	if err != nil {
 		return err
 	}
-	return unstruct.MultiResourceOperation(kc.DynamicInterface, resources, operation)
+	return unstruct.ResourcesOperation(kc.DynamicInterface, resources, operation)
 }
 
-func (kc *ClientSet) MultiResourceOperationInNamespace(operation, resourcesFileName, namespace string) error {
+func (kc *ClientSet) ResourcesOperationInNamespace(operation, resourcesFileName, namespace string) error {
 	resources, err := unstruct.GetResources(kc.DiscoveryInterface, kc.TemplateArguments, kc.getResourcePath(resourcesFileName))
 	if err != nil {
 		return err
 	}
-	return unstruct.MultiResourceOperationInNamespace(kc.DynamicInterface, resources, operation, namespace)
+	return unstruct.ResourcesOperationInNamespace(kc.DynamicInterface, resources, operation, namespace)
 }
 
 func (kc *ClientSet) ResourceOperationWithResult(operation, resourceFileName, expectedResult string) error {

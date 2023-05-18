@@ -21,7 +21,7 @@ func Pods(kubeClientset kubernetes.Interface, namespace string) error {
 }
 
 func PodsWithSelector(kubeClientset kubernetes.Interface, namespace, selector string) error {
-	var readyCount = func(conditions []corev1.ContainerStatus) string {
+	var readyCountFn = func(conditions []corev1.ContainerStatus) string {
 		var readyCount = 0
 		var containerCount = len(conditions)
 		for _, condition := range conditions {
@@ -42,7 +42,7 @@ func PodsWithSelector(kubeClientset kubernetes.Interface, namespace, selector st
 	tableFormat := "%-64s%-12s%-24s"
 	log.Infof(tableFormat, "NAME", "READY", "STATUS")
 	for _, pod := range pods.Items {
-		log.Infof(tableFormat, pod.Name, readyCount(pod.Status.ContainerStatuses), pod.Status.Phase)
+		log.Infof(tableFormat, pod.Name, readyCountFn(pod.Status.ContainerStatuses), pod.Status.Phase)
 	}
 	return nil
 }
