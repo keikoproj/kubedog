@@ -8,6 +8,7 @@ import (
 	"time"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
+	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -16,12 +17,14 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func listPodsWithLabelSelector(KubeClientset kubernetes.Interface, namespace, selector string) (*corev1.PodList, error) {
-	if err := validateClientset(KubeClientset); err != nil {
+// TODO: move to a helper.go file with all other functions that return anything but an error?
+func ListPodsWithLabelSelector(kubeClientset kubernetes.Interface, namespace, selector string) (*corev1.PodList, error) {
+	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return nil, err
 	}
+
 	pods, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
-		return KubeClientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector})
+		return kubeClientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector})
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list pods")
@@ -30,11 +33,11 @@ func listPodsWithLabelSelector(KubeClientset kubernetes.Interface, namespace, se
 	return pods.(*corev1.PodList), nil
 }
 
-func GetPods(KubeClientset kubernetes.Interface, namespace string) error {
-	return GetPodsWithSelector(KubeClientset, namespace, "")
+func Pods(kubeClientset kubernetes.Interface, namespace string) error {
+	return PodsWithSelector(kubeClientset, namespace, "")
 }
 
-func GetPodsWithSelector(KubeClientset kubernetes.Interface, namespace, selector string) error {
+func PodsWithSelector(kubeClientset kubernetes.Interface, namespace, selector string) error {
 	var readyCount = func(conditions []corev1.ContainerStatus) string {
 		var readyCount = 0
 		var containerCount = len(conditions)
@@ -45,7 +48,7 @@ func GetPodsWithSelector(KubeClientset kubernetes.Interface, namespace, selector
 		}
 		return fmt.Sprintf("%d/%d", readyCount, containerCount)
 	}
-	pods, err := listPodsWithLabelSelector(KubeClientset, namespace, selector)
+	pods, err := ListPodsWithLabelSelector(kubeClientset, namespace, selector)
 	if err != nil {
 		return err
 	}
@@ -56,14 +59,13 @@ func GetPodsWithSelector(KubeClientset kubernetes.Interface, namespace, selector
 	tableFormat := "%-64s%-12s%-24s"
 	log.Infof(tableFormat, "NAME", "READY", "STATUS")
 	for _, pod := range pods.Items {
-		log.Infof(tableFormat,
-			pod.Name, readyCount(pod.Status.ContainerStatuses), pod.Status.Phase)
+		log.Infof(tableFormat, pod.Name, readyCount(pod.Status.ContainerStatuses), pod.Status.Phase)
 	}
 	return nil
 }
 
-func PodsWithSelectorHaveRestartCountLessThan(KubeClientset kubernetes.Interface, namespace string, selector string, restartCount int) error {
-	pods, err := listPodsWithLabelSelector(KubeClientset, namespace, selector)
+func PodsWithSelectorHaveRestartCountLessThan(kubeClientset kubernetes.Interface, namespace string, selector string, restartCount int) error {
+	pods, err := ListPodsWithLabelSelector(kubeClientset, namespace, selector)
 	if err != nil {
 		return err
 	}
@@ -86,9 +88,9 @@ func PodsWithSelectorHaveRestartCountLessThan(KubeClientset kubernetes.Interface
 	return nil
 }
 
-func SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(KubeClientset kubernetes.Interface, expBackoff wait.Backoff, SomeOrAll, namespace, selector, searchKeyword string, since time.Time) error {
+func SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(kubeClientset kubernetes.Interface, expBackoff wait.Backoff, SomeOrAll, namespace, selector, searchKeyword string, since time.Time) error {
 	return util.RetryOnAnyError(&expBackoff, func() error {
-		pods, err := listPodsWithLabelSelector(KubeClientset, namespace, selector)
+		pods, err := ListPodsWithLabelSelector(kubeClientset, namespace, selector)
 		if err != nil {
 			return err
 		}
@@ -102,7 +104,7 @@ func SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(KubeClientset
 		)
 		var podsCount int
 		for _, pod := range pods.Items {
-			podCount, err := findStringInPodLogs(KubeClientset, pod, since, searchKeyword)
+			podCount, err := countStringInPodLogs(kubeClientset, pod, since, searchKeyword)
 			if err != nil {
 				return err
 			}
@@ -138,9 +140,9 @@ func GetExpBackoff(steps int) wait.Backoff {
 	}
 }
 
-func findStringInPodLogs(KubeClientset kubernetes.Interface, pod corev1.Pod, since time.Time, stringsToFind ...string) (int, error) {
+func countStringInPodLogs(kubeClientset kubernetes.Interface, pod corev1.Pod, since time.Time, stringsToFind ...string) (int, error) {
 	foundCount := 0
-	if err := validateClientset(KubeClientset); err != nil {
+	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return foundCount, err
 	}
 	var sinceTime metav1.Time = metav1.NewTime(since)
@@ -150,7 +152,7 @@ func findStringInPodLogs(KubeClientset kubernetes.Interface, pod corev1.Pod, sin
 			Container: container.Name,
 		}
 
-		req := KubeClientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
+		req := kubeClientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
 		podLogs, err := req.Stream(context.Background())
 		if err != nil {
 			return 0, errors.Errorf("Error in opening stream for pod '%s', container '%s' : '%s'", pod.Name, container.Name, string(err.Error()))
@@ -171,8 +173,8 @@ func findStringInPodLogs(KubeClientset kubernetes.Interface, pod corev1.Pod, sin
 	return foundCount, nil
 }
 
-func SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(KubeClientset kubernetes.Interface, namespace, selector, searchkeyword string, since time.Time) error {
-	pods, err := listPodsWithLabelSelector(KubeClientset, namespace, selector)
+func SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(kubeClientset kubernetes.Interface, namespace, selector, searchkeyword string, since time.Time) error {
+	pods, err := ListPodsWithLabelSelector(kubeClientset, namespace, selector)
 	if err != nil {
 		return err
 	}
@@ -181,7 +183,7 @@ func SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(KubeClientset 
 		return errors.Errorf("No pods matched selector '%s'", selector)
 	}
 	for _, pod := range pods.Items {
-		count, err := findStringInPodLogs(KubeClientset, pod, since, searchkeyword)
+		count, err := countStringInPodLogs(kubeClientset, pod, since, searchkeyword)
 		if err != nil {
 			return err
 		}
@@ -192,8 +194,8 @@ func SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(KubeClientset 
 	return fmt.Errorf("pod has '%s' message in the logs", searchkeyword)
 }
 
-func PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(KubeClientset kubernetes.Interface, namespace string, selector string, since time.Time) error {
-	pods, err := listPodsWithLabelSelector(KubeClientset, namespace, selector)
+func PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(kubeClientset kubernetes.Interface, namespace string, selector string, since time.Time) error {
+	pods, err := ListPodsWithLabelSelector(kubeClientset, namespace, selector)
 	if err != nil {
 		return err
 	}
@@ -203,7 +205,7 @@ func PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(KubeClientset kubern
 
 	for _, pod := range pods.Items {
 		errorStrings := []string{`"level":"error"`, "level=error"}
-		count, err := findStringInPodLogs(KubeClientset, pod, since, errorStrings...)
+		count, err := countStringInPodLogs(kubeClientset, pod, since, errorStrings...)
 		if err != nil {
 			return err
 		}
@@ -215,20 +217,20 @@ func PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(KubeClientset kubern
 	return nil
 }
 
-func PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(KubeClientset kubernetes.Interface, namespace string, selector string, since time.Time) error {
-	err := PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(KubeClientset, namespace, selector, since)
+func PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(kubeClientset kubernetes.Interface, namespace string, selector string, since time.Time) error {
+	err := PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(kubeClientset, namespace, selector, since)
 	if err == nil {
 		return fmt.Errorf("logs found from selector %q in namespace %q have errors", selector, namespace)
 	}
 	return nil
 }
 
-func PodInNamespaceShouldHaveLabels(KubeClientset kubernetes.Interface, name, namespace, labels string) error {
-	if err := validateClientset(KubeClientset); err != nil {
+func PodInNamespaceShouldHaveLabels(kubeClientset kubernetes.Interface, name, namespace, labels string) error {
+	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return err
 	}
 
-	pod, err := KubeClientset.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	pod, err := kubeClientset.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return errors.New("Error fetching pod: " + err.Error())
 	}
@@ -257,8 +259,8 @@ func PodInNamespaceShouldHaveLabels(KubeClientset kubernetes.Interface, name, na
 	return nil
 }
 
-func PodsInNamespaceWithSelectorShouldHaveLabels(KubeClientset kubernetes.Interface, namespace, selector, labels string) error {
-	podList, err := listPodsWithLabelSelector(KubeClientset, namespace, selector)
+func PodsInNamespaceWithSelectorShouldHaveLabels(kubeClientset kubernetes.Interface, namespace, selector, labels string) error {
+	podList, err := ListPodsWithLabelSelector(kubeClientset, namespace, selector)
 	if err != nil {
 		return fmt.Errorf("error getting pods with selector %q: %v", selector, err)
 	}
@@ -290,12 +292,5 @@ func PodsInNamespaceWithSelectorShouldHaveLabels(KubeClientset kubernetes.Interf
 		}
 	}
 
-	return nil
-}
-
-func validateClientset(KubeClientset kubernetes.Interface) error {
-	if KubeClientset == nil {
-		return errors.Errorf("'k8s.io/client-go/kubernetes.Interface' is nil.")
-	}
 	return nil
 }

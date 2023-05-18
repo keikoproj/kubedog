@@ -1,15 +1,19 @@
 package kube
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
 	"github.com/keikoproj/kubedog/pkg/kubernetes/pod"
+	"github.com/keikoproj/kubedog/pkg/kubernetes/structured"
 	unstruct "github.com/keikoproj/kubedog/pkg/kubernetes/unstructured"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -17,18 +21,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// TODO: implemented twice. this moved to unstructured pkg, check what is still needed or not
+// TODO: move this to pkg/kubernetes/common?
 const (
-	operationCreate = "create"
-	operationSubmit = "submit"
-	operationUpdate = "update"
-	operationDelete = "delete"
-
-	stateCreated  = "created"
-	stateDeleted  = "deleted"
 	stateUpgraded = "upgraded"
-	stateReady    = "ready"
-	stateFound    = "found"
 )
 
 type ClientSet struct {
@@ -153,20 +148,37 @@ func (kc *ClientSet) getWaiterTries() int {
 	return defaultWaiterTries
 }
 
-func (kc *ClientSet) getWaiterConfig() unstruct.WaiterConfig {
-	return unstruct.NewWaiterConfig(kc.getWaiterTries(), kc.getWaiterInterval())
+func (kc *ClientSet) getWaiterConfig() common.WaiterConfig {
+	return common.NewWaiterConfig(kc.getWaiterTries(), kc.getWaiterInterval())
 }
 
 func (kc *ClientSet) getExpBackoff() wait.Backoff {
 	return pod.GetExpBackoff(kc.getWaiterTries())
 }
 
+// TODO: should this be here? if so use GetPods instead of making api call directly?
+func (kc *ClientSet) KubernetesClusterShouldBe(state string) error {
+	if err := kc.Validate(); err != nil {
+		return err
+	}
+	switch state {
+	case common.StateCreated, stateUpgraded:
+		if _, err := kc.KubeInterface.CoreV1().Pods(metav1.NamespaceSystem).List(context.TODO(), metav1.ListOptions{}); err != nil {
+			return err
+		}
+		return nil
+	case common.StateDeleted:
+		if err := kc.DiscoverClients(); err == nil {
+			return errors.New("failed validating cluster delete, cluster is still available")
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported state: '%s'", state)
+	}
+}
+
 func (kc *ClientSet) DeleteAllTestResources() error {
-	return unstruct.DeleteResourcesAtPath(kc.DynamicInterface,
-		kc.DiscoveryInterface,
-		kc.TemplateArguments,
-		kc.getWaiterConfig(),
-		kc.getTemplatesPath())
+	return unstruct.DeleteResourcesAtPath(kc.DynamicInterface, kc.DiscoveryInterface, kc.TemplateArguments, kc.getWaiterConfig(), kc.getTemplatesPath())
 }
 
 func (kc *ClientSet) ResourceOperation(operation, resourceFileName string) error {
@@ -177,12 +189,12 @@ func (kc *ClientSet) ResourceOperation(operation, resourceFileName string) error
 	return unstruct.ResourceOperation(kc.DynamicInterface, resource, operation)
 }
 
-func (kc *ClientSet) ResourceOperationInNamespace(operation, resourceFileName, ns string) error {
+func (kc *ClientSet) ResourceOperationInNamespace(operation, resourceFileName, namespace string) error {
 	resource, err := unstruct.GetResource(kc.DiscoveryInterface, kc.TemplateArguments, kc.getResourcePath(resourceFileName))
 	if err != nil {
 		return err
 	}
-	return unstruct.ResourceOperationInNamespace(kc.DynamicInterface, resource, operation, ns)
+	return unstruct.ResourceOperationInNamespace(kc.DynamicInterface, resource, operation, namespace)
 }
 
 func (kc *ClientSet) MultiResourceOperation(operation, resourcesFileName string) error {
@@ -193,12 +205,12 @@ func (kc *ClientSet) MultiResourceOperation(operation, resourcesFileName string)
 	return unstruct.MultiResourceOperation(kc.DynamicInterface, resources, operation)
 }
 
-func (kc *ClientSet) MultiResourceOperationInNamespace(operation, resourcesFileName, ns string) error {
+func (kc *ClientSet) MultiResourceOperationInNamespace(operation, resourcesFileName, namespace string) error {
 	resources, err := unstruct.GetResources(kc.DiscoveryInterface, kc.TemplateArguments, kc.getResourcePath(resourcesFileName))
 	if err != nil {
 		return err
 	}
-	return unstruct.MultiResourceOperationInNamespace(kc.DynamicInterface, resources, operation, ns)
+	return unstruct.MultiResourceOperationInNamespace(kc.DynamicInterface, resources, operation, namespace)
 }
 
 func (kc *ClientSet) ResourceOperationWithResult(operation, resourceFileName, expectedResult string) error {
@@ -209,12 +221,12 @@ func (kc *ClientSet) ResourceOperationWithResult(operation, resourceFileName, ex
 	return unstruct.ResourceOperationWithResult(kc.DynamicInterface, resource, operation, expectedResult)
 }
 
-func (kc *ClientSet) ResourceOperationWithResultInNamespace(operation, resourceFileName, ns, expectedResult string) error {
+func (kc *ClientSet) ResourceOperationWithResultInNamespace(operation, resourceFileName, namespace, expectedResult string) error {
 	resource, err := unstruct.GetResource(kc.DiscoveryInterface, kc.TemplateArguments, kc.getResourcePath(resourceFileName))
 	if err != nil {
 		return err
 	}
-	return unstruct.ResourceOperationWithResultInNamespace(kc.DynamicInterface, resource, operation, ns, expectedResult)
+	return unstruct.ResourceOperationWithResultInNamespace(kc.DynamicInterface, resource, operation, namespace, expectedResult)
 }
 
 func (kc *ClientSet) ResourceShouldBe(resourceFileName, state string) error {
@@ -249,54 +261,110 @@ func (kc *ClientSet) UpdateResourceWithField(resourceFileName, key, value string
 	return unstruct.UpdateResourceWithField(kc.DynamicInterface, resource, key, value)
 }
 
-func (kc *ClientSet) GetPods(ns string) error {
-	return pod.GetPods(kc.KubeInterface, ns)
+func (kc *ClientSet) VerifyInstanceGroups() error {
+	return unstruct.VerifyInstanceGroups(kc.DynamicInterface)
 }
 
-func (kc *ClientSet) GetPodsWithSelector(ns, selector string) error {
-	return pod.GetPodsWithSelector(kc.KubeInterface, ns, selector)
+func (kc *ClientSet) Pods(namespace string) error {
+	return pod.Pods(kc.KubeInterface, namespace)
 }
 
-func (kc *ClientSet) PodsWithSelectorHaveRestartCountLessThan(ns, selector string, restartCount int) error {
-	return pod.PodsWithSelectorHaveRestartCountLessThan(kc.KubeInterface, ns, selector, restartCount)
+func (kc *ClientSet) PodsWithSelector(namespace, selector string) error {
+	return pod.PodsWithSelector(kc.KubeInterface, namespace, selector)
 }
 
-func (kc *ClientSet) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(someOrAll, ns, selector, searchKeyword, sinceTime string) error {
+func (kc *ClientSet) PodsWithSelectorHaveRestartCountLessThan(namespace, selector string, restartCount int) error {
+	return pod.PodsWithSelectorHaveRestartCountLessThan(kc.KubeInterface, namespace, selector, restartCount)
+}
+
+func (kc *ClientSet) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(someOrAll, namespace, selector, searchKeyword, sinceTime string) error {
 	timestamp, err := kc.getTimestamp(sinceTime)
 	if err != nil {
 		return err
 	}
-	return pod.SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(kc.KubeInterface, kc.getExpBackoff(), someOrAll, ns, selector, searchKeyword, timestamp)
+	return pod.SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(kc.KubeInterface, kc.getExpBackoff(), someOrAll, namespace, selector, searchKeyword, timestamp)
 }
 
-func (kc *ClientSet) SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(ns, selector, searchKeyword, sinceTime string) error {
+func (kc *ClientSet) SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(namespace, selector, searchKeyword, sinceTime string) error {
 	timestamp, err := kc.getTimestamp(sinceTime)
 	if err != nil {
 		return err
 	}
-	return pod.SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(kc.KubeInterface, ns, selector, searchKeyword, timestamp)
+	return pod.SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(kc.KubeInterface, namespace, selector, searchKeyword, timestamp)
 }
 
-func (kc *ClientSet) PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(ns, selector, sinceTime string) error {
+func (kc *ClientSet) PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(namespace, selector, sinceTime string) error {
 	timestamp, err := kc.getTimestamp(sinceTime)
 	if err != nil {
 		return err
 	}
-	return pod.PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(kc.KubeInterface, ns, selector, timestamp)
+	return pod.PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(kc.KubeInterface, namespace, selector, timestamp)
 }
 
-func (kc *ClientSet) PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(ns, selector, sinceTime string) error {
+func (kc *ClientSet) PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(namespace, selector, sinceTime string) error {
 	timestamp, err := kc.getTimestamp(sinceTime)
 	if err != nil {
 		return err
 	}
-	return pod.PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(kc.KubeInterface, ns, selector, timestamp)
+	return pod.PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(kc.KubeInterface, namespace, selector, timestamp)
 }
 
-func (kc *ClientSet) PodsInNamespaceWithSelectorShouldHaveLabels(ns, selector, labels string) error {
-	return pod.PodsInNamespaceWithSelectorShouldHaveLabels(kc.KubeInterface, ns, selector, labels)
+func (kc *ClientSet) PodsInNamespaceWithSelectorShouldHaveLabels(namespace, selector, labels string) error {
+	return pod.PodsInNamespaceWithSelectorShouldHaveLabels(kc.KubeInterface, namespace, selector, labels)
 }
 
-func (kc *ClientSet) PodInNamespaceShouldHaveLabels(name, ns, labels string) error {
-	return pod.PodInNamespaceShouldHaveLabels(kc.KubeInterface, name, ns, labels)
+func (kc *ClientSet) PodInNamespaceShouldHaveLabels(name, namespace, labels string) error {
+	return pod.PodInNamespaceShouldHaveLabels(kc.KubeInterface, name, namespace, labels)
+}
+
+func (kc *ClientSet) SecretOperationFromEnvironmentVariable(operation, name, namespace, environmentVariable string) error {
+	return structured.SecretOperationFromEnvironmentVariable(kc.KubeInterface, operation, name, namespace, environmentVariable)
+}
+
+func (kc *ClientSet) SecretDelete(name, namespace string) error {
+	return structured.SecretDelete(kc.KubeInterface, name, namespace)
+}
+
+func (kc *ClientSet) NodesWithSelectorShouldBe(expectedNodes int, selector, state string) error {
+	return structured.NodesWithSelectorShouldBe(kc.KubeInterface, kc.getWaiterConfig(), expectedNodes, selector, state)
+}
+
+func (kc *ClientSet) ResourceInNamespace(resourceType, name, namespace string) error {
+	return structured.ResourceInNamespace(kc.KubeInterface, resourceType, name, namespace)
+}
+
+func (kc *ClientSet) ScaleDeployment(name, namespace string, replicas int32) error {
+	return structured.ScaleDeployment(kc.KubeInterface, name, namespace, replicas)
+}
+
+func (kc *ClientSet) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName, namespace, volumeClaimTemplatesName string) error {
+	return structured.ValidatePrometheusVolumeClaimTemplatesName(kc.KubeInterface, statefulsetName, namespace, volumeClaimTemplatesName)
+}
+
+func (kc *ClientSet) GetNodes() error {
+	return structured.GetNodes(kc.KubeInterface)
+}
+
+func (kc *ClientSet) DaemonSetIsRunning(name, namespace string) error {
+	return structured.DaemonSetIsRunning(kc.KubeInterface, name, namespace)
+}
+
+func (kc *ClientSet) DeploymentIsRunning(name, namespace string) error {
+	return structured.DeploymentIsRunning(kc.KubeInterface, name, namespace)
+}
+
+func (kc *ClientSet) PersistentVolExists(name, expectedPhase string) error {
+	return structured.PersistentVolExists(kc.KubeInterface, name, expectedPhase)
+}
+
+func (kc *ClientSet) ClusterRbacIsFound(resourceType, name string) error {
+	return structured.ClusterRbacIsFound(kc.KubeInterface, resourceType, name)
+}
+
+func (kc *ClientSet) IngressAvailable(name, namespace string, port int, path string) error {
+	return structured.IngressAvailable(kc.KubeInterface, kc.getWaiterConfig(), name, namespace, port, path)
+}
+
+func (kc *ClientSet) SendTrafficToIngress(tps int, name, namespace string, port int, path string, duration int, durationUnits string, expectedErrors int) error {
+	return structured.SendTrafficToIngress(kc.KubeInterface, kc.getWaiterConfig(), tps, name, namespace, port, path, duration, durationUnits, expectedErrors)
 }

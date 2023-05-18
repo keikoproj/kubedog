@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
+	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -64,9 +65,9 @@ func TestPositiveResourceOperation(t *testing.T) {
 	// }
 	resource, err := GetResource(&fakeDiscovery, nil, resourcePath(fileName))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = ResourceOperation(fakeDynamicClient, resource, operationCreate)
+	err = ResourceOperation(fakeDynamicClient, resource, common.OperationCreate)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = ResourceOperation(fakeDynamicClient, resource, operationDelete)
+	err = ResourceOperation(fakeDynamicClient, resource, common.OperationDelete)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
@@ -107,7 +108,7 @@ func TestPositiveResourceShouldBe(t *testing.T) {
 	// }
 	resource, err := GetResource(&fakeDiscovery, nil, resourcePath(fileName))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = ResourceShouldBe(fakeDynamicClient, resource, WaiterConfig{}, stateCreated)
+	err = ResourceShouldBe(fakeDynamicClient, resource, common.WaiterConfig{}, common.StateCreated)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 
 	fakeDiscovery.ReactionChain[0] = &kTesting.SimpleReactor{
@@ -116,7 +117,7 @@ func TestPositiveResourceShouldBe(t *testing.T) {
 		Reaction: deletedReactionFunc,
 	}
 
-	err = ResourceShouldBe(fakeDynamicClient, resource, WaiterConfig{}, stateDeleted)
+	err = ResourceShouldBe(fakeDynamicClient, resource, common.WaiterConfig{}, common.StateDeleted)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
@@ -157,7 +158,7 @@ func TestPositiveResourceShouldConvergeToSelector(t *testing.T) {
 	// }
 	resource, err := GetResource(&fakeDiscovery, nil, resourcePath(fileName))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = ResourceShouldConvergeToSelector(fakeDynamicClient, resource, WaiterConfig{}, selector)
+	err = ResourceShouldConvergeToSelector(fakeDynamicClient, resource, common.WaiterConfig{}, selector)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
@@ -199,7 +200,7 @@ func TestPositiveResourceConditionShouldBe(t *testing.T) {
 	// }
 	resource, err := GetResource(&fakeDiscovery, nil, resourcePath(fileName))
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = ResourceConditionShouldBe(fakeDynamicClient, resource, WaiterConfig{}, testConditionType, testConditionStatus)
+	err = ResourceConditionShouldBe(fakeDynamicClient, resource, common.WaiterConfig{}, testConditionType, testConditionStatus)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
@@ -262,7 +263,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 	}
 	type funcArgs struct {
 		operation            string
-		ns                   string
+		namespace            string
 		unstructuredResource util.K8sUnstructuredResource
 	}
 
@@ -302,7 +303,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			},
 			funcArgs: funcArgs{
 				operation: "create",
-				ns:        "test-namespace",
+				namespace: "test-namespace",
 				unstructuredResource: util.K8sUnstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNoNs,
@@ -317,7 +318,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			},
 			funcArgs: funcArgs{
 				operation: "update",
-				ns:        "test-namespace",
+				namespace: "test-namespace",
 				unstructuredResource: util.K8sUnstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNoNsUpdate,
@@ -332,7 +333,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			},
 			funcArgs: funcArgs{
 				operation: "delete",
-				ns:        "test-namespace",
+				namespace: "test-namespace",
 				unstructuredResource: util.K8sUnstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNoNs,
@@ -375,7 +376,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			},
 			funcArgs: funcArgs{
 				operation: "create",
-				ns:        "override-ns",
+				namespace: "override-namespace",
 				unstructuredResource: util.K8sUnstructuredResource{
 					GVR:      &meta.RESTMapping{},
 					Resource: resourceNs,
@@ -403,7 +404,7 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			// kc := &ClientSet{
 			// 	DynamicInterface: tt.clientFields.DynamicInterface,
 			// }
-			if err := ResourceOperationInNamespace(tt.clientFields.DynamicInterface, tt.funcArgs.unstructuredResource, tt.funcArgs.operation, tt.funcArgs.ns); (err != nil) != tt.wantErr {
+			if err := ResourceOperationInNamespace(tt.clientFields.DynamicInterface, tt.funcArgs.unstructuredResource, tt.funcArgs.operation, tt.funcArgs.namespace); (err != nil) != tt.wantErr {
 				t.Errorf("ClientSet.unstructuredResourceOperation() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

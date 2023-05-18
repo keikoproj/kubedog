@@ -13,7 +13,7 @@ limitations under the License.
 */
 
 // Package kube provides steps implementations related to Kubernetes.
-package kube
+package structured
 
 import (
 	"context"
@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/onsi/ginkgo"
@@ -30,43 +29,30 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
-	"github.com/keikoproj/kubedog/pkg/common"
+	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
+	"github.com/keikoproj/kubedog/pkg/kubernetes/pod"
 	"github.com/pkg/errors"
 	vegeta "github.com/tsenart/vegeta/v12/lib"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/kubernetes"
 )
 
-func (kc *ClientSet) KubernetesClusterShouldBe(state string) error {
-	if err := kc.Validate(); err != nil {
-		return err
-	}
-	switch state {
-	case stateCreated, stateUpgraded:
-		if _, err := kc.KubeInterface.CoreV1().Pods(metav1.NamespaceSystem).List(context.TODO(), metav1.ListOptions{}); err != nil {
-			return err
-		}
-		return nil
-	case stateDeleted:
-		if err := kc.DiscoverClients(); err == nil {
-			return errors.New("failed validating cluster delete, cluster is still available")
-		}
-		return nil
-	default:
-		return fmt.Errorf("unsupported state: '%s'", state)
-	}
-}
+// TODO: implemented twice (one in pkg/kubernetes/structured and one in pkg/common)
+const (
+	durationMinutes = "minutes"
+	durationSeconds = "seconds"
+)
 
-func (kc *ClientSet) NodesWithSelectorShouldBe(n int, selector, state string) error {
+func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.WaiterConfig, expectedNodes int, selector, state string) error {
 	var (
 		counter int
 		found   bool
 	)
 
-	if err := kc.Validate(); err != nil {
+	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return err
 	}
 
@@ -78,30 +64,30 @@ func (kc *ClientSet) NodesWithSelectorShouldBe(n int, selector, state string) er
 			}
 		)
 
-		if counter >= kc.getWaiterTries() {
+		if counter >= w.GetTries() {
 			return errors.New("waiter timed out waiting for nodes")
 		}
 
-		nodes, err := kc.KubeInterface.CoreV1().Nodes().List(context.Background(), opts)
+		nodes, err := kubeClientset.CoreV1().Nodes().List(context.Background(), opts)
 		if err != nil {
 			return err
 		}
 
 		switch state {
-		case stateFound:
+		case common.StateFound:
 			nodesCount = len(nodes.Items)
-			if nodesCount == n {
-				log.Infof("[KUBEDOG] found %v nodes", n)
+			if nodesCount == expectedNodes {
+				log.Infof("[KUBEDOG] found %v nodes", expectedNodes)
 				found = true
 			}
-		case stateReady:
+		case common.StateReady:
 			for _, node := range nodes.Items {
 				if util.IsNodeReady(node) {
 					nodesCount++
 				}
 			}
-			if nodesCount == n {
-				log.Infof("[KUBEDOG] found %v ready nodes", n)
+			if nodesCount == expectedNodes {
+				log.Infof("[KUBEDOG] found %v ready nodes", expectedNodes)
 				found = true
 			}
 		}
@@ -110,47 +96,47 @@ func (kc *ClientSet) NodesWithSelectorShouldBe(n int, selector, state string) er
 			break
 		}
 
-		log.Infof("[KUBEDOG] found %v nodes, waiting for %v nodes to be %v with selector %v", nodesCount, n, state, selector)
+		log.Infof("[KUBEDOG] found %v nodes, waiting for %v nodes to be %v with selector %v", nodesCount, expectedNodes, state, selector)
 
 		counter++
-		time.Sleep(kc.getWaiterInterval())
+		time.Sleep(w.GetInterval())
 	}
 	return nil
 }
 
-func (kc *ClientSet) ScaleDeployment(name, ns string, replica int32) error {
-	if err := kc.Validate(); err != nil {
+func ScaleDeployment(kubeClientset kubernetes.Interface, name, namespace string, replicas int32) error {
+	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return err
 	}
 
 	scale := &autoscalingv1.Scale{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: ns,
+			Namespace: namespace,
 		},
 		Spec: autoscalingv1.ScaleSpec{
-			Replicas: replica,
+			Replicas: replicas,
 		},
 	}
 
-	_, err := kc.KubeInterface.AppsV1().Deployments(ns).UpdateScale(context.Background(), name, scale, metav1.UpdateOptions{})
+	_, err := kubeClientset.AppsV1().Deployments(namespace).UpdateScale(context.Background(), name, scale, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (kc *ClientSet) ClusterRbacIsFound(resource, name string) error {
+func ClusterRbacIsFound(kubeClientset kubernetes.Interface, resourceType, name string) error {
 	var err error
-	if err := kc.Validate(); err != nil {
+	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return err
 	}
 
-	switch resource {
+	switch resourceType {
 	case "clusterrole":
-		_, err = kc.KubeInterface.RbacV1().ClusterRoles().Get(context.Background(), name, metav1.GetOptions{})
+		_, err = kubeClientset.RbacV1().ClusterRoles().Get(context.Background(), name, metav1.GetOptions{})
 	case "clusterrolebinding":
-		_, err = kc.KubeInterface.RbacV1().ClusterRoleBindings().Get(context.Background(), name, metav1.GetOptions{})
+		_, err = kubeClientset.RbacV1().ClusterRoleBindings().Get(context.Background(), name, metav1.GetOptions{})
 	default:
 		return errors.Errorf("Invalid resource type")
 	}
@@ -161,7 +147,7 @@ func (kc *ClientSet) ClusterRbacIsFound(resource, name string) error {
 	return nil
 }
 
-func (kc *ClientSet) GetNodes() error {
+func GetNodes(kubeClientset kubernetes.Interface) error {
 
 	var readyStatus = func(conditions []corev1.NodeCondition) string {
 		var status = false
@@ -181,7 +167,7 @@ func (kc *ClientSet) GetNodes() error {
 		return "NotReady"
 	}
 	// List nodes
-	nodes, _ := kc.ListNodes()
+	nodes, _ := ListNodes(kubeClientset)
 	if nodes != nil {
 		tableFormat := "%-64s%-12s%-24s%-16s"
 		log.Infof(tableFormat, "NAME", "STATUS", "INSTANCEGROUP", "AZ")
@@ -196,60 +182,46 @@ func (kc *ClientSet) GetNodes() error {
 	return nil
 }
 
-// TODO: export it and use it instead of ResourceIsRunning
-func (kc *ClientSet) daemonsetIsRunning(dsName, namespace string) error {
+func DaemonSetIsRunning(kubeClientset kubernetes.Interface, name, namespace string) error {
 	// TODO: implement this differently, remove gomega
 	gomega.Eventually(func() error {
-		ds, err := kc.GetDaemonset(dsName, namespace)
+		ds, err := GetDaemonSet(kubeClientset, name, namespace)
 		if err != nil {
 			return err
 		}
 
 		if ds.Status.DesiredNumberScheduled != ds.Status.CurrentNumberScheduled {
-			return fmt.Errorf("daemonset %s/%s is not updated. status: %s", namespace, dsName, ds.Status.String())
+			return fmt.Errorf("daemonset %s/%s is not updated. status: %s", namespace, name, ds.Status.String())
 		}
 
 		return nil
 	}, 10*time.Second).Should(gomega.Succeed(), func() string {
 		// Print Pods after failure
-		_ = kc.GetPods(namespace)
-		return fmt.Sprintf("daemonset %s/%s is not updated.", namespace, dsName)
+		_ = pod.Pods(kubeClientset, namespace)
+		return fmt.Sprintf("daemonset %s/%s is not updated.", namespace, name)
 	})
 
 	return nil
 }
 
-// TODO: export it and use it instead of ResourceIsRunning
-func (kc *ClientSet) deploymentIsRunning(deployName, namespace string) error {
-	deploy, err := kc.GetDeployment(deployName, namespace)
+func DeploymentIsRunning(kubeClientset kubernetes.Interface, name, namespace string) error {
+	deploy, err := GetDeployment(kubeClientset, name, namespace)
 	if err != nil {
 		return err
 	}
 	if deploy.Status.ReadyReplicas != deploy.Status.Replicas {
-		return fmt.Errorf("deployment %s/%s is not ready. status: %s", namespace, deployName, deploy.Status.String())
+		return fmt.Errorf("deployment %s/%s is not ready. status: %s", namespace, name, deploy.Status.String())
 	}
 
 	if deploy.Status.UpdatedReplicas != deploy.Status.Replicas {
-		return fmt.Errorf("deploymemnt %s/%s is not updated. status: %s", namespace, deployName, deploy.Status.String())
+		return fmt.Errorf("deploymemnt %s/%s is not updated. status: %s", namespace, name, deploy.Status.String())
 	}
 
 	return nil
 }
 
-func (kc *ClientSet) ResourceIsRunning(kind, name, namespace string) error {
-	kind = strings.ToLower(kind)
-	switch kind {
-	case "daemonset":
-		return kc.daemonsetIsRunning(name, namespace)
-	case "deployment":
-		return kc.deploymentIsRunning(name, namespace)
-	default:
-		return fmt.Errorf("invalid resource type: %s", kind)
-	}
-}
-
-func (kc *ClientSet) PersistentVolExists(volName, expectedPhase string) error {
-	vol, err := kc.GetPersistentVolume(volName)
+func PersistentVolExists(kubeClientset kubernetes.Interface, name, expectedPhase string) error {
+	vol, err := GetPersistentVolume(kubeClientset, name)
 	if err != nil {
 		return err
 	}
@@ -260,39 +232,13 @@ func (kc *ClientSet) PersistentVolExists(volName, expectedPhase string) error {
 	return nil
 }
 
-func (kc *ClientSet) VerifyInstanceGroups() error {
-	igs, err := kc.ListInstanceGroups()
-	if err != nil {
-		return err
-	}
-
-	for _, ig := range igs.Items {
-		currentStatus := getInstanceGroupStatus(&ig)
-		if !strings.EqualFold(currentStatus, stateReady) {
-			return errors.Errorf("Expected Instance Group %s to be ready, but was '%s'", ig.GetName(), currentStatus)
-		} else {
-			log.Infof("Instance Group %s is ready", ig.GetName())
-		}
-	}
-
-	return nil
-}
-
-// TODO: delete function, use code directly in VerifyInstanceGroups
-func getInstanceGroupStatus(instanceGroup *unstructured.Unstructured) string {
-	if val, ok, _ := unstructured.NestedString(instanceGroup.UnstructuredContent(), "status", "currentState"); ok {
-		return val
-	}
-	return ""
-}
-
-func (kc *ClientSet) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName string, namespace string, volumeClaimTemplatesName string) error {
+func ValidatePrometheusVolumeClaimTemplatesName(kubeClientset kubernetes.Interface, statefulsetName, namespace, volumeClaimTemplatesName string) error {
 	var sfsvolumeClaimTemplatesName string
 	// Prometheus StatefulSets deployed, then validate volumeClaimTemplate name.
 	// Validation required:
 	// 	- To retain existing persistent volumes and not to loose any data.
 	//	- And avoid creating new name persistent volumes.
-	sfs, err := kc.ListStatefulSets(namespace)
+	sfs, err := ListStatefulSets(kubeClientset, namespace)
 	if err != nil {
 		return err
 	}
@@ -308,7 +254,7 @@ func (kc *ClientSet) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName 
 		return errors.Errorf("Prometheus volumeClaimTemplate name changed', got: %v", sfsvolumeClaimTemplatesName)
 	}
 	// Validate Persistent Volume label
-	err = kc.validatePrometheusPVLabels(volumeClaimTemplatesName)
+	err = validatePrometheusPVLabels(kubeClientset, volumeClaimTemplatesName)
 	if err != nil {
 		return err
 	}
@@ -316,9 +262,9 @@ func (kc *ClientSet) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName 
 	return nil
 }
 
-func (kc *ClientSet) validatePrometheusPVLabels(volumeClaimTemplatesName string) error {
+func validatePrometheusPVLabels(kubeClientset kubernetes.Interface, volumeClaimTemplatesName string) error {
 	// Get prometheus PersistentVolume list
-	pv, err := kc.ListPersistentVolumes()
+	pv, err := ListPersistentVolumes(kubeClientset)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -333,42 +279,42 @@ func (kc *ClientSet) validatePrometheusPVLabels(volumeClaimTemplatesName string)
 	return nil
 }
 
-func (kc *ClientSet) SecretDelete(secretName, namespace string) error {
-	return kc.SecretOperationFromEnvironmentVariable(operationDelete, secretName, namespace, "")
+func SecretDelete(kubeClientset kubernetes.Interface, name, namespace string) error {
+	return SecretOperationFromEnvironmentVariable(kubeClientset, common.OperationDelete, name, namespace, "")
 }
 
-func (kc *ClientSet) SecretOperationFromEnvironmentVariable(operation, secretName, namespace, environmentVariable string) error {
+func SecretOperationFromEnvironmentVariable(kubeClientset kubernetes.Interface, operation, name, namespace, environmentVariable string) error {
 	var (
 		secretValue string
 		ok          bool
 	)
-	if err := kc.Validate(); err != nil {
+	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return err
 	}
-	if operation != operationDelete {
+	if operation != common.OperationDelete {
 		secretValue, ok = os.LookupEnv(environmentVariable)
 		if !ok {
 			return errors.Errorf("couldn't lookup environment variable '%s'", environmentVariable)
 		}
 	}
 	switch operation {
-	case operationCreate, operationSubmit:
+	case common.OperationCreate, common.OperationSubmit:
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: secretName,
+				Name: name,
 			},
 			Data: map[string][]byte{
 				environmentVariable: []byte(secretValue),
 			},
 		}
-		_, err := kc.KubeInterface.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+		_, err := kubeClientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 		if kerrors.IsAlreadyExists(err) {
-			log.Infof("secret '%s' already created", secretName)
+			log.Infof("secret '%s' already created", name)
 			return nil
 		}
 		return err
-	case operationUpdate:
-		currentSecret, err := kc.KubeInterface.CoreV1().Secrets(namespace).Get(context.TODO(), secretName, metav1.GetOptions{})
+	case common.OperationUpdate:
+		currentSecret, err := kubeClientset.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -377,12 +323,12 @@ func (kc *ClientSet) SecretOperationFromEnvironmentVariable(operation, secretNam
 			secret.Data = map[string][]byte{}
 		}
 		secret.Data[environmentVariable] = []byte(secretValue)
-		_, err = kc.KubeInterface.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+		_, err = kubeClientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
 		return err
-	case operationDelete:
-		err := kc.KubeInterface.CoreV1().Secrets(namespace).Delete(context.TODO(), secretName, metav1.DeleteOptions{})
+	case common.OperationDelete:
+		err := kubeClientset.CoreV1().Secrets(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 		if kerrors.IsNotFound(err) {
-			log.Infof("secret '%s' already deleted", secretName)
+			log.Infof("secret '%s' already deleted", name)
 			return nil
 		}
 		return err
@@ -391,16 +337,16 @@ func (kc *ClientSet) SecretOperationFromEnvironmentVariable(operation, secretNam
 	}
 }
 
-func (kc *ClientSet) GetIngressEndpoint(name, namespace string, port int, path string) (string, error) {
+func GetIngressEndpoint(kubeClientset kubernetes.Interface, w common.WaiterConfig, name, namespace string, port int, path string) (string, error) {
 	var (
 		counter int
 	)
 	for {
 		log.Info("waiting for ingress availability")
-		if counter >= kc.getWaiterTries() {
+		if counter >= w.GetTries() {
 			return "", errors.New("waiter timed out waiting for resource state")
 		}
-		ingress, err := kc.GetIngress(name, namespace)
+		ingress, err := GetIngress(kubeClientset, name, namespace)
 		if err != nil {
 			return "", err
 		}
@@ -420,21 +366,21 @@ func (kc *ClientSet) GetIngressEndpoint(name, namespace string, port int, path s
 			return endpoint, nil
 		}
 		counter++
-		time.Sleep(kc.getWaiterInterval())
+		time.Sleep(w.GetInterval())
 	}
 }
 
-func (kc *ClientSet) IngressAvailable(name, namespace string, port int, path string) error {
+func IngressAvailable(kubeClientset kubernetes.Interface, w common.WaiterConfig, name, namespace string, port int, path string) error {
 	var (
 		counter int
 	)
-	endpoint, err := kc.GetIngressEndpoint(name, namespace, port, path)
+	endpoint, err := GetIngressEndpoint(kubeClientset, w, name, namespace, port, path)
 	if err != nil {
 		return err
 	}
 	for {
 		log.Info("waiting for ingress availability")
-		if counter >= kc.getWaiterTries() {
+		if counter >= w.GetTries() {
 			return errors.New("waiter timed out waiting for resource state")
 		}
 		log.Infof("waiting for endpoint %v to become available", endpoint)
@@ -448,19 +394,19 @@ func (kc *ClientSet) IngressAvailable(name, namespace string, port int, path str
 		if resp, err := client.Do(req); resp != nil {
 			if resp.StatusCode == 200 {
 				log.Infof("endpoint %v is available", endpoint)
-				time.Sleep(kc.getWaiterInterval())
+				time.Sleep(w.GetInterval())
 				return nil
 			}
 		} else {
 			log.Infof("endpoint %v is not available yet: %v", endpoint, err)
 		}
 		counter++
-		time.Sleep(kc.getWaiterInterval())
+		time.Sleep(w.GetInterval())
 	}
 }
 
-func (kc *ClientSet) SendTrafficToIngress(tps int, name, namespace string, port int, path string, duration int, durationUnits string, expectedErrors int) error {
-	endpoint, err := kc.GetIngressEndpoint(name, namespace, port, path)
+func SendTrafficToIngress(kubeClientset kubernetes.Interface, w common.WaiterConfig, tps int, name, namespace string, port int, path string, duration int, durationUnits string, expectedErrors int) error {
+	endpoint, err := GetIngressEndpoint(kubeClientset, w, name, namespace, port, path)
 	if err != nil {
 		return err
 	}
@@ -468,9 +414,9 @@ func (kc *ClientSet) SendTrafficToIngress(tps int, name, namespace string, port 
 	rate := vegeta.Rate{Freq: tps, Per: time.Second}
 	var d time.Duration
 	switch durationUnits {
-	case common.DurationMinutes:
+	case durationMinutes:
 		d = time.Minute * time.Duration(duration)
-	case common.DurationSeconds:
+	case durationSeconds:
 		d = time.Second * time.Duration(duration)
 	default:
 		return fmt.Errorf("unsupported duration units: '%s'", durationUnits)
@@ -500,28 +446,24 @@ func init() {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 }
 
-func (kc *ClientSet) ResourceInNamespace(resource, name, ns string) error {
+func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name, namespace string) error {
 	var err error
 
-	if err := kc.Validate(); err != nil {
+	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return err
 	}
 
-	switch resource {
+	switch resourceType {
 	case "deployment":
-		_, err = kc.KubeInterface.AppsV1().Deployments(ns).Get(context.Background(), name, metav1.GetOptions{})
-
+		_, err = kubeClientset.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	case "service":
-		_, err = kc.KubeInterface.CoreV1().Services(ns).Get(context.Background(), name, metav1.GetOptions{})
-
+		_, err = kubeClientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	case "hpa", "horizontalpodautoscaler":
-		_, err = kc.KubeInterface.AutoscalingV2beta2().HorizontalPodAutoscalers(ns).Get(context.Background(), name, metav1.GetOptions{})
-
+		_, err = kubeClientset.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	case "pdb", "poddisruptionbudget":
-		_, err = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(ns).Get(context.Background(), name, metav1.GetOptions{})
+		_, err = kubeClientset.PolicyV1beta1().PodDisruptionBudgets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	case "sa", "serviceaccount":
-		_, err = kc.KubeInterface.CoreV1().ServiceAccounts(ns).Get(context.Background(), name, metav1.GetOptions{})
-
+		_, err = kubeClientset.CoreV1().ServiceAccounts(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	default:
 		return errors.Errorf("Invalid resource type")
 	}

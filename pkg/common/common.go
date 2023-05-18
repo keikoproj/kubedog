@@ -29,6 +29,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// TODO: implemented twice (one in pkg/kubernetes/structured and one in pkg/common)
 const (
 	DurationMinutes = "minutes"
 	DurationSeconds = "seconds"

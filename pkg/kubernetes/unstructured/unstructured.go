@@ -24,6 +24,7 @@ import (
 	"time"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
+	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/text/cases"
@@ -32,48 +33,10 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 )
-
-// TODO: seems not used, check and delete
-const (
-	operationCreate = "create"
-	operationSubmit = "submit"
-	operationUpdate = "update"
-	operationDelete = "delete"
-
-	stateCreated = "created"
-	stateDeleted = "deleted"
-	//stateUpgraded = "upgraded"
-	//stateReady = "ready"
-	//stateFound = "found"
-)
-
-type WaiterConfig struct {
-	tries    int
-	interval time.Duration
-}
-
-func NewWaiterConfig(tries int, interval time.Duration) WaiterConfig {
-	return WaiterConfig{tries: tries, interval: interval}
-}
-
-func (w WaiterConfig) getInterval() time.Duration {
-	defaultWaiterInterval := time.Second * 30
-	if w.interval > 0 {
-		return w.interval
-	}
-	return defaultWaiterInterval
-}
-
-func (w WaiterConfig) getTries() int {
-	defaultWaiterTries := 40
-	if w.tries > 0 {
-		return w.tries
-	}
-	return defaultWaiterTries
-}
 
 func ResourceOperation(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, operation string) error {
 	return ResourceOperationInNamespace(dynamicClient, unstructuredResource, operation, "")
@@ -112,9 +75,9 @@ func MultiResourceOperation(dynamicClient dynamic.Interface, unstructuredResourc
 	return nil
 }
 
-func MultiResourceOperationInNamespace(dynamicClient dynamic.Interface, unstructuredResources []util.K8sUnstructuredResource, operation, ns string) error {
+func MultiResourceOperationInNamespace(dynamicClient dynamic.Interface, unstructuredResources []util.K8sUnstructuredResource, operation, namespace string) error {
 	for _, unstructuredResource := range unstructuredResources {
-		err := ResourceOperationInNamespace(dynamicClient, unstructuredResource, operation, ns)
+		err := ResourceOperationInNamespace(dynamicClient, unstructuredResource, operation, namespace)
 		if err != nil {
 			return err
 		}
@@ -122,20 +85,20 @@ func MultiResourceOperationInNamespace(dynamicClient dynamic.Interface, unstruct
 	return nil
 }
 
-func ResourceOperationInNamespace(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, operation, ns string) error {
+func ResourceOperationInNamespace(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, operation, namespace string) error {
 	if err := validateDynamicClient(dynamicClient); err != nil {
 		return err
 	}
 
 	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
-	if ns == "" {
-		ns = resource.GetNamespace()
+	if namespace == "" {
+		namespace = resource.GetNamespace()
 	}
 
 	switch operation {
-	case operationCreate, operationSubmit:
-		_, err := dynamicClient.Resource(gvr.Resource).Namespace(ns).Create(context.Background(), resource, metav1.CreateOptions{})
+	case common.OperationCreate, common.OperationSubmit:
+		_, err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Create(context.Background(), resource, metav1.CreateOptions{})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
 				log.Infof("%s %s already created", resource.GetKind(), resource.GetName())
@@ -143,22 +106,22 @@ func ResourceOperationInNamespace(dynamicClient dynamic.Interface, unstructuredR
 			}
 			return err
 		}
-		log.Infof("%s %s has been created in namespace %s", resource.GetKind(), resource.GetName(), ns)
-	case operationUpdate:
-		currentResourceVersion, err := dynamicClient.Resource(gvr.Resource).Namespace(ns).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
+		log.Infof("%s %s has been created in namespace %s", resource.GetKind(), resource.GetName(), namespace)
+	case common.OperationUpdate:
+		currentResourceVersion, err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Get(context.Background(), resource.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		resource.SetResourceVersion(currentResourceVersion.DeepCopy().GetResourceVersion())
 
-		_, err = dynamicClient.Resource(gvr.Resource).Namespace(ns).Update(context.Background(), resource, metav1.UpdateOptions{})
+		_, err = dynamicClient.Resource(gvr.Resource).Namespace(namespace).Update(context.Background(), resource, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
-		log.Infof("%s %s has been updated in namespace %s", resource.GetKind(), resource.GetName(), ns)
-	case operationDelete:
-		err := dynamicClient.Resource(gvr.Resource).Namespace(ns).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
+		log.Infof("%s %s has been updated in namespace %s", resource.GetKind(), resource.GetName(), namespace)
+	case common.OperationDelete:
+		err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Delete(context.Background(), resource.GetName(), metav1.DeleteOptions{})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				log.Infof("%s %s already deleted", resource.GetKind(), resource.GetName())
@@ -166,7 +129,7 @@ func ResourceOperationInNamespace(dynamicClient dynamic.Interface, unstructuredR
 			}
 			return err
 		}
-		log.Infof("%s %s has been deleted from namespace %s", resource.GetKind(), resource.GetName(), ns)
+		log.Infof("%s %s has been deleted from namespace %s", resource.GetKind(), resource.GetName(), namespace)
 	default:
 		return fmt.Errorf("unsupported operation: %s", operation)
 	}
@@ -177,9 +140,9 @@ func ResourceOperationWithResult(dynamicClient dynamic.Interface, unstructuredRe
 	return ResourceOperationWithResultInNamespace(dynamicClient, unstructuredResource, operation, "", expectedResult)
 }
 
-func ResourceOperationWithResultInNamespace(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, operation, ns, expectedResult string) error {
+func ResourceOperationWithResultInNamespace(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, operation, namespace, expectedResult string) error {
 	var expectError = strings.EqualFold(expectedResult, "fail")
-	err := ResourceOperationInNamespace(dynamicClient, unstructuredResource, operation, ns)
+	err := ResourceOperationInNamespace(dynamicClient, unstructuredResource, operation, namespace)
 	if !expectError && err != nil {
 		return fmt.Errorf("unexpected error when '%s' '%s': '%s'", operation, unstructuredResource.Resource.GetName(), err.Error())
 	} else if expectError && err == nil {
@@ -188,7 +151,7 @@ func ResourceOperationWithResultInNamespace(dynamicClient dynamic.Interface, uns
 	return nil
 }
 
-func ResourceShouldBe(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, w WaiterConfig, state string) error {
+func ResourceShouldBe(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, w common.WaiterConfig, state string) error {
 	var (
 		exists  bool
 		counter int
@@ -201,7 +164,7 @@ func ResourceShouldBe(dynamicClient dynamic.Interface, unstructuredResource util
 	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 	for {
 		exists = true
-		if counter >= w.getTries() {
+		if counter >= w.GetTries() {
 			return errors.New("waiter timed out waiting for resource state")
 		}
 		log.Infof("[KUBEDOG] waiting for resource %v/%v to become %v", resource.GetNamespace(), resource.GetName(), state)
@@ -216,23 +179,23 @@ func ResourceShouldBe(dynamicClient dynamic.Interface, unstructuredResource util
 		}
 
 		switch state {
-		case stateDeleted:
+		case common.StateDeleted:
 			if !exists {
 				log.Infof("[KUBEDOG] %v/%v is deleted", resource.GetNamespace(), resource.GetName())
 				return nil
 			}
-		case stateCreated:
+		case common.StateCreated:
 			if exists {
 				log.Infof("[KUBEDOG] %v/%v is created", resource.GetNamespace(), resource.GetName())
 				return nil
 			}
 		}
 		counter++
-		time.Sleep(w.getInterval())
+		time.Sleep(w.GetInterval())
 	}
 }
 
-func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, w WaiterConfig, selector string) error {
+func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, w common.WaiterConfig, selector string) error {
 	var counter int
 
 	if err := validateDynamicClient(dynamicClient); err != nil {
@@ -255,7 +218,7 @@ func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, unstructu
 	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
 	for {
-		if counter >= w.getTries() {
+		if counter >= w.GetTries() {
 			return errors.New("waiter timed out waiting for resource")
 		}
 		//TODO: configure the logger to output "[KUBEDOG]" instead typing it in each log
@@ -274,13 +237,13 @@ func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, unstructu
 			}
 		}
 		counter++
-		time.Sleep(w.getInterval())
+		time.Sleep(w.GetInterval())
 	}
 
 	return nil
 }
 
-func ResourceConditionShouldBe(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, w WaiterConfig, conditionType, conditionValue string) error {
+func ResourceConditionShouldBe(dynamicClient dynamic.Interface, unstructuredResource util.K8sUnstructuredResource, w common.WaiterConfig, conditionType, conditionValue string) error {
 	var (
 		counter        int
 		expectedStatus = cases.Title(language.English).String(conditionValue)
@@ -293,7 +256,7 @@ func ResourceConditionShouldBe(dynamicClient dynamic.Interface, unstructuredReso
 	gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
 	for {
-		if counter >= w.getTries() {
+		if counter >= w.GetTries() {
 			return errors.New("waiter timed out waiting for resource state")
 		}
 		log.Infof("[KUBEDOG] waiting for resource %v/%v to meet condition %v=%v", resource.GetNamespace(), resource.GetName(), conditionType, expectedStatus)
@@ -329,7 +292,7 @@ func ResourceConditionShouldBe(dynamicClient dynamic.Interface, unstructuredReso
 			}
 		}
 		counter++
-		time.Sleep(w.getInterval())
+		time.Sleep(w.GetInterval())
 	}
 }
 
@@ -378,7 +341,7 @@ func UpdateResourceWithField(dynamicClient dynamic.Interface, unstructuredResour
 
 // TODO: figure out what to do with this func. could break it down into deleteFn and waitFn and use them where this is called
 // TODO: this function has a bug, it would not delete properly files with multiple resources in them, see if using getResources instead of getResource would fix issue (not sure getResources can handle single files correctly)
-func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.DiscoveryInterface, TemplateArguments interface{}, w WaiterConfig, resourcesPath string) error {
+func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.DiscoveryInterface, TemplateArguments interface{}, w common.WaiterConfig, resourcesPath string) error {
 	if err := validateDynamicClient(dynamicClient); err != nil {
 		return err
 	}
@@ -426,7 +389,7 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 		gvr, resource := unstructuredResource.GVR, unstructuredResource.Resource
 
 		for {
-			if counter >= w.getTries() {
+			if counter >= w.GetTries() {
 				return errors.New("waiter timed out waiting for deletion")
 			}
 			log.Infof("[KUBEDOG] waiting for resource deletion of %v/%v", resource.GetNamespace(), resource.GetName())
@@ -438,7 +401,7 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 				}
 			}
 			counter++
-			time.Sleep(w.getInterval())
+			time.Sleep(w.GetInterval())
 		}
 		return nil
 	}
@@ -451,4 +414,54 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 	}
 
 	return nil
+}
+
+func VerifyInstanceGroups(dynamicClient dynamic.Interface) error {
+	igs, err := ListInstanceGroups(dynamicClient)
+	if err != nil {
+		return err
+	}
+
+	for _, ig := range igs.Items {
+		//currentStatus := getInstanceGroupStatus(&ig)
+		var currentStatus string
+		if val, ok, _ := unstructured.NestedString(ig.UnstructuredContent(), "status", "currentState"); ok {
+			currentStatus = val
+		}
+		if !strings.EqualFold(currentStatus, common.StateReady) {
+			return errors.Errorf("Expected Instance Group %s to be ready, but was '%s'", ig.GetName(), currentStatus)
+		} else {
+			log.Infof("Instance Group %s is ready", ig.GetName())
+		}
+	}
+
+	return nil
+}
+
+// TODO: delete function, use code directly in VerifyInstanceGroups
+// func getInstanceGroupStatus(instanceGroup *unstructured.Unstructured) string {
+// 	if val, ok, _ := unstructured.NestedString(instanceGroup.UnstructuredContent(), "status", "currentState"); ok {
+// 		return val
+// 	}
+// 	return ""
+// }
+
+// TODO: move this to a helper.go file? along with all functions that return anything but an error?
+func ListInstanceGroups(dynamicClient dynamic.Interface) (*unstructured.UnstructuredList, error) {
+	const (
+		instanceGroupNamespace   = "instance-manager"
+		customResourceGroup      = "instancemgr"
+		customResourceAPIVersion = "v1alpha1"
+		customeResourceDomain    = "keikoproj.io"
+		customResourceKind       = "instancegroups"
+	)
+	var (
+		customResourceName    = fmt.Sprintf("%v.%v", customResourceGroup, customeResourceDomain)
+		instanceGroupResource = schema.GroupVersionResource{Group: customResourceName, Version: customResourceAPIVersion, Resource: customResourceKind}
+	)
+	igs, err := dynamicClient.Resource(instanceGroupResource).Namespace(instanceGroupNamespace).List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return igs, nil
 }

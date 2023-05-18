@@ -12,7 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package kube
+package structured
 
 import (
 	"context"
@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
+	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
 	"github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	hpa "k8s.io/api/autoscaling/v2beta2"
@@ -44,9 +45,9 @@ func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 		testReadyLabel    = map[string]string{"testing-ShouldBeReady": "some-value"}
 		testFoundLabel    = map[string]string{"testing-ShouldBeFound": "some-value"}
 		fakeClient        *fake.Clientset
-		dynScheme         = runtime.NewScheme()
-		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(dynScheme)
-		fakeDiscovery     = &fakeDiscovery.FakeDiscovery{}
+		// dynScheme         = runtime.NewScheme()
+		// fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(dynScheme)
+		// fakeDiscovery     = &fakeDiscovery.FakeDiscovery{}
 	)
 
 	fakeClient = fake.NewSimpleClientset(&v1.Node{
@@ -69,16 +70,16 @@ func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 		},
 	})
 
-	kc := ClientSet{
-		KubeInterface:      fakeClient,
-		DiscoveryInterface: fakeDiscovery,
-		DynamicInterface:   fakeDynamicClient,
-		FilesPath:          "../../test/templates",
-	}
+	// kc := ClientSet{
+	// 	KubeInterface:      fakeClient,
+	// 	DiscoveryInterface: fakeDiscovery,
+	// 	DynamicInterface:   fakeDynamicClient,
+	// 	FilesPath:          "../../test/templates",
+	// }
 
-	err := kc.NodesWithSelectorShouldBe(1, testReadySelector, stateReady)
+	err := NodesWithSelectorShouldBe(fakeClient, common.WaiterConfig{}, 1, testReadySelector, common.StateReady)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = kc.NodesWithSelectorShouldBe(1, testFoundSelector, stateFound)
+	err = NodesWithSelectorShouldBe(fakeClient, common.WaiterConfig{}, 1, testFoundSelector, common.StateFound)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
@@ -90,7 +91,7 @@ func TestMultipleResourcesOperation(t *testing.T) {
 		fakeDynamicClient   = fakeDynamic.NewSimpleDynamicClient(dynScheme)
 		fakeDiscovery       = fakeDiscovery.FakeDiscovery{}
 		g                   = gomega.NewWithT(t)
-		testTemplatePath, _ = filepath.Abs("../../test/templates")
+		testTemplatePath, _ = filepath.Abs("../../../test/templates")
 	)
 
 	expectedResources := []*metav1.APIResourceList{
@@ -158,12 +159,12 @@ func TestMultipleResourcesOperation(t *testing.T) {
 
 func TestResourceInNamespace(t *testing.T) {
 	var (
-		err               error
-		g                 = gomega.NewWithT(t)
-		fakeKubeClient    = fake.NewSimpleClientset()
-		namespace         = "test_ns"
-		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(runtime.NewScheme())
-		fakeDiscovery     = &fakeDiscovery.FakeDiscovery{}
+		err        error
+		g          = gomega.NewWithT(t)
+		fakeClient = fake.NewSimpleClientset()
+		namespace  = "test_ns"
+		// fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(runtime.NewScheme())
+		// fakeDiscovery     = &fakeDiscovery.FakeDiscovery{}
 	)
 
 	tests := []struct {
@@ -200,13 +201,13 @@ func TestResourceInNamespace(t *testing.T) {
 		},
 	}
 
-	kc := ClientSet{
-		KubeInterface:      fakeKubeClient,
-		DynamicInterface:   fakeDynamicClient,
-		DiscoveryInterface: fakeDiscovery,
-	}
+	// kc := ClientSet{
+	// 	KubeInterface:      fakeKubeClient,
+	// 	DynamicInterface:   fakeDynamicClient,
+	// 	DiscoveryInterface: fakeDiscovery,
+	// }
 
-	_, _ = kc.KubeInterface.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
+	_, _ = fakeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
@@ -221,27 +222,27 @@ func TestResourceInNamespace(t *testing.T) {
 
 			switch tt.resource {
 			case "deployment":
-				_, _ = kc.KubeInterface.AppsV1().Deployments(namespace).Create(context.Background(), &appsv1.Deployment{
+				_, _ = fakeClient.AppsV1().Deployments(namespace).Create(context.Background(), &appsv1.Deployment{
 					ObjectMeta: meta,
 				}, metav1.CreateOptions{})
 			case "service":
-				_, _ = kc.KubeInterface.CoreV1().Services(namespace).Create(context.Background(), &v1.Service{
+				_, _ = fakeClient.CoreV1().Services(namespace).Create(context.Background(), &v1.Service{
 					ObjectMeta: meta,
 				}, metav1.CreateOptions{})
 			case "hpa":
-				_, _ = kc.KubeInterface.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Create(context.Background(), &hpa.HorizontalPodAutoscaler{
+				_, _ = fakeClient.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Create(context.Background(), &hpa.HorizontalPodAutoscaler{
 					ObjectMeta: meta,
 				}, metav1.CreateOptions{})
 			case "pdb":
-				_, _ = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(namespace).Create(context.Background(), &policy.PodDisruptionBudget{
+				_, _ = fakeClient.PolicyV1beta1().PodDisruptionBudgets(namespace).Create(context.Background(), &policy.PodDisruptionBudget{
 					ObjectMeta: meta,
 				}, metav1.CreateOptions{})
 			case "serviceaccount":
-				_, _ = kc.KubeInterface.CoreV1().ServiceAccounts(namespace).Create(context.Background(), &v1.ServiceAccount{
+				_, _ = fakeClient.CoreV1().ServiceAccounts(namespace).Create(context.Background(), &v1.ServiceAccount{
 					ObjectMeta: meta,
 				}, metav1.CreateOptions{})
 			}
-			err = kc.ResourceInNamespace(tt.resource, tt.name, namespace)
+			err = ResourceInNamespace(fakeClient, tt.resource, tt.name, namespace)
 			g.Expect(err).ShouldNot(gomega.HaveOccurred())
 		})
 	}
@@ -249,26 +250,26 @@ func TestResourceInNamespace(t *testing.T) {
 
 func TestScaleDeployment(t *testing.T) {
 	var (
-		err            error
-		g              = gomega.NewWithT(t)
-		fakeKubeClient = fake.NewSimpleClientset()
-		namespace      = "test_ns"
-		deployName     = "test_deploy"
-		replicaCount   = int32(1)
+		err          error
+		g            = gomega.NewWithT(t)
+		fakeClient   = fake.NewSimpleClientset()
+		namespace    = "test_ns"
+		deployName   = "test_deploy"
+		replicaCount = int32(1)
 	)
 
-	kc := ClientSet{
-		KubeInterface: fakeKubeClient,
-	}
+	// kc := ClientSet{
+	// 	KubeInterface: fakeKubeClient,
+	// }
 
-	_, _ = kc.KubeInterface.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
+	_, _ = fakeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
 		Status: v1.NamespaceStatus{Phase: v1.NamespaceActive},
 	}, metav1.CreateOptions{})
 
-	_, _ = kc.KubeInterface.AppsV1().Deployments(namespace).Create(context.Background(), &appsv1.Deployment{
+	_, _ = fakeClient.AppsV1().Deployments(namespace).Create(context.Background(), &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: deployName,
 		},
@@ -276,9 +277,9 @@ func TestScaleDeployment(t *testing.T) {
 			Replicas: &replicaCount,
 		},
 	}, metav1.CreateOptions{})
-	err = kc.ScaleDeployment(deployName, namespace, 2)
+	err = ScaleDeployment(fakeClient, deployName, namespace, 2)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	s, _ := kc.KubeInterface.AppsV1().Deployments(namespace).GetScale(context.Background(), deployName, metav1.GetOptions{})
+	s, _ := fakeClient.AppsV1().Deployments(namespace).GetScale(context.Background(), deployName, metav1.GetOptions{})
 	g.Expect(s.Spec.Replicas).To(gomega.Equal(int32(2)))
 }
 
@@ -298,14 +299,14 @@ func newTestAPIResourceList(apiVersion, name, kind string) *metav1.APIResourceLi
 
 func TestClusterRoleAndBindingIsFound(t *testing.T) {
 	var (
-		err            error
-		g              = gomega.NewWithT(t)
-		fakeKubeClient = fake.NewSimpleClientset()
+		err        error
+		g          = gomega.NewWithT(t)
+		fakeClient = fake.NewSimpleClientset()
 	)
 
-	kc := ClientSet{
-		KubeInterface: fakeKubeClient,
-	}
+	// kc := ClientSet{
+	// 	KubeInterface: fakeKubeClient,
+	// }
 
 	tests := []struct {
 		resource string
@@ -329,17 +330,17 @@ func TestClusterRoleAndBindingIsFound(t *testing.T) {
 
 			switch tt.resource {
 			case "clusterrole":
-				_, _ = kc.KubeInterface.RbacV1().ClusterRoles().Create(context.Background(), &rbacv1.ClusterRole{
+				_, _ = fakeClient.RbacV1().ClusterRoles().Create(context.Background(), &rbacv1.ClusterRole{
 
 					ObjectMeta: meta,
 				}, metav1.CreateOptions{})
 			case "clusterrolebinding":
-				_, _ = kc.KubeInterface.RbacV1().ClusterRoleBindings().Create(context.Background(), &rbacv1.ClusterRoleBinding{
+				_, _ = fakeClient.RbacV1().ClusterRoleBindings().Create(context.Background(), &rbacv1.ClusterRoleBinding{
 
 					ObjectMeta: meta,
 				}, metav1.CreateOptions{})
 			}
-			err = kc.ClusterRbacIsFound(tt.resource, tt.name)
+			err = ClusterRbacIsFound(fakeClient, tt.resource, tt.name)
 			g.Expect(err).ShouldNot(gomega.HaveOccurred())
 		})
 	}
