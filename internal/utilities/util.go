@@ -132,7 +132,7 @@ func GetResourceFromYaml(path string, dc discovery.DiscoveryInterface, args inte
 	return GetResourceFromString(string(data), dc, args)
 }
 
-func GetMultipleResourcesFromYaml(path string, dc discovery.DiscoveryInterface, args interface{}) ([]K8sUnstructuredResource, error) {
+func GetResourcesFromYaml(path string, dc discovery.DiscoveryInterface, args interface{}) ([]K8sUnstructuredResource, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err

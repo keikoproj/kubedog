@@ -7,18 +7,17 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// TODO: seems not used, check and delete
 const (
 	OperationCreate = "create"
 	OperationSubmit = "submit"
 	OperationUpdate = "update"
 	OperationDelete = "delete"
 
-	StateCreated = "created"
-	StateDeleted = "deleted"
-	//stateUpgraded = "upgraded"
-	StateReady = "ready"
-	StateFound = "found"
+	StateCreated  = "created"
+	StateDeleted  = "deleted"
+	StateUpgraded = "upgraded"
+	StateReady    = "ready"
+	StateFound    = "found"
 )
 
 type WaiterConfig struct {

@@ -35,7 +35,6 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-// TODO: redistribute this test functions
 func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 
 	var (
@@ -143,7 +142,7 @@ func TestMultipleResourcesOperation(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		resourceList, err := util.GetMultipleResourcesFromYaml(test.testResourcePath, &fakeDiscovery, nil)
+		resourceList, err := util.GetResourcesFromYaml(test.testResourcePath, &fakeDiscovery, nil)
 
 		g.Expect(len(resourceList)).To(gomega.Equal(test.numResources))
 		if test.expectError {

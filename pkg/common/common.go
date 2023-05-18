@@ -31,8 +31,8 @@ import (
 
 // TODO: implemented twice (one in pkg/kubernetes/structured and one in pkg/common)
 const (
-	DurationMinutes = "minutes"
-	DurationSeconds = "seconds"
+	durationMinutes = "minutes"
+	durationSeconds = "seconds"
 )
 
 type TemplateArgument struct {
@@ -110,7 +110,7 @@ func GenerateFileFromTemplate(templatedFilePath string, templateArgs interface{}
 
 func WaitFor(duration int, durationUnits string) error {
 	switch durationUnits {
-	case DurationMinutes:
+	case durationMinutes:
 		increment := 1
 		d := increment
 		for d <= duration {
@@ -119,7 +119,7 @@ func WaitFor(duration int, durationUnits string) error {
 			d += increment
 		}
 		return nil
-	case DurationSeconds:
+	case durationSeconds:
 		increment := 30
 		d := increment
 		for d <= duration {

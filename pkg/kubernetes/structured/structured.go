@@ -23,9 +23,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/onsi/ginkgo"
-
-	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
@@ -37,6 +34,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -182,25 +180,24 @@ func GetNodes(kubeClientset kubernetes.Interface) error {
 	return nil
 }
 
-func DaemonSetIsRunning(kubeClientset kubernetes.Interface, name, namespace string) error {
-	// TODO: implement this differently, remove gomega
-	gomega.Eventually(func() error {
+func DaemonSetIsRunning(kubeClientset kubernetes.Interface, expBackoff wait.Backoff, name, namespace string) error {
+	err := util.RetryOnAnyError(&expBackoff, func() error {
 		ds, err := GetDaemonSet(kubeClientset, name, namespace)
 		if err != nil {
 			return err
 		}
 
 		if ds.Status.DesiredNumberScheduled != ds.Status.CurrentNumberScheduled {
-			return fmt.Errorf("daemonset %s/%s is not updated. status: %s", namespace, name, ds.Status.String())
+			return fmt.Errorf("daemonset '%s/%s' not updated. status: '%s'", namespace, name, ds.Status.String())
 		}
 
 		return nil
-	}, 10*time.Second).Should(gomega.Succeed(), func() string {
+	})
+	if err != nil {
 		// Print Pods after failure
 		_ = pod.Pods(kubeClientset, namespace)
-		return fmt.Sprintf("daemonset %s/%s is not updated.", namespace, name)
-	})
-
+		return fmt.Errorf("daemonset '%s/%s' not updated: '%v'", namespace, name, err)
+	}
 	return nil
 }
 
@@ -262,23 +259,6 @@ func ValidatePrometheusVolumeClaimTemplatesName(kubeClientset kubernetes.Interfa
 	return nil
 }
 
-func validatePrometheusPVLabels(kubeClientset kubernetes.Interface, volumeClaimTemplatesName string) error {
-	// Get prometheus PersistentVolume list
-	pv, err := ListPersistentVolumes(kubeClientset)
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, item := range pv.Items {
-		pvcname := item.Spec.ClaimRef.Name
-		if pvcname == volumeClaimTemplatesName+"-prometheus-k8s-prometheus-0" || pvcname == volumeClaimTemplatesName+"-prometheus-k8s-prometheus-1" {
-			if k1, k2 := item.Labels["failure-domain.beta.kubernetes.io/zone"], item.Labels["topology.kubernetes.io/zone"]; k1 == "" && k2 == "" {
-				return errors.Errorf("Prometheus volumes does not exist label - kubernetes.io/zone")
-			}
-		}
-	}
-	return nil
-}
-
 func SecretDelete(kubeClientset kubernetes.Interface, name, namespace string) error {
 	return SecretOperationFromEnvironmentVariable(kubeClientset, common.OperationDelete, name, namespace, "")
 }
@@ -334,39 +314,6 @@ func SecretOperationFromEnvironmentVariable(kubeClientset kubernetes.Interface, 
 		return err
 	default:
 		return fmt.Errorf("unsupported operation: '%s'", operation)
-	}
-}
-
-func GetIngressEndpoint(kubeClientset kubernetes.Interface, w common.WaiterConfig, name, namespace string, port int, path string) (string, error) {
-	var (
-		counter int
-	)
-	for {
-		log.Info("waiting for ingress availability")
-		if counter >= w.GetTries() {
-			return "", errors.New("waiter timed out waiting for resource state")
-		}
-		ingress, err := GetIngress(kubeClientset, name, namespace)
-		if err != nil {
-			return "", err
-		}
-		annotations := ingress.GetAnnotations()
-		albSubnets := annotations["service.beta.kubernetes.io/aws-load-balancer-subnets"]
-		log.Infof("Alb IngressSubnets associated are: %v", albSubnets)
-		var ingressReconciled bool
-		ingressStatus := ingress.Status.LoadBalancer.Ingress
-		if ingressStatus == nil {
-			log.Infof("ingress %v/%v is not ready yet", namespace, name)
-		} else {
-			ingressReconciled = true
-		}
-		if ingressReconciled {
-			hostname := ingressStatus[0].Hostname
-			endpoint := fmt.Sprintf("http://%v:%v%v", hostname, port, path)
-			return endpoint, nil
-		}
-		counter++
-		time.Sleep(w.GetInterval())
 	}
 }
 
@@ -435,15 +382,6 @@ func SendTrafficToIngress(kubeClientset kubernetes.Interface, w common.WaiterCon
 		return errors.Errorf("traffic test had '%v' errors but expected '%d'", metrics.Errors, expectedErrors)
 	}
 	return nil
-}
-
-func init() {
-
-	// Register ginkgo.Fail as the Fail handler. This handler panics
-	// and subsequently auto recovers from the panic, which is what we need
-	// for gracefully exiting failures.
-	// https://github.com/onsi/ginkgo/blob/v1.16.5/ginkgo_dsl.go#L283-L303
-	gomega.RegisterFailHandler(ginkgo.Fail)
 }
 
 func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name, namespace string) error {

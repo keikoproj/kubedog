@@ -21,11 +21,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// TODO: move this to pkg/kubernetes/common?
-const (
-	stateUpgraded = "upgraded"
-)
-
 type ClientSet struct {
 	KubeInterface      kubernetes.Interface
 	DynamicInterface   dynamic.Interface
@@ -162,7 +157,7 @@ func (kc *ClientSet) KubernetesClusterShouldBe(state string) error {
 		return err
 	}
 	switch state {
-	case common.StateCreated, stateUpgraded:
+	case common.StateCreated, common.StateUpgraded:
 		if _, err := kc.KubeInterface.CoreV1().Pods(metav1.NamespaceSystem).List(context.TODO(), metav1.ListOptions{}); err != nil {
 			return err
 		}
@@ -346,7 +341,7 @@ func (kc *ClientSet) GetNodes() error {
 }
 
 func (kc *ClientSet) DaemonSetIsRunning(name, namespace string) error {
-	return structured.DaemonSetIsRunning(kc.KubeInterface, name, namespace)
+	return structured.DaemonSetIsRunning(kc.KubeInterface, kc.getExpBackoff(), name, namespace)
 }
 
 func (kc *ClientSet) DeploymentIsRunning(name, namespace string) error {

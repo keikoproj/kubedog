@@ -2,10 +2,13 @@ package structured
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
 	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -110,4 +113,37 @@ func GetIngress(kubeClientset kubernetes.Interface, name, namespace string) (*ne
 		return nil, errors.Wrapf(err, "failed to get clusterrolebinding '%v'", name)
 	}
 	return ingress.(*networkingv1.Ingress), nil
+}
+
+func GetIngressEndpoint(kubeClientset kubernetes.Interface, w common.WaiterConfig, name, namespace string, port int, path string) (string, error) {
+	var (
+		counter int
+	)
+	for {
+		log.Info("waiting for ingress availability")
+		if counter >= w.GetTries() {
+			return "", errors.New("waiter timed out waiting for resource state")
+		}
+		ingress, err := GetIngress(kubeClientset, name, namespace)
+		if err != nil {
+			return "", err
+		}
+		annotations := ingress.GetAnnotations()
+		albSubnets := annotations["service.beta.kubernetes.io/aws-load-balancer-subnets"]
+		log.Infof("Alb IngressSubnets associated are: %v", albSubnets)
+		var ingressReconciled bool
+		ingressStatus := ingress.Status.LoadBalancer.Ingress
+		if ingressStatus == nil {
+			log.Infof("ingress %v/%v is not ready yet", namespace, name)
+		} else {
+			ingressReconciled = true
+		}
+		if ingressReconciled {
+			hostname := ingressStatus[0].Hostname
+			endpoint := fmt.Sprintf("http://%v:%v%v", hostname, port, path)
+			return endpoint, nil
+		}
+		counter++
+		time.Sleep(w.GetInterval())
+	}
 }
