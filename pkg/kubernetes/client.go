@@ -1,13 +1,16 @@
 package kube
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/keikoproj/kubedog/pkg/kubernetes/pod"
 	unstruct "github.com/keikoproj/kubedog/pkg/kubernetes/unstructured"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -34,9 +37,9 @@ type ClientSet struct {
 	DiscoveryInterface discovery.DiscoveryInterface
 	FilesPath          string
 	TemplateArguments  interface{}
-	WaiterInterval     time.Duration
-	WaiterTries        int
-	Timestamps         map[string]time.Time
+	WaiterInterval     time.Duration        //TODO: do not export this, there is a getter that enforces defaults
+	WaiterTries        int                  //TODO: do not export this, there is a getter that enforces defaults
+	Timestamps         map[string]time.Time //TODO: do not export this, implement getters and setters
 }
 
 func (kc *ClientSet) Validate() error {
@@ -100,13 +103,25 @@ func (kc *ClientSet) DiscoverClients() error {
 }
 
 func (kc *ClientSet) SetTimestamp(timestampName string) error {
+	now := time.Now()
 	if kc.Timestamps == nil {
 		kc.Timestamps = map[string]time.Time{}
 	}
-	now := time.Now()
 	kc.Timestamps[timestampName] = now
-	log.Infof("Memorizing '%s' time is %v", timestampName, now)
+	log.Infof("Set timestamp '%s' as '%v'", timestampName, now)
 	return nil
+}
+
+func (kc *ClientSet) getTimestamp(timestampName string) (time.Time, error) {
+	commonErrorMessage := fmt.Sprintf("failed getting timestamp '%s'", timestampName)
+	if kc.Timestamps == nil {
+		return time.Time{}, errors.Errorf("%s: 'ClientSet.Timestamps' is nil", commonErrorMessage)
+	}
+	timestamp, ok := kc.Timestamps[timestampName]
+	if !ok {
+		return time.Time{}, errors.Errorf("%s: Timestamp not found", commonErrorMessage)
+	}
+	return timestamp, nil
 }
 
 func (kc *ClientSet) getResourcePath(resourceFileName string) string {
@@ -140,6 +155,10 @@ func (kc *ClientSet) getWaiterTries() int {
 
 func (kc *ClientSet) getWaiterConfig() unstruct.WaiterConfig {
 	return unstruct.NewWaiterConfig(kc.getWaiterTries(), kc.getWaiterInterval())
+}
+
+func (kc *ClientSet) getExpBackoff() wait.Backoff {
+	return pod.GetExpBackoff(kc.getWaiterTries())
 }
 
 func (kc *ClientSet) DeleteAllTestResources() error {
@@ -228,4 +247,56 @@ func (kc *ClientSet) UpdateResourceWithField(resourceFileName, key, value string
 		return err
 	}
 	return unstruct.UpdateResourceWithField(kc.DynamicInterface, resource, key, value)
+}
+
+func (kc *ClientSet) GetPods(ns string) error {
+	return pod.GetPods(kc.KubeInterface, ns)
+}
+
+func (kc *ClientSet) GetPodsWithSelector(ns, selector string) error {
+	return pod.GetPodsWithSelector(kc.KubeInterface, ns, selector)
+}
+
+func (kc *ClientSet) PodsWithSelectorHaveRestartCountLessThan(ns, selector string, restartCount int) error {
+	return pod.PodsWithSelectorHaveRestartCountLessThan(kc.KubeInterface, ns, selector, restartCount)
+}
+
+func (kc *ClientSet) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(someOrAll, ns, selector, searchKeyword, sinceTime string) error {
+	timestamp, err := kc.getTimestamp(sinceTime)
+	if err != nil {
+		return err
+	}
+	return pod.SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(kc.KubeInterface, kc.getExpBackoff(), someOrAll, ns, selector, searchKeyword, timestamp)
+}
+
+func (kc *ClientSet) SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(ns, selector, searchKeyword, sinceTime string) error {
+	timestamp, err := kc.getTimestamp(sinceTime)
+	if err != nil {
+		return err
+	}
+	return pod.SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(kc.KubeInterface, ns, selector, searchKeyword, timestamp)
+}
+
+func (kc *ClientSet) PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(ns, selector, sinceTime string) error {
+	timestamp, err := kc.getTimestamp(sinceTime)
+	if err != nil {
+		return err
+	}
+	return pod.PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(kc.KubeInterface, ns, selector, timestamp)
+}
+
+func (kc *ClientSet) PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(ns, selector, sinceTime string) error {
+	timestamp, err := kc.getTimestamp(sinceTime)
+	if err != nil {
+		return err
+	}
+	return pod.PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(kc.KubeInterface, ns, selector, timestamp)
+}
+
+func (kc *ClientSet) PodsInNamespaceWithSelectorShouldHaveLabels(ns, selector, labels string) error {
+	return pod.PodsInNamespaceWithSelectorShouldHaveLabels(kc.KubeInterface, ns, selector, labels)
+}
+
+func (kc *ClientSet) PodInNamespaceShouldHaveLabels(name, ns, labels string) error {
+	return pod.PodInNamespaceShouldHaveLabels(kc.KubeInterface, name, ns, labels)
 }
