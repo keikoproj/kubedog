@@ -11,7 +11,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [the] Kubernetes cluster should be (created|deleted|upgraded)` kdt.KubeContext.KubernetesClusterShouldBe
 - `<GK> [I] store [the] current time as <any-characters-except-(")>` kdt.KubeContext.SetTimestamp
 
-### Unstructured Resources (any kubernetes resource including Custom Resources)
+### Unstructured Resources
 - `<GK> [I] (create|submit|delete|update) [the] resource <non-whitespace-characters>` kdt.KubeContext.ResourceOperation
 - `<GK> [I] (create|submit|delete|update) [the] resource <non-whitespace-characters> in [the] <any-characters-except-(")> namespace` kdt.KubeContext.ResourceOperationInNamespace
 - `<GK> [I] (create|submit|delete|update) [the] resources in <non-whitespace-characters>` kdt.KubeContext.ResourcesOperation
@@ -37,7 +37,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [the] pods in namespace <non-whitespace-characters> with selector <non-whitespace-characters> should have labels <non-whitespace-characters>` kdt.KubeContext.PodsInNamespaceWithSelectorShouldHaveLabels
 - `<GK> [the] pod <non-whitespace-characters> in namespace <non-whitespace-characters> should have labels <non-whitespace-characters>` kdt.KubeContext.PodInNamespaceShouldHaveLabels
 
-#### Other Structured Resources
+#### Others
 - `<GK> [I] (create|submit|update) [the] secret <non-whitespace-characters> in namespace <non-whitespace-characters> from [environment variable] <non-whitespace-characters>` kdt.KubeContext.SecretOperationFromEnvironmentVariable
 - `<GK> [I] delete [the] secret <non-whitespace-characters> in namespace <non-whitespace-characters>` kdt.KubeContext.SecretDelete
 - `<GK> <digits> node[s] with selector <non-whitespace-characters> should be (found|ready)` kdt.KubeContext.NodesWithSelectorShouldBe
