@@ -12,7 +12,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// TODO: put license header on all file
 // TODO: exclude some files from unit test coverage e.g. github.com/keikoproj/kubedog/generate/syntax and github.com/keikoproj/kubedog and github.com/keikoproj/kubedog/internal/utilities maybe?
 package kubedog
 

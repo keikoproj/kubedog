@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	util "github.com/keikoproj/kubedog/internal/utilities"
+	"github.com/keikoproj/kubedog/internal/util"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"

@@ -21,7 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	util "github.com/keikoproj/kubedog/internal/utilities"
+	"github.com/keikoproj/kubedog/internal/util"
 )
 
 func getManagedPolicy(policyARN string, iamClient iamiface.IAMAPI) (*iam.Policy, *iam.PolicyVersion, error) {

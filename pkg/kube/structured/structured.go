@@ -24,7 +24,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	util "github.com/keikoproj/kubedog/internal/utilities"
+	"github.com/keikoproj/kubedog/internal/util"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"github.com/keikoproj/kubedog/pkg/kube/pod"
 	"github.com/pkg/errors"
