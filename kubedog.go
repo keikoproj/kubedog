@@ -50,15 +50,15 @@ func (kdt *Test) Run() {
 	}
 	// TODO: implement syntax-generation:subtitle and syntax-generation:sub-subtitle or maybe syntax-generation:title:<rank of the tittle> e.g syntax-generation:title:1 or syntax-generation:title:2 and the number is the number of # chars
 	//syntax-generation:begin
-	//syntax-generation:title:1:Generic steps
+	//syntax-generation:title-0:Generic steps
 	kdt.scenarioContext.Step(`^(?:I )?wait (?:for )?(\d+) (minutes|seconds)$`, generic.WaitFor)
 	kdt.scenarioContext.Step(`^the (\S+) command is available$`, generic.CommandExists)
 	kdt.scenarioContext.Step(`^I run the (\S+) command with the ([^"]*) args and the command (fails|succeeds)$`, generic.RunCommand)
-	//syntax-generation:title:1:Kubernetes steps
+	//syntax-generation:title-0:Kubernetes steps
 	kdt.scenarioContext.Step(`^((?:a )?Kubernetes cluster|(?:there are )?(?:valid )?Kubernetes Credentials)$`, kdt.KubeContext.DiscoverClients)
 	kdt.scenarioContext.Step(`^(?:the )?Kubernetes cluster should be (created|deleted|upgraded)$`, kdt.KubeContext.KubernetesClusterShouldBe)
 	kdt.scenarioContext.Step(`^(?:I )?store (?:the )?current time as ([^"]*)$`, kdt.KubeContext.SetTimestamp)
-	//syntax-generation:title:2:Unstructured Resources (any kubernetes resource including Custom Resources)
+	//syntax-generation:title-1:Unstructured Resources (any kubernetes resource including Custom Resources)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+)$`, kdt.KubeContext.ResourceOperation)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resource (\S+) in (?:the )?([^"]*) namespace$`, kdt.KubeContext.ResourceOperationInNamespace)
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|delete|update) (?:the )?resources in (\S+)$`, kdt.KubeContext.ResourcesOperation)
@@ -70,8 +70,8 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:the )?resource ([^"]*) condition ([^"]*) should be (true|false)$`, kdt.KubeContext.ResourceConditionShouldBe)
 	kdt.scenarioContext.Step(`^(?:I )?update (?:the )?resource ([^"]*) with ([^"]*) set to ([^"]*)$`, kdt.KubeContext.UpdateResourceWithField)
 	kdt.scenarioContext.Step(`^(?:I )?verify InstanceGroups (?:are )?in "ready" state$`, kdt.KubeContext.VerifyInstanceGroups)
-	//syntax-generation:title:2:Structured Resources
-	//syntax-generation:title:3:Pods
+	//syntax-generation:title-1:Structured Resources
+	//syntax-generation:title-2:Pods
 	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*)$`, kdt.KubeContext.Pods)
 	kdt.scenarioContext.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*) with selector (\S+)$`, kdt.KubeContext.PodsWithSelector)
 	kdt.scenarioContext.Step(`^(?:the )?pods in namespace ([^"]*) with selector (\S+) have restart count less than (\d+)$`, kdt.KubeContext.PodsWithSelectorHaveRestartCountLessThan)
@@ -81,7 +81,7 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) have some errors in logs since ([^"]*) time$`, kdt.KubeContext.PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime)
 	kdt.scenarioContext.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) should have labels (\S+)$`, kdt.KubeContext.PodsInNamespaceWithSelectorShouldHaveLabels)
 	kdt.scenarioContext.Step(`^(?:the )?pod (\S+) in namespace (\S+) should have labels (\S+)$`, kdt.KubeContext.PodInNamespaceShouldHaveLabels)
-	//syntax-generation:title:3:Other Structured Resources
+	//syntax-generation:title-2:Other Structured Resources
 	kdt.scenarioContext.Step(`^(?:I )?(create|submit|update) (?:the )?secret (\S+) in namespace (\S+) from (?:environment variable )?(\S+)$`, kdt.KubeContext.SecretOperationFromEnvironmentVariable)
 	kdt.scenarioContext.Step(`^(?:I )?delete (?:the )?secret (\S+) in namespace (\S+)$`, kdt.KubeContext.SecretDelete)
 	kdt.scenarioContext.Step(`^(\d+) node(?:s)? with selector (\S+) should be (found|ready)$`, kdt.KubeContext.NodesWithSelectorShouldBe)
@@ -95,7 +95,7 @@ func (kdt *Test) Run() {
 	kdt.scenarioContext.Step(`^(?:the )?(clusterrole|clusterrolebinding) with name ([^"]*) should be found$`, kdt.KubeContext.ClusterRbacIsFound)
 	kdt.scenarioContext.Step(`^(?:the )?ingress (\S+) in (?:the )?namespace (\S+) (?:is )?(?:available )?on port (\d+) and path ([^"]*)$`, kdt.KubeContext.IngressAvailable)
 	kdt.scenarioContext.Step(`^(?:I )?send (\d+) tps to ingress (\S+) in (?:the )?namespace (\S+) (?:available )?on port (\d+) and path ([^"]*) for (\d+) (minutes|seconds) expecting up to (\d+) error(?:s)?$`, kdt.KubeContext.SendTrafficToIngress)
-	//syntax-generation:title:1:AWS steps
+	//syntax-generation:title-0:AWS steps
 	kdt.scenarioContext.Step(`^(?:there are )?(?:valid )?AWS Credentials$`, kdt.AwsContext.GetAWSCredsAndClients)
 	kdt.scenarioContext.Step(`^an Auto Scaling Group named ([^"]*)$`, kdt.AwsContext.AnASGNamed)
 	kdt.scenarioContext.Step(`^(?:I )?update (?:the )?current Auto Scaling Group with ([^"]*) set to ([^"]*)$`, kdt.AwsContext.UpdateFieldOfCurrentASG)

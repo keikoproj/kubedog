@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -18,7 +19,9 @@ const (
 	actionBegin              = "begin"
 	actionEnd                = "end"
 	actionTitle              = "title"
-	titleBeginning           = "## "
+	tittleDelimiter          = "-"
+	tittleRankStep           = "#"
+	processedTitleBeginning  = "## "
 	processedStepBeginning   = "- "
 	stepIndicator            = "kdt.scenarioContext.Step"
 	stepDelimiter            = "`"
@@ -101,7 +104,8 @@ func processSyntax(rawSyntax []string) []string {
 	for _, rawLine := range rawSyntax {
 		switch {
 		case strings.Contains(rawLine, actionIndicator):
-			title := mustGetTitle(rawLine)
+			title, tittleRank := mustGetTitle(rawLine)
+			titleBeginning := getTittleProcessedRank(tittleRank)
 			processedTitle := newLine + titleBeginning + title + newLine
 			log.Debugf("processed '%s' as: '%s'", rawLine, processedTitle)
 			processedSyntax = append(processedSyntax, processedTitle)
@@ -134,15 +138,32 @@ func processStep(rawStep string) string {
 	return markdownCodeDelimiter + gherkinKeyword + " " + processedStep + markdownCodeDelimiter + method
 }
 
-func mustGetTitle(line string) string {
+func mustGetTitle(line string) (string, int) {
 	action, afterAction := getAction(line)
+	actionSplit := strings.Split(action, tittleDelimiter)
+	if len(actionSplit) != 2 {
+		log.Fatalf("expected '%s' to meet format '%s%s<digit>'", action, actionTitle, tittleDelimiter)
+	}
+	action, tittleRankString := actionSplit[0], actionSplit[1]
 	if action != actionTitle {
 		log.Fatalf("expected '%s' to contain '%s%s%s'", line, actionIndicator, actionDelimiter, actionTitle)
+	}
+	tittleRank, err := strconv.Atoi(tittleRankString)
+	if err != nil {
+		log.Fatalf("failed converting '%s' to integer: '%v'", tittleRankString, err)
 	}
 	if afterAction == "" {
 		log.Fatalf("expected '%s' to contain '%s%s%s%s<title>'", line, actionIndicator, actionDelimiter, actionTitle, actionDelimiter)
 	}
-	return afterAction
+	return afterAction, tittleRank
+}
+
+func getTittleProcessedRank(rank int) string {
+	if rank < 0 || rank > 9 {
+		log.Fatalf("expected '%d' to be a digit between 1 and 9)", rank)
+	}
+	totalRankString := strings.Repeat(tittleRankStep, rank)
+	return totalRankString + processedTitleBeginning
 }
 
 func isEndAction(line string) bool {
