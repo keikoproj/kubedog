@@ -3,10 +3,12 @@ package aws
 import (
 	"fmt"
 	"os"
-	"os/user"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/route53"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -15,7 +17,33 @@ const (
 	clusterNameEnvironmentVariable = "CLUSTER_NAME"
 )
 
-func (c *Client) GetDNSRecord(dnsName string, hostedZoneID string) (string, error) {
+func (c *ClientSet) GetEksVpc() (string, error) {
+	clusterName, err := getClusterName()
+	if err != nil {
+		return "", err
+	}
+	input := &eks.DescribeClusterInput{
+		Name: aws.String(clusterName),
+	}
+	result, err := c.EKSClient.DescribeCluster(input)
+	if err != nil {
+		return "", err
+	}
+	return aws.StringValue(result.Cluster.ResourcesVpcConfig.VpcId), nil
+}
+
+func getAccountNumber(svc stsiface.STSAPI) string {
+	// Region is defaulted to "us-west-2"
+	input := &sts.GetCallerIdentityInput{}
+	result, err := svc.GetCallerIdentity(input)
+	if err != nil {
+		log.Infof("Failed to get caller identity: %s", err.Error())
+		return ""
+	}
+	return *result.Account
+}
+
+func (c *ClientSet) getDNSRecord(dnsName string, hostedZoneID string) (string, error) {
 	params := &route53.ListResourceRecordSetsInput{
 		HostedZoneId:    aws.String(hostedZoneID),
 		MaxItems:        aws.String("1"),
@@ -49,8 +77,8 @@ func (c *Client) GetDNSRecord(dnsName string, hostedZoneID string) (string, erro
 	}
 }
 
-func (c *Client) DnsNameInHostedZoneID(dnsName, hostedZoneID string) error {
-	recordValue, err := c.GetDNSRecord(dnsName, hostedZoneID)
+func (c *ClientSet) dnsNameInHostedZoneID(dnsName, hostedZoneID string) error {
+	recordValue, err := c.getDNSRecord(dnsName, hostedZoneID)
 	if err != nil {
 		if recordValue != "" {
 			log.Infof("records for hostedZoneID %s with dnsName %s exists", hostedZoneID, dnsName)
@@ -72,19 +100,4 @@ func getEnv(envName string) (string, error) {
 		return envValue, nil
 	}
 	return "", fmt.Errorf("could not get environment variable '%s'", envName)
-}
-
-func getEnvWithFallback(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
-}
-
-func getUsernamePrefix() string {
-	currUser, err := user.Current()
-	if err != nil || currUser.Username == "root" {
-		return ""
-	}
-	return currUser.Username + "-"
 }

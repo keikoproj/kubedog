@@ -63,8 +63,6 @@ func (kc *ClientSet) DiscoverClients() error {
 	if err != nil {
 		log.Fatal("Unable to construct dynamic client", err)
 	}
-	kc.DynamicInterface = dynClient
-
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return err
@@ -73,6 +71,8 @@ func (kc *ClientSet) DiscoverClients() error {
 	if err != nil {
 		return err
 	}
+
+	kc.DynamicInterface = dynClient
 	kc.KubeInterface = client
 
 	return nil

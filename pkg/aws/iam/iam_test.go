@@ -1,4 +1,4 @@
-package aws
+package iam
 
 import (
 	"testing"
@@ -81,42 +81,6 @@ func (fiam *FakeIAMClient) DeletePolicy(*iam.DeletePolicyInput) (*iam.DeletePoli
 
 func (fiam *FakeIAMClient) DeletePolicyVersion(input *iam.DeletePolicyVersionInput) (*iam.DeletePolicyVersionOutput, error) {
 	return &iam.DeletePolicyVersionOutput{}, nil
-}
-
-func TestGetOldestVersionID(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
-
-	var versions []*iam.PolicyVersion
-	versions = append(versions, &iam.PolicyVersion{VersionId: aws.String("v1"), CreateDate: aws.Time(time.Now().Add(5 * time.Minute))})
-	versions = append(versions, &iam.PolicyVersion{VersionId: aws.String("v2"), CreateDate: aws.Time(time.Now())})
-	versions = append(versions, &iam.PolicyVersion{VersionId: aws.String("v3"), CreateDate: aws.Time(time.Now().Add(10 * time.Minute))})
-	versions = append(versions, &iam.PolicyVersion{VersionId: aws.String("v4"), CreateDate: aws.Time(time.Now())})
-
-	oldestId := getOldestVersionID(versions)
-	g.Expect(oldestId).To(gomega.Equal("v2"))
-}
-
-func TestCreateIAMRole(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
-
-	iamClient := &FakeIAMClient{}
-	policyYAML := `|
-  Version: '2012-10-17'
-  Statement:
-  - Effect: Allow
-    Action:
-    - autoscaling:TerminateInstanceInAutoScalingGroup
-    - autoscaling:DescribeAutoScalingGroups
-    - ec2:DescribeTags
-    - ec2:DescribeInstances
-    Resource:
-    - "*"`
-	policyJSON, err := yaml.YAMLToJSON([]byte(policyYAML))
-	g.Expect(err).To(gomega.BeNil())
-
-	output, err := CreateIAMRole("arn:aws:iam::aws:policy/test-role", "Description", policyJSON, iamClient)
-	g.Expect(err).To(gomega.BeNil())
-	g.Expect(output).ToNot(gomega.BeNil())
 }
 
 func TestDeleteIAMRole(t *testing.T) {
@@ -207,42 +171,11 @@ func TestPutManagedPolicy(t *testing.T) {
 	g.Expect(output).ToNot(gomega.BeNil())
 }
 
-func TestCreateManagedPolicy(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
-
-	iamClient := &FakeIAMClient{}
-	policyYAML := `|
-  Version: '2012-10-17'
-  Statement:
-  - Effect: Allow
-    Action:
-    - autoscaling:TerminateInstanceInAutoScalingGroup
-    - autoscaling:DescribeAutoScalingGroups
-    - ec2:DescribeTags
-    - ec2:DescribeInstances
-    Resource:
-    - "*"`
-	policyJSON, err := yaml.YAMLToJSON([]byte(policyYAML))
-	g.Expect(err).To(gomega.BeNil())
-
-	_, err = CreateManagedPolicy("arn:aws:iam::aws:policy/test-role", "Description", policyJSON, iamClient)
-	g.Expect(err).To(gomega.BeNil())
-}
-
 func TestDeleteManagedPolicy(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 
 	iamClient := &FakeIAMClient{}
 
 	err := DeleteManagedPolicy("arn:aws:iam::aws:policy/test-role", iamClient)
-	g.Expect(err).To(gomega.BeNil())
-}
-
-func TestDeleteManagedPolicyVersion(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
-
-	iamClient := &FakeIAMClient{}
-
-	err := DeleteManagedPolicyVersion("arn:aws:iam::aws:policy/test-role", "testid", iamClient)
 	g.Expect(err).To(gomega.BeNil())
 }

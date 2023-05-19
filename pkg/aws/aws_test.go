@@ -107,36 +107,36 @@ func TestAnASGNamed(t *testing.T) {
 	)
 
 	// Not ASClient
-	ASC := Client{}
+	ASC := ClientSet{}
 	err := ASC.AnASGNamed("Some-ASG-Name")
 	g.Expect(err).Should(gomega.HaveOccurred())
 
 	for _, test := range tests {
-		client := Client{ASClient: &test.ASClient}
+		client := ClientSet{ASClient: &test.ASClient}
 		ASG_Name := aws.StringValue(test.expectedASG.AutoScalingGroupName)
 		err := client.AnASGNamed(ASG_Name)
 
 		if test.expectError {
 			g.Expect(err).Should(gomega.HaveOccurred())
-			g.Expect(client.AsgName).To(gomega.Equal(""))
-			g.Expect(client.LaunchConfigName).To(gomega.Equal(""))
+			g.Expect(client.asgName).To(gomega.Equal(""))
+			g.Expect(client.launchConfigName).To(gomega.Equal(""))
 		} else {
 			LC_Name := aws.StringValue(test.expectedASG.LaunchConfigurationName)
 			g.Expect(err).ShouldNot(gomega.HaveOccurred())
-			g.Expect(client.AsgName).To(gomega.Equal(ASG_Name))
-			g.Expect(client.LaunchConfigName).To(gomega.Equal(LC_Name))
+			g.Expect(client.asgName).To(gomega.Equal(ASG_Name))
+			g.Expect(client.launchConfigName).To(gomega.Equal(LC_Name))
 		}
 	}
 }
 func TestPositiveUpdateFieldOfCurrentASG(t *testing.T) {
 	var (
 		g   = gomega.NewWithT(t)
-		ASC = Client{
+		ASC = ClientSet{
 			ASClient: &mockAutoScalingClient{
 				Err: nil,
 			},
-			AsgName:          "asg-test",
-			LaunchConfigName: "current-lc-asg-test",
+			asgName:          "asg-test",
+			launchConfigName: "current-lc-asg-test",
 		}
 	)
 
@@ -161,13 +161,13 @@ func TestPositiveUpdateFieldOfCurrentASG(t *testing.T) {
 func TestNegativeUpdateFieldOfCurrentASG(t *testing.T) {
 	var (
 		g        = gomega.NewWithT(t)
-		emptyASC = Client{}
-		ASC      = Client{
+		emptyASC = ClientSet{}
+		ASC      = ClientSet{
 			ASClient: &mockAutoScalingClient{
 				Err: errors.New("some-UASG-error"),
 			},
-			AsgName:          "asg-test",
-			LaunchConfigName: "current-lc-asg-test",
+			asgName:          "asg-test",
+			launchConfigName: "current-lc-asg-test",
 		}
 	)
 
@@ -200,11 +200,11 @@ func TestNegativeUpdateFieldOfCurrentASG(t *testing.T) {
 func TestPositiveScaleCurrentASG(t *testing.T) {
 	var (
 		g   = gomega.NewWithT(t)
-		ASC = Client{
+		ASC = ClientSet{
 			ASClient: &mockAutoScalingClient{
 				Err: nil,
 			},
-			AsgName: "asg-test",
+			asgName: "asg-test",
 		}
 	)
 
@@ -217,12 +217,12 @@ func TestPositiveScaleCurrentASG(t *testing.T) {
 func TestNegativeScaleCurrentASG(t *testing.T) {
 	var (
 		g        = gomega.NewWithT(t)
-		emptyASC = Client{}
-		ASC      = Client{
+		emptyASC = ClientSet{}
+		ASC      = ClientSet{
 			ASClient: &mockAutoScalingClient{
 				Err: errors.New("some-UASG-error"),
 			},
-			AsgName: "asg-test",
+			asgName: "asg-test",
 		}
 	)
 
@@ -255,12 +255,4 @@ func (asc *mockAutoScalingClient) DescribeAutoScalingGroups(input *autoscaling.D
 		AutoScalingGroups: ASGs,
 	}
 	return out, asc.Err
-}
-
-func TestGetAccountNumber(t *testing.T) {
-	g := gomega.NewGomegaWithT(t)
-	stsClient := &STSMocker{}
-
-	output := GetAccountNumber(stsClient)
-	g.Expect(output).ToNot(gomega.Equal(""))
 }
