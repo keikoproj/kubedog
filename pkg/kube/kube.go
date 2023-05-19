@@ -39,7 +39,7 @@ type ClientSet struct {
 	config           configuration
 }
 
-// TODO: update docs to reflect the changes in unexported fields and rm methods from root package
+// TODO: update docs to reflect the changes in unexported fields and removed methods from root package
 func (kc *ClientSet) SetFilesPath(path string) {
 	kc.config.filesPath = path
 }
@@ -220,7 +220,7 @@ func (kc *ClientSet) PodsWithSelectorHaveRestartCountLessThan(namespace, selecto
 }
 
 func (kc *ClientSet) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(someOrAll, namespace, selector, searchKeyword, sinceTime string) error {
-	timestamp, err := kc.getTimestamp(sinceTime)
+	timestamp, err := kc.GetTimestamp(sinceTime)
 	if err != nil {
 		return err
 	}
@@ -228,7 +228,7 @@ func (kc *ClientSet) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTi
 }
 
 func (kc *ClientSet) SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime(namespace, selector, searchKeyword, sinceTime string) error {
-	timestamp, err := kc.getTimestamp(sinceTime)
+	timestamp, err := kc.GetTimestamp(sinceTime)
 	if err != nil {
 		return err
 	}
@@ -236,7 +236,7 @@ func (kc *ClientSet) SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTim
 }
 
 func (kc *ClientSet) PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(namespace, selector, sinceTime string) error {
-	timestamp, err := kc.getTimestamp(sinceTime)
+	timestamp, err := kc.GetTimestamp(sinceTime)
 	if err != nil {
 		return err
 	}
@@ -244,7 +244,7 @@ func (kc *ClientSet) PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime(name
 }
 
 func (kc *ClientSet) PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(namespace, selector, sinceTime string) error {
-	timestamp, err := kc.getTimestamp(sinceTime)
+	timestamp, err := kc.GetTimestamp(sinceTime)
 	if err != nil {
 		return err
 	}

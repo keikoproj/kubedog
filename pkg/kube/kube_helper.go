@@ -32,7 +32,7 @@ type configuration struct {
 	waiterTries       int
 }
 
-func (kc *ClientSet) getTimestamp(timestampName string) (time.Time, error) {
+func (kc *ClientSet) GetTimestamp(timestampName string) (time.Time, error) {
 	commonErrorMessage := fmt.Sprintf("failed getting timestamp '%s'", timestampName)
 	if kc.timestamps == nil {
 		return time.Time{}, errors.Errorf("%s: 'ClientSet.Timestamps' is nil", commonErrorMessage)
