@@ -12,7 +12,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package kube provides steps implementations related to Kubernetes.
 package structured
 
 import (

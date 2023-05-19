@@ -12,7 +12,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package aws provides steps implementations related to AWS.
 package aws
 
 import (
