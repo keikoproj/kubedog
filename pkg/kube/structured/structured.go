@@ -26,8 +26,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
-	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
-	"github.com/keikoproj/kubedog/pkg/kubernetes/pod"
+	"github.com/keikoproj/kubedog/pkg/kube/common"
+	"github.com/keikoproj/kubedog/pkg/kube/pod"
 	"github.com/pkg/errors"
 	vegeta "github.com/tsenart/vegeta/v12/lib"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"

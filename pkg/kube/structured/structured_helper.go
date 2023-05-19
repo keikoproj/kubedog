@@ -6,7 +6,7 @@ import (
 	"time"
 
 	util "github.com/keikoproj/kubedog/internal/utilities"
-	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
+	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"

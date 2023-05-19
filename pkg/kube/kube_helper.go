@@ -5,18 +5,25 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
-	"github.com/keikoproj/kubedog/pkg/kubernetes/pod"
+	"github.com/keikoproj/kubedog/pkg/kube/common"
+	"github.com/keikoproj/kubedog/pkg/kube/pod"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+type configuration struct {
+	filesPath         string
+	templateArguments interface{}
+	waiterInterval    time.Duration
+	waiterTries       int
+}
+
 func (kc *ClientSet) getTimestamp(timestampName string) (time.Time, error) {
 	commonErrorMessage := fmt.Sprintf("failed getting timestamp '%s'", timestampName)
-	if kc.Timestamps == nil {
+	if kc.timestamps == nil {
 		return time.Time{}, errors.Errorf("%s: 'ClientSet.Timestamps' is nil", commonErrorMessage)
 	}
-	timestamp, ok := kc.Timestamps[timestampName]
+	timestamp, ok := kc.timestamps[timestampName]
 	if !ok {
 		return time.Time{}, errors.Errorf("%s: Timestamp not found", commonErrorMessage)
 	}
@@ -30,24 +37,24 @@ func (kc *ClientSet) getResourcePath(resourceFileName string) string {
 
 func (kc *ClientSet) getTemplatesPath() string {
 	defaultFilePath := "templates"
-	if kc.FilesPath != "" {
-		return kc.FilesPath
+	if kc.config.filesPath != "" {
+		return kc.config.filesPath
 	}
 	return defaultFilePath
 }
 
 func (kc *ClientSet) getWaiterInterval() time.Duration {
 	defaultWaiterInterval := time.Second * 30
-	if kc.WaiterInterval > 0 {
-		return kc.WaiterInterval
+	if kc.config.waiterInterval > 0 {
+		return kc.config.waiterInterval
 	}
 	return defaultWaiterInterval
 }
 
 func (kc *ClientSet) getWaiterTries() int {
 	defaultWaiterTries := 40
-	if kc.WaiterTries > 0 {
-		return kc.WaiterTries
+	if kc.config.waiterTries > 0 {
+		return kc.config.waiterTries
 	}
 	return defaultWaiterTries
 }

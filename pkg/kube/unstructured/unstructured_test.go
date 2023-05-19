@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
+	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"

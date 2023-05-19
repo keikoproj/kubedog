@@ -15,5 +15,5 @@ The library has a one and only purpose – it saves you from the hassle of imple
 #### GoDocs
 
 - [Kubedog](https://godoc.org/github.com/keikoproj/kubedog)
-- [Kube](https://godoc.org/github.com/keikoproj/kubedog/pkg/kubernetes)
+- [Kube](https://godoc.org/github.com/keikoproj/kubedog/pkg/kube)
 - [AWS](https://godoc.org/github.com/keikoproj/kubedog/pkg/aws)

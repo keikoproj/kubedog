@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/keikoproj/kubedog/pkg/kubernetes/common"
+	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	hpa "k8s.io/api/autoscaling/v2beta2"
