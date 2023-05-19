@@ -26,7 +26,7 @@ import (
 
 //go:generate go run generate/syntax/main.go
 
-// TODO: are these the right names for this struct and its fields?
+// TODO: change struct name?
 // TODO: make struct unexported and add NewTest func?
 type Test struct {
 	suiteContext    *godog.TestSuiteContext
