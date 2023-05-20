@@ -8,13 +8,13 @@ import (
 	"github.com/keikoproj/kubedog"
 )
 
-//TODO: add comments to all the examples?
-
 var k kubedog.Test
 
+// Required for 'go test'
 func TestFeatures(t *testing.T) {
+	// Setting Godog and running test
 	status := godog.TestSuite{
-		Name:                 "godogs",
+		Name:                 "kubedog-example",
 		TestSuiteInitializer: InitializeTestSuite,
 		ScenarioInitializer:  InitializeScenario,
 		Options: &godog.Options{
@@ -28,20 +28,26 @@ func TestFeatures(t *testing.T) {
 	}
 }
 
+// Required for godog
 func InitializeScenario(ctx *godog.ScenarioContext) {
+	// Required for Kubedog
 	k.SetScenario(ctx)
 }
 
+// Required for Godog
 func InitializeTestSuite(ctx *godog.TestSuiteContext) {
+	// Optional: recommended hook
 	ctx.BeforeSuite(func() {
 		if err := k.KubeClientSet.DeleteAllTestResources(); err != nil {
 			log.Printf("Failed deleting the test resources: %v\n\n", err)
 		}
 	})
+	// Optional: recommended hook
 	ctx.AfterSuite(func() {
 		if err := k.KubeClientSet.DeleteAllTestResources(); err != nil {
 			log.Printf("Failed deleting the test resources: %v\n\n", err)
 		}
 	})
+	// Required for Kubedog
 	k.SetTestSuite(ctx)
 }

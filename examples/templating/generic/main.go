@@ -6,6 +6,9 @@ import (
 	"github.com/keikoproj/kubedog/pkg/generic"
 )
 
+// Using the generic package to:
+// - get template arguments from environment variables
+// - generate file from template using the obtained arguments
 func main() {
 	templateArguments := []generic.TemplateArgument{
 		{

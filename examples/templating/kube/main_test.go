@@ -13,7 +13,7 @@ var k kubedog.Test
 
 func TestFeatures(t *testing.T) {
 	status := godog.TestSuite{
-		Name:                 "godogs",
+		Name:                 "kubedog-example",
 		TestSuiteInitializer: InitializeTestSuite,
 		ScenarioInitializer:  InitializeScenario,
 		Options: &godog.Options{
@@ -28,6 +28,7 @@ func TestFeatures(t *testing.T) {
 }
 
 func InitializeScenario(ctx *godog.ScenarioContext) {
+	// Required to populate templated Kubernetes yaml files
 	k.KubeClientSet.SetTemplateArguments(getTemplateArguments(t))
 	k.SetScenario(ctx)
 }
@@ -46,6 +47,7 @@ func InitializeTestSuite(ctx *godog.TestSuiteContext) {
 	k.SetTestSuite(ctx)
 }
 
+// Using the generic package to get template arguments from environment variables
 func getTemplateArguments(t *testing.T) map[string]string {
 	templateArguments := []generic.TemplateArgument{
 		{
