@@ -336,6 +336,10 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 			gvr, unstruct := resource.GVR, resource.Resource
 			err = dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Delete(context.Background(), unstruct.GetName(), metav1.DeleteOptions{})
 			if err != nil {
+				if kerrors.IsNotFound(err) {
+					log.Infof("resource %v/%v already deleted", unstruct.GetNamespace(), unstruct.GetName())
+					continue
+				}
 				return err
 			}
 			log.Infof("submitted deletion for %v/%v", unstruct.GetNamespace(), unstruct.GetName())
@@ -370,7 +374,7 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 				_, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
 				if err != nil {
 					if kerrors.IsNotFound(err) {
-						log.Infof("resource %v/%v is deleted", unstruct.GetNamespace(), unstruct.GetName())
+						log.Infof("resource %v/%v already deleted", unstruct.GetNamespace(), unstruct.GetName())
 						break
 					}
 				}

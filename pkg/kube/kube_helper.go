@@ -23,6 +23,7 @@ import (
 	"github.com/keikoproj/kubedog/pkg/kube/pod"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/discovery"
 )
 
 type configuration struct {
@@ -79,4 +80,11 @@ func (kc *ClientSet) getWaiterConfig() common.WaiterConfig {
 
 func (kc *ClientSet) getExpBackoff() wait.Backoff {
 	return pod.GetExpBackoff(kc.getWaiterTries())
+}
+
+func (kc *ClientSet) getDiscoveryClient() discovery.DiscoveryInterface {
+	if kc.KubeInterface != nil {
+		return kc.KubeInterface.Discovery()
+	}
+	return nil
 }

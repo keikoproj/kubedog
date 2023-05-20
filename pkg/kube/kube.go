@@ -120,11 +120,14 @@ func (kc *ClientSet) KubernetesClusterShouldBe(state string) error {
 }
 
 func (kc *ClientSet) DeleteAllTestResources() error {
-	return unstruct.DeleteResourcesAtPath(kc.DynamicInterface, kc.KubeInterface.Discovery(), kc.config.templateArguments, kc.getWaiterConfig(), kc.getTemplatesPath())
+	if err := kc.DiscoverClients(); err != nil {
+		return err
+	}
+	return unstruct.DeleteResourcesAtPath(kc.DynamicInterface, kc.getDiscoveryClient(), kc.config.templateArguments, kc.getWaiterConfig(), kc.getTemplatesPath())
 }
 
 func (kc *ClientSet) ResourceOperation(operation, resourceFileName string) error {
-	resource, err := unstruct.GetResource(kc.KubeInterface.Discovery(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
+	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
 	if err != nil {
 		return err
 	}
@@ -132,7 +135,7 @@ func (kc *ClientSet) ResourceOperation(operation, resourceFileName string) error
 }
 
 func (kc *ClientSet) ResourceOperationInNamespace(operation, resourceFileName, namespace string) error {
-	resource, err := unstruct.GetResource(kc.KubeInterface.Discovery(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
+	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
 	if err != nil {
 		return err
 	}
@@ -140,7 +143,7 @@ func (kc *ClientSet) ResourceOperationInNamespace(operation, resourceFileName, n
 }
 
 func (kc *ClientSet) ResourcesOperation(operation, resourcesFileName string) error {
-	resources, err := unstruct.GetResources(kc.KubeInterface.Discovery(), kc.config.templateArguments, kc.getResourcePath(resourcesFileName))
+	resources, err := unstruct.GetResources(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourcesFileName))
 	if err != nil {
 		return err
 	}
@@ -148,7 +151,7 @@ func (kc *ClientSet) ResourcesOperation(operation, resourcesFileName string) err
 }
 
 func (kc *ClientSet) ResourcesOperationInNamespace(operation, resourcesFileName, namespace string) error {
-	resources, err := unstruct.GetResources(kc.KubeInterface.Discovery(), kc.config.templateArguments, kc.getResourcePath(resourcesFileName))
+	resources, err := unstruct.GetResources(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourcesFileName))
 	if err != nil {
 		return err
 	}
@@ -156,7 +159,7 @@ func (kc *ClientSet) ResourcesOperationInNamespace(operation, resourcesFileName,
 }
 
 func (kc *ClientSet) ResourceOperationWithResult(operation, resourceFileName, expectedResult string) error {
-	resource, err := unstruct.GetResource(kc.KubeInterface.Discovery(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
+	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
 	if err != nil {
 		return err
 	}
@@ -164,7 +167,7 @@ func (kc *ClientSet) ResourceOperationWithResult(operation, resourceFileName, ex
 }
 
 func (kc *ClientSet) ResourceOperationWithResultInNamespace(operation, resourceFileName, namespace, expectedResult string) error {
-	resource, err := unstruct.GetResource(kc.KubeInterface.Discovery(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
+	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
 	if err != nil {
 		return err
 	}
@@ -172,7 +175,7 @@ func (kc *ClientSet) ResourceOperationWithResultInNamespace(operation, resourceF
 }
 
 func (kc *ClientSet) ResourceShouldBe(resourceFileName, state string) error {
-	resource, err := unstruct.GetResource(kc.KubeInterface.Discovery(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
+	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
 	if err != nil {
 		return err
 	}
@@ -180,7 +183,7 @@ func (kc *ClientSet) ResourceShouldBe(resourceFileName, state string) error {
 }
 
 func (kc *ClientSet) ResourceShouldConvergeToSelector(resourceFileName, selector string) error {
-	resource, err := unstruct.GetResource(kc.KubeInterface.Discovery(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
+	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
 	if err != nil {
 		return err
 	}
@@ -188,7 +191,7 @@ func (kc *ClientSet) ResourceShouldConvergeToSelector(resourceFileName, selector
 }
 
 func (kc *ClientSet) ResourceConditionShouldBe(resourceFileName, conditionType, conditionValue string) error {
-	resource, err := unstruct.GetResource(kc.KubeInterface.Discovery(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
+	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
 	if err != nil {
 		return err
 	}
@@ -196,7 +199,7 @@ func (kc *ClientSet) ResourceConditionShouldBe(resourceFileName, conditionType, 
 }
 
 func (kc *ClientSet) UpdateResourceWithField(resourceFileName, key, value string) error {
-	resource, err := unstruct.GetResource(kc.KubeInterface.Discovery(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
+	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
 	if err != nil {
 		return err
 	}
