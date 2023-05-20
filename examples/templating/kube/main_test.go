@@ -12,7 +12,6 @@ import (
 var k kubedog.Test
 
 func TestFeatures(t *testing.T) {
-	k.KubeClientSet.SetTemplateArguments(getTemplateArguments(t))
 	status := godog.TestSuite{
 		Name:                 "godogs",
 		TestSuiteInitializer: InitializeTestSuite,
@@ -29,6 +28,7 @@ func TestFeatures(t *testing.T) {
 }
 
 func InitializeScenario(ctx *godog.ScenarioContext) {
+	k.KubeClientSet.SetTemplateArguments(getTemplateArguments(t))
 	k.SetScenario(ctx)
 }
 

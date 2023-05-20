@@ -8,6 +8,8 @@ import (
 	"github.com/keikoproj/kubedog"
 )
 
+//TODO: add comments to all the examples?
+
 var k kubedog.Test
 
 func TestFeatures(t *testing.T) {

@@ -39,7 +39,6 @@ type ClientSet struct {
 	config           configuration
 }
 
-// TODO: update docs to reflect the changes in unexported fields and removed methods from root package
 func (kc *ClientSet) SetFilesPath(path string) {
 	kc.config.filesPath = path
 }
