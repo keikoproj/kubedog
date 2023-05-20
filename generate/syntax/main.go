@@ -37,7 +37,7 @@ const (
 	tittleRankStep           = "#"
 	processedTitleBeginning  = "## "
 	processedStepBeginning   = "- "
-	stepIndicator            = "kdt.scenarioContext.Step"
+	stepIndicator            = "kdt.scenario.Step"
 	stepDelimiter            = "`"
 	stepPrefix               = "^"
 	stepSuffix               = "$"
