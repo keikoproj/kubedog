@@ -31,7 +31,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	templatedFilePath := "templates/pod.yaml"
+	templatedFilePath := "files/pod.yaml"
 	_, err = generic.GenerateFileFromTemplate(templatedFilePath, args)
 	if err != nil {
 		log.Fatalln(err)
