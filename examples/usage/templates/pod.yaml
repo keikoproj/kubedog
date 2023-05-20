@@ -8,6 +8,6 @@ metadata:
 spec:
   containers:
   - name: hello
-    image: docker.intuit.com/docker-rmt/busybox:1.28 # TODO: revert to busybox:1.28
+    image: busybox:1.28
     command: ['sh', '-c', 'echo "Hello, Kubedog!" && sleep 3600']
   restartPolicy: OnFailure
