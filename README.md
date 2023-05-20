@@ -7,6 +7,6 @@ This is a simple wrapper of [Godog]( https://github.com/cucumber/godog) with som
 The library has a one and only purpose – to save you from the hassle of implementing steps and hooks with the compromise of using predefined syntax. But of course, you could always redefine the steps using custom syntax and pass the corresponding kubedog methods.
 
 ## Resources
-- [Syntax](docs/syntax.md)
 - [Examples](examples/examples.md)
+- [Syntax](docs/syntax.md)
 - [GoDocs](https://godoc.org/github.com/keikoproj/kubedog)
