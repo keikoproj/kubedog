@@ -63,13 +63,6 @@ func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 		},
 	})
 
-	// kc := ClientSet{
-	// 	KubeInterface:      fakeClient,
-	// 	DiscoveryInterface: fakeDiscovery,
-	// 	DynamicInterface:   fakeDynamicClient,
-	// 	FilesPath:          "../../test/templates",
-	// }
-
 	err := NodesWithSelectorShouldBe(fakeClient, common.WaiterConfig{}, 1, testReadySelector, common.StateReady)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	err = NodesWithSelectorShouldBe(fakeClient, common.WaiterConfig{}, 1, testFoundSelector, common.StateFound)

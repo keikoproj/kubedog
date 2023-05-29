@@ -1,0 +1,7 @@
+apiVersion: instancemgr.keikoproj.io/v1alpha1
+kind: InstanceGroup
+metadata:
+  name: hello-world
+  namespace: instance-manager
+status:
+  currentState: NotReady

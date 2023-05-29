@@ -2,7 +2,7 @@
 .idea
 .DS_Store
 *.test
-test/templates/generated_*
+pkg/generic/test-fixtures/generated_*
 kubedog
 coverage.txt
 

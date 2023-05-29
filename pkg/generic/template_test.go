@@ -243,7 +243,7 @@ metadata:
 
 	var (
 		g                    = gomega.NewWithT(t)
-		testTemplatesPath, _ = filepath.Abs("../../test/templates")
+		testTemplatesPath, _ = filepath.Abs("./test-fixtures")
 		tests                = []struct {
 			templatedFilePath string
 			args              templateArgs
@@ -271,7 +271,7 @@ metadata:
 				expectError:      true,
 			},
 			{ // NegativeTest: template.Execute fails
-				templatedFilePath: testTemplatesPath + "/badKind_manifest.yaml",
+				templatedFilePath: testTemplatesPath + "/manifest-bad-kind.yaml",
 				args: templateArgs{
 					Kind:       "myKind",
 					ApiVersion: "myApiVersion",

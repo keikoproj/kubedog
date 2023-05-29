@@ -38,6 +38,7 @@ const (
 	trimTokens    = "\n "
 )
 
+// TODO: why GVR if its more than that?
 type unstructuredResource struct {
 	GVR      *meta.RESTMapping
 	Resource *unstructured.Unstructured
