@@ -222,12 +222,12 @@ func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, resource 
 			return errors.New("waiter timed out waiting for resource")
 		}
 		log.Infof("waiting for resource %v/%v to converge to %v=%v", unstruct.GetNamespace(), unstruct.GetName(), key, value)
-		cr, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		retResource, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
-		if val, ok, err := unstructured.NestedString(cr.UnstructuredContent(), keySlice...); ok {
+		if val, ok, err := unstructured.NestedString(retResource.UnstructuredContent(), keySlice...); ok {
 			if err != nil {
 				return err
 			}
@@ -425,7 +425,6 @@ func VerifyInstanceGroups(dynamicClient dynamic.Interface) error {
 	}
 
 	for _, ig := range igs.Items {
-		//currentStatus := getInstanceGroupStatus(&ig)
 		var currentStatus string
 		if val, ok, _ := unstructured.NestedString(ig.UnstructuredContent(), "status", "currentState"); ok {
 			currentStatus = val

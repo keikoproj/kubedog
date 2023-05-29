@@ -15,7 +15,6 @@ limitations under the License.
 package unstructured
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/onsi/gomega"
@@ -28,11 +27,11 @@ import (
 
 func TestGetResources(t *testing.T) {
 	var (
-		dynScheme           = runtime.NewScheme()
-		fakeDynamicClient   = fakeDynamic.NewSimpleDynamicClient(dynScheme)
-		fakeDiscovery       = fakeDiscovery.FakeDiscovery{}
-		g                   = gomega.NewWithT(t)
-		testTemplatePath, _ = filepath.Abs("../../../test/templates")
+		dynScheme         = runtime.NewScheme()
+		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(dynScheme)
+		fakeDiscovery     = fakeDiscovery.FakeDiscovery{}
+		g                 = gomega.NewWithT(t)
+		testTemplatePath  = "./test-fixtures"
 	)
 
 	expectedResources := []*metav1.APIResourceList{
@@ -59,7 +58,7 @@ func TestGetResources(t *testing.T) {
 		expectedResources []*metav1.APIResourceList
 	}{
 		{ // PositiveTest
-			testResourcePath: testTemplatePath + "/test-multi-resourcefile.yaml",
+			testResourcePath: testTemplatePath + "/multi-resource.yaml",
 			numResources:     2,
 			expectError:      false,
 			expectedResources: []*metav1.APIResourceList{
@@ -95,5 +94,18 @@ func TestGetResources(t *testing.T) {
 				g.Expect(resourceToApiResourceList(resource.Resource)).To(gomega.Equal(test.expectedResources[i]))
 			}
 		}
+	}
+}
+
+func newTestAPIResourceList(apiVersion, name, kind string) *metav1.APIResourceList {
+	return &metav1.APIResourceList{
+		GroupVersion: apiVersion,
+		APIResources: []metav1.APIResource{
+			{
+				Name:       name,
+				Kind:       kind,
+				Namespaced: true,
+			},
+		},
 	}
 }
