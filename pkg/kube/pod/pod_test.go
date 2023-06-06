@@ -125,11 +125,6 @@ func Test_PodsInNamespaceWithSelectorShouldHaveLabels(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// kc := &ClientSet{
-			// 	KubeInterface:      tt.fields.KubeInterface,
-			// 	DynamicInterface:   tt.fields.DynamicInterface,
-			// 	DiscoveryInterface: tt.fields.DiscoveryInterface,
-			// }
 			if err := PodsInNamespaceWithSelectorShouldHaveLabels(tt.fields.KubeInterface, tt.args.namespace, tt.args.selector, tt.args.labels); (err != nil) != tt.wantErr {
 				t.Errorf("ThePodsInNamespaceWithSelectorShouldHaveLabels() error = %v, wantErr %v", err, tt.wantErr)
 			}

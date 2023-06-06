@@ -38,9 +38,6 @@ func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 		testReadyLabel    = map[string]string{"testing-ShouldBeReady": "some-value"}
 		testFoundLabel    = map[string]string{"testing-ShouldBeFound": "some-value"}
 		fakeClient        *fake.Clientset
-		// dynScheme         = runtime.NewScheme()
-		// fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(dynScheme)
-		// fakeDiscovery     = &fakeDiscovery.FakeDiscovery{}
 	)
 
 	fakeClient = fake.NewSimpleClientset(&v1.Node{
@@ -63,13 +60,6 @@ func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 		},
 	})
 
-	// kc := ClientSet{
-	// 	KubeInterface:      fakeClient,
-	// 	DiscoveryInterface: fakeDiscovery,
-	// 	DynamicInterface:   fakeDynamicClient,
-	// 	FilesPath:          "../../test/templates",
-	// }
-
 	err := NodesWithSelectorShouldBe(fakeClient, common.WaiterConfig{}, 1, testReadySelector, common.StateReady)
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 	err = NodesWithSelectorShouldBe(fakeClient, common.WaiterConfig{}, 1, testFoundSelector, common.StateFound)
@@ -82,8 +72,6 @@ func TestResourceInNamespace(t *testing.T) {
 		g          = gomega.NewWithT(t)
 		fakeClient = fake.NewSimpleClientset()
 		namespace  = "test_ns"
-		// fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(runtime.NewScheme())
-		// fakeDiscovery     = &fakeDiscovery.FakeDiscovery{}
 	)
 
 	tests := []struct {
@@ -119,12 +107,6 @@ func TestResourceInNamespace(t *testing.T) {
 			name:     "mock_service_account",
 		},
 	}
-
-	// kc := ClientSet{
-	// 	KubeInterface:      fakeKubeClient,
-	// 	DynamicInterface:   fakeDynamicClient,
-	// 	DiscoveryInterface: fakeDiscovery,
-	// }
 
 	_, _ = fakeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -177,10 +159,6 @@ func TestScaleDeployment(t *testing.T) {
 		replicaCount = int32(1)
 	)
 
-	// kc := ClientSet{
-	// 	KubeInterface: fakeKubeClient,
-	// }
-
 	_, _ = fakeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
@@ -208,10 +186,6 @@ func TestClusterRoleAndBindingIsFound(t *testing.T) {
 		g          = gomega.NewWithT(t)
 		fakeClient = fake.NewSimpleClientset()
 	)
-
-	// kc := ClientSet{
-	// 	KubeInterface: fakeKubeClient,
-	// }
 
 	tests := []struct {
 		resource string
