@@ -79,11 +79,11 @@ func RunCommand(command string, args, successOrFail string) error {
 	log.Infof("Running command: %s", cmdStr)
 	err := toRun.Run()
 	if successOrFail == "succeeds" && err != nil {
-		return fmt.Errorf("command %s did not succeed: %s", cmdStr, stderr.String())
+		return fmt.Errorf("command '%s' did not succeed. error: '%v'. stderr: '%s'", cmdStr, err, stderr.String())
 	}
 
 	if successOrFail == "fails" && err == nil {
-		return fmt.Errorf("command %s succeeded but was expected to fail: %s", cmdStr, stdout.String())
+		return fmt.Errorf("command '%s' succeeded but expected to fail: '%s'", cmdStr, stdout.String())
 	}
 
 	return nil
