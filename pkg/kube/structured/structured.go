@@ -204,7 +204,7 @@ func DeploymentIsRunning(kubeClientset kubernetes.Interface, name, namespace str
 	}
 
 	if deploy.Status.UpdatedReplicas != deploy.Status.Replicas {
-		return fmt.Errorf("deploymemnt %s/%s is not updated. status: %s", namespace, name, deploy.Status.String())
+		return fmt.Errorf("deployment %s/%s is not updated. status: %s", namespace, name, deploy.Status.String())
 	}
 
 	return nil
