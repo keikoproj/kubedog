@@ -33,8 +33,8 @@ const (
 	actionBegin              = "begin"
 	actionEnd                = "end"
 	actionTitle              = "title"
-	tittleDelimiter          = "-"
-	tittleRankStep           = "#"
+	titleDelimiter           = "-"
+	titleRankStep            = "#"
 	processedTitleBeginning  = "## "
 	processedStepBeginning   = "- "
 	stepIndicator            = "kdt.scenario.Step"
@@ -118,8 +118,8 @@ func processSyntax(rawSyntax []string) []string {
 	for _, rawLine := range rawSyntax {
 		switch {
 		case strings.Contains(rawLine, actionIndicator):
-			title, tittleRank := mustGetTitle(rawLine)
-			titleBeginning := getTittleProcessedRank(tittleRank)
+			title, titleRank := mustGetTitle(rawLine)
+			titleBeginning := getTitleProcessedRank(titleRank)
 			processedTitle := newLine + titleBeginning + title + newLine
 			log.Debugf("processed '%s' as: '%s'", rawLine, processedTitle)
 			processedSyntax = append(processedSyntax, processedTitle)
@@ -154,29 +154,29 @@ func processStep(rawStep string) string {
 
 func mustGetTitle(line string) (string, int) {
 	action, afterAction := getAction(line)
-	actionSplit := strings.Split(action, tittleDelimiter)
+	actionSplit := strings.Split(action, titleDelimiter)
 	if len(actionSplit) != 2 {
-		log.Fatalf("expected '%s' to meet format '%s%s<digit>'", action, actionTitle, tittleDelimiter)
+		log.Fatalf("expected '%s' to meet format '%s%s<digit>'", action, actionTitle, titleDelimiter)
 	}
-	action, tittleRankString := actionSplit[0], actionSplit[1]
+	action, titleRankString := actionSplit[0], actionSplit[1]
 	if action != actionTitle {
 		log.Fatalf("expected '%s' to contain '%s%s%s'", line, actionIndicator, actionDelimiter, actionTitle)
 	}
-	tittleRank, err := strconv.Atoi(tittleRankString)
+	titleRank, err := strconv.Atoi(titleRankString)
 	if err != nil {
-		log.Fatalf("failed converting '%s' to integer: '%v'", tittleRankString, err)
+		log.Fatalf("failed converting '%s' to integer: '%v'", titleRankString, err)
 	}
 	if afterAction == "" {
 		log.Fatalf("expected '%s' to contain '%s%s%s%s<title>'", line, actionIndicator, actionDelimiter, actionTitle, actionDelimiter)
 	}
-	return afterAction, tittleRank
+	return afterAction, titleRank
 }
 
-func getTittleProcessedRank(rank int) string {
+func getTitleProcessedRank(rank int) string {
 	if rank < 0 || rank > 9 {
 		log.Fatalf("expected '%d' to be a digit between 1 and 9)", rank)
 	}
-	totalRankString := strings.Repeat(tittleRankStep, rank)
+	totalRankString := strings.Repeat(titleRankStep, rank)
 	return totalRankString + processedTitleBeginning
 }
 
