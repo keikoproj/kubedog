@@ -124,7 +124,7 @@ func GetIngress(kubeClientset kubernetes.Interface, name, namespace string) (*ne
 		return kubeClientset.NetworkingV1().Ingresses(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	})
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get clusterrolebinding '%v'", name)
+		return nil, errors.Wrapf(err, "failed to get ingress '%v'", name)
 	}
 	return ingress.(*networkingv1.Ingress), nil
 }
