@@ -162,6 +162,7 @@ func GetIngressEndpoint(kubeClientset kubernetes.Interface, w common.WaiterConfi
 	}
 }
 
+// TODO: This is hardcoded based on prometheus names in iks clusters. Might be worth making it more generic in the future
 func validatePrometheusPVLabels(kubeClientset kubernetes.Interface, volumeClaimTemplatesName string) error {
 	// Get prometheus PersistentVolume list
 	pv, err := ListPersistentVolumes(kubeClientset)
