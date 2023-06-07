@@ -377,7 +377,7 @@ func TestPositiveUpdateResourceWithField(t *testing.T) {
 	g.Expect(expectedLabelValue).To(gomega.Equal(testUpdateValue))
 }
 
-func TestResourceInNamespace(t *testing.T) {
+func TestPositiveResourceInNamespace(t *testing.T) {
 	var (
 		err               error
 		g                 = gomega.NewWithT(t)
@@ -462,7 +462,72 @@ func TestResourceInNamespace(t *testing.T) {
 					ObjectMeta: meta,
 				}, metav1.CreateOptions{})
 			}
-			err = kc.ResourceInNamespace(tt.resource, tt.name, namespace)
+			err = kc.ResourceInNamespace(tt.resource, tt.name, namespace, "is")
+			g.Expect(err).ShouldNot(gomega.HaveOccurred())
+		})
+	}
+}
+
+func TestNegativeResourceInNamespace(t *testing.T) {
+	var (
+		err               error
+		g                 = gomega.NewWithT(t)
+		fakeKubeClient    = fake.NewSimpleClientset()
+		namespace         = "test_ns"
+		fakeDynamicClient = fakeDynamic.NewSimpleDynamicClient(runtime.NewScheme())
+		fakeDiscovery     = &fakeDiscovery.FakeDiscovery{}
+	)
+
+	tests := []struct {
+		resource string
+		name     string
+	}{
+		{
+			resource: "deployment",
+			name:     "test_deploy",
+		},
+		{
+			resource: "service",
+			name:     "test_service",
+		},
+		{
+			resource: "hpa",
+			name:     "test_hpa",
+		},
+		{
+			resource: "horizontalpodautoscaler",
+			name:     "test_hpa",
+		},
+		{
+			resource: "pdb",
+			name:     "test_pdb",
+		},
+		{
+			resource: "poddisruptionbudget",
+			name:     "test_pdb",
+		},
+		{
+			resource: "serviceaccount",
+			name:     "mock_service_account",
+		},
+	}
+
+	kc := Client{
+		KubeInterface:      fakeKubeClient,
+		DynamicInterface:   fakeDynamicClient,
+		DiscoveryInterface: fakeDiscovery,
+	}
+
+	_, _ = kc.KubeInterface.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+		Status: v1.NamespaceStatus{Phase: v1.NamespaceActive},
+	}, metav1.CreateOptions{})
+
+	for _, tt := range tests {
+		t.Run(tt.resource, func(t *testing.T) {
+			err = kc.ResourceInNamespace(tt.resource, tt.name, namespace, "is not")
 			g.Expect(err).ShouldNot(gomega.HaveOccurred())
 		})
 	}

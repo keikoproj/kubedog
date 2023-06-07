@@ -684,37 +684,61 @@ func (kc *Client) DeleteResourcesAtPath(resourcesPath string) error {
 }
 
 /*
-ResourceInNamespace check if (deployment|service) in the related namespace
+ResourceInNamespace check if (deployment|service|horizontalpodautoscaler|poddisruptionbudget|serviceaccount) in the related namespace
 */
-func (kc *Client) ResourceInNamespace(resource, name, ns string) error {
+func (kc *Client) ResourceInNamespace(resource, name, ns string, isOrIsNot string) error {
 	var err error
 
 	if err := kc.Validate(); err != nil {
 		return err
 	}
 
-	switch resource {
-	case "deployment":
-		_, err = kc.KubeInterface.AppsV1().Deployments(ns).Get(context.Background(), name, metav1.GetOptions{})
+	if isOrIsNot == "is" {
+		switch resource {
+		case "deployment":
+			_, err = kc.KubeInterface.AppsV1().Deployments(ns).Get(context.Background(), name, metav1.GetOptions{})
 
-	case "service":
-		_, err = kc.KubeInterface.CoreV1().Services(ns).Get(context.Background(), name, metav1.GetOptions{})
+		case "service":
+			_, err = kc.KubeInterface.CoreV1().Services(ns).Get(context.Background(), name, metav1.GetOptions{})
 
-	case "hpa", "horizontalpodautoscaler":
-		_, err = kc.KubeInterface.AutoscalingV2beta2().HorizontalPodAutoscalers(ns).Get(context.Background(), name, metav1.GetOptions{})
+		case "hpa", "horizontalpodautoscaler":
+			_, err = kc.KubeInterface.AutoscalingV2beta2().HorizontalPodAutoscalers(ns).Get(context.Background(), name, metav1.GetOptions{})
 
-	case "pdb", "poddisruptionbudget":
-		_, err = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(ns).Get(context.Background(), name, metav1.GetOptions{})
-	case "sa", "serviceaccount":
-		_, err = kc.KubeInterface.CoreV1().ServiceAccounts(ns).Get(context.Background(), name, metav1.GetOptions{})
+		case "pdb", "poddisruptionbudget":
+			_, err = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(ns).Get(context.Background(), name, metav1.GetOptions{})
+		case "sa", "serviceaccount":
+			_, err = kc.KubeInterface.CoreV1().ServiceAccounts(ns).Get(context.Background(), name, metav1.GetOptions{})
 
-	default:
-		return errors.Errorf("Invalid resource type")
+		default:
+			return errors.Errorf("Invalid resource type")
+		}
+		if err != nil {
+			return err
+		}
+	} else { // check if resource is not in ns
+		switch resource {
+		case "deployment":
+			_, err = kc.KubeInterface.AppsV1().Deployments(ns).Get(context.Background(), name, metav1.GetOptions{})
+
+		case "service":
+			_, err = kc.KubeInterface.CoreV1().Services(ns).Get(context.Background(), name, metav1.GetOptions{})
+
+		case "hpa", "horizontalpodautoscaler":
+			_, err = kc.KubeInterface.AutoscalingV2beta2().HorizontalPodAutoscalers(ns).Get(context.Background(), name, metav1.GetOptions{})
+
+		case "pdb", "poddisruptionbudget":
+			_, err = kc.KubeInterface.PolicyV1beta1().PodDisruptionBudgets(ns).Get(context.Background(), name, metav1.GetOptions{})
+		case "sa", "serviceaccount":
+			_, err = kc.KubeInterface.CoreV1().ServiceAccounts(ns).Get(context.Background(), name, metav1.GetOptions{})
+
+		default:
+			return errors.Errorf("Invalid resource type")
+		}
+		if err == nil {
+			return errors.Errorf("Resource %s of type %s found in ns '%s' when it should not be", name, resource, ns)
+		}
 	}
 
-	if err != nil {
-		return err
-	}
 	return nil
 }
 

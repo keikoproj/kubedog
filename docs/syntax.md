@@ -22,7 +22,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [the] resource <any-characters-except-(")> condition <any-characters-except-(")> should be (true|false)` kdt.KubeContext.ResourceConditionShouldBe
 - `<GK> [I] update [the] resource <any-characters-except-(")> with <any-characters-except-(")> set to <any-characters-except-(")>` kdt.KubeContext.UpdateResourceWithField
 - `<GK> <digits> node[s] with selector <non-whitespace-characters> should be (found|ready)` kdt.KubeContext.NodesWithSelectorShouldBe
-- `<GK> [the] (deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) <any-characters-except-(")> is in namespace <any-characters-except-(")>` kdt.KubeContext.ResourceInNamespace
+- `<GK> [the] (deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) <any-characters-except-(")> (is|is not) in namespace <any-characters-except-(")>` kdt.KubeContext.ResourceInNamespace
 - `<GK> [I] scale [the] deployment <any-characters-except-(")> in namespace <any-characters-except-(")> to <digits>` kdt.KubeContext.ScaleDeployment
 - `<GK> [I] verify InstanceGroups [are] in "ready" state` kdt.KubeContext.VerifyInstanceGroups
 - `<GK> [I] validate Prometheus Statefulset <any-characters-except-(")> in namespace <any-characters-except-(")> has volumeClaimTemplates name <any-characters-except-(")>` kdt.KubeContext.ValidatePrometheusVolumeClaimTemplatesName
