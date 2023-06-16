@@ -4,6 +4,7 @@
 *.test
 examples/templating/generic/files/generated_*
 pkg/generic/test-fixtures/generated_*
+pkg/kube/unstructured/test-fixtures/generated_*
 kubedog
 coverage.txt
 

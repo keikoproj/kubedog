@@ -1,6 +1,3 @@
-Generated TestGetResource
-Generated TestGetResources
-Generated TestListInstanceGroups
 /*
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,6 +18,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/keikoproj/kubedog/internal/util"
+	"github.com/keikoproj/kubedog/pkg/generic"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -32,13 +31,49 @@ func TestGetResource(t *testing.T) {
 		TemplateArguments interface{}
 		resourceFilePath  string
 	}
+	resourcePath := getFilePath("resource.yaml")
+	resource := getResourceFromYaml(t, resourcePath)
+	templatedPath := getFilePath("templated.yaml")
+	templateArgs := []generic.TemplateArgument{
+		{
+			Key:     "Kind",
+			Default: "myKind",
+		},
+		{
+			Key:     "ApiVersion",
+			Default: "myApiVersion",
+		},
+		{
+			Key:     "Name",
+			Default: "myName",
+		},
+	}
+	templateMap := templateArgsToMap(t, templateArgs...)
+	generatedResource := getResourceFromYaml(t, generateFileFromTemplate(t, templatedPath, templateMap))
 	tests := []struct {
 		name    string
 		args    args
 		want    unstructuredResource
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Positive Test",
+			args: args{
+				dc:                newFakeDiscoveryClient(&newFakeDynamicClientWithResourceList(resource).Fake),
+				TemplateArguments: nil,
+				resourceFilePath:  resourcePath,
+			},
+			want: resource,
+		},
+		{
+			name: "Positive Test: templated",
+			args: args{
+				dc:                newFakeDiscoveryClient(&newFakeDynamicClientWithResourceList(generatedResource).Fake),
+				TemplateArguments: templateMap,
+				resourceFilePath:  templatedPath,
+			},
+			want: generatedResource,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -48,7 +83,8 @@ func TestGetResource(t *testing.T) {
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetResource() = %v, want %v", got, tt.want)
+				t.Errorf("GetResource() = %s, want %s", util.StructToPrettyString(got), util.StructToPrettyString(tt.want))
+
 			}
 		})
 	}
@@ -106,4 +142,20 @@ func TestListInstanceGroups(t *testing.T) {
 			}
 		})
 	}
+}
+
+func templateArgsToMap(t *testing.T, args ...generic.TemplateArgument) map[string]string {
+	argsMap, err := generic.TemplateArgumentsToMap(args...)
+	if err != nil {
+		t.Error(err)
+	}
+	return argsMap
+}
+
+func generateFileFromTemplate(t *testing.T, templatedFilePath string, templateArgs interface{}) string {
+	generatedPath, err := generic.GenerateFileFromTemplate(templatedFilePath, templateArgs)
+	if err != nil {
+		t.Error(err)
+	}
+	return generatedPath
 }

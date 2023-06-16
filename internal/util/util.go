@@ -15,6 +15,7 @@ limitations under the License.
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -116,4 +117,9 @@ func RetryOnAnyError(backoff *wait.Backoff, fn FuncToRetry) error {
 		return nil, fn()
 	})
 	return err
+}
+
+func StructToPrettyString(st interface{}) string {
+	s, _ := json.MarshalIndent(st, "", "\t")
+	return string(s)
 }

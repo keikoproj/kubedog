@@ -779,6 +779,10 @@ func getResourceFromBytes(t *testing.T, rawResource []byte) unstructuredResource
 	if err != nil {
 		t.Error(err)
 	}
+	scope := meta.RESTScopeNamespace
+	if resource.GetNamespace() == "" {
+		scope = meta.RESTScopeRoot
+	}
 	gvr := &meta.RESTMapping{
 		Resource: schema.GroupVersionResource{
 			Group:   gvk.Group,
@@ -787,6 +791,7 @@ func getResourceFromBytes(t *testing.T, rawResource []byte) unstructuredResource
 			Resource: resource.GetName(),
 		},
 		GroupVersionKind: *gvk,
+		Scope:            scope,
 	}
 	return unstructuredResource{GVR: gvr, Resource: resource}
 }

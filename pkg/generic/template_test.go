@@ -251,17 +251,17 @@ metadata:
 			expectError       bool
 		}{
 			{ // PositiveTest
-				templatedFilePath: testTemplatesPath + "/manifest.yaml",
+				templatedFilePath: testTemplatesPath + "/templated.yaml",
 				args: templateArgs{
 					Kind:       "myKind",
 					ApiVersion: "myApiVersion",
 					Name:       "myName",
 				},
-				expectedFilePath: testTemplatesPath + "/generated_manifest.yaml",
+				expectedFilePath: testTemplatesPath + "/generated_templated.yaml",
 				expectError:      false,
 			},
 			{ // NegativeTest: template.ParseFiles fails
-				templatedFilePath: testTemplatesPath + "/wrongName_manifest.yaml",
+				templatedFilePath: testTemplatesPath + "/wrong-file-name.yaml",
 				args: templateArgs{
 					Kind:       "myKind",
 					ApiVersion: "myApiVersion",
@@ -271,7 +271,7 @@ metadata:
 				expectError:      true,
 			},
 			{ // NegativeTest: template.Execute fails
-				templatedFilePath: testTemplatesPath + "/manifest-bad-kind.yaml",
+				templatedFilePath: testTemplatesPath + "/templated-bad-kind.yaml",
 				args: templateArgs{
 					Kind:       "myKind",
 					ApiVersion: "myApiVersion",

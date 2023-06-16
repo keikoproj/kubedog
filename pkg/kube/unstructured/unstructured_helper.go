@@ -136,10 +136,8 @@ func getGVR(gvk *schema.GroupVersionKind, dc discovery.DiscoveryInterface) (*met
 	CachedDiscoveryInterface := memory.NewMemCacheClient(dc)
 	DeferredDiscoveryRESTMapper := restmapper.NewDeferredDiscoveryRESTMapper(CachedDiscoveryInterface)
 	RESTMapping, err := DeferredDiscoveryRESTMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-
 	if err != nil {
 		return nil, err
 	}
-
 	return RESTMapping, nil
 }
