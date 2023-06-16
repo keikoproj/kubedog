@@ -12,7 +12,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package aws provides steps implementations related to AWS.
 package aws
 
 import (
@@ -34,31 +33,49 @@ import (
 	"github.com/aws/aws-sdk-go/service/route53/route53iface"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
-	util "github.com/keikoproj/kubedog/internal/utilities"
-	"github.com/keikoproj/kubedog/pkg/common"
+	kIam "github.com/keikoproj/kubedog/pkg/aws/iam"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
-type Client struct {
+type ClientSet struct {
 	ASClient         autoscalingiface.AutoScalingAPI
 	EKSClient        eksiface.EKSAPI
 	Route53Client    route53iface.Route53API
 	IAMClient        iamiface.IAMAPI
 	STSClient        stsiface.STSAPI
-	AsgName          string
-	LaunchConfigName string
+	asgName          string
+	launchConfigName string
 }
 
-var (
-	ClusterAWSRegion = common.GetEnv("AWS_REGION", "us-west-2")
-	BDDClusterName   = common.GetEnv("CLUSTER_NAME", common.GetUsernamePrefix()+"kubedog-bdd")
-)
+func (c *ClientSet) DiscoverClients() error {
+	var (
+		sess     *session.Session
+		identity *sts.GetCallerIdentityOutput
+		err      error
+	)
 
-/*
-AnASGNamed updates the current ASG to be used by the other ASG related steps.
-*/
-func (c *Client) AnASGNamed(name string) error {
+	if sess, err = session.NewSession(); err != nil {
+		return err
+	}
+
+	svc := sts.New(sess)
+	if identity, err = svc.GetCallerIdentity(&sts.GetCallerIdentityInput{}); err != nil {
+		return err
+	}
+	arn := aws.StringValue(identity.Arn)
+	log.Infof("Credentials: %v", arn)
+
+	c.ASClient = autoscaling.New(sess)
+	c.EKSClient = eks.New(sess)
+	c.Route53Client = route53.New(sess)
+	c.IAMClient = iam.New(sess)
+	c.STSClient = sts.New(sess)
+
+	return nil
+}
+
+func (c *ClientSet) AnASGNamed(name string) error {
 	if c.ASClient == nil {
 		return errors.Errorf("Unable to get ASG %v: The AS client was not found, use the method GetAWSCredsAndClients", name)
 	}
@@ -73,39 +90,33 @@ func (c *Client) AnASGNamed(name string) error {
 	}
 
 	arn := aws.StringValue(out.AutoScalingGroups[0].AutoScalingGroupARN)
-	log.Infof("[KUBEDOG] Auto Scaling group: %v", arn)
+	log.Infof("Auto Scaling group: %v", arn)
 
-	c.LaunchConfigName = aws.StringValue(out.AutoScalingGroups[0].LaunchConfigurationName)
-	c.AsgName = name
+	c.launchConfigName = aws.StringValue(out.AutoScalingGroups[0].LaunchConfigurationName)
+	c.asgName = name
 
 	return nil
 }
 
-/*
-ScaleCurrentASG scales the max and min size of the current ASG.
-*/
-func (c *Client) ScaleCurrentASG(desiredMin, desiredMax int64) error {
+func (c *ClientSet) ScaleCurrentASG(desiredMin, desiredMax int64) error {
 
 	if c.ASClient == nil {
 		return errors.Errorf("Unable to scale currrent ASG: The AS client was not found, use the method GetAWSCredsAndClients")
 	}
 
 	_, err := c.ASClient.UpdateAutoScalingGroup(&autoscaling.UpdateAutoScalingGroupInput{
-		AutoScalingGroupName: aws.String(c.AsgName),
+		AutoScalingGroupName: aws.String(c.asgName),
 		MinSize:              aws.Int64(desiredMin),
 		MaxSize:              aws.Int64(desiredMax),
 	})
 	if err != nil {
-		return errors.Errorf("Failed scaling ASG %v: %v", c.AsgName, err)
+		return errors.Errorf("Failed scaling ASG %v: %v", c.asgName, err)
 	}
 
 	return nil
 }
 
-/*
-UpdateFieldOfCurrentASG updates the current ASG. Fields/parameters supported: LaunchConfigurationName, MinSize, DesiredCapacity and MaxSize.
-*/
-func (c *Client) UpdateFieldOfCurrentASG(field, value string) error {
+func (c *ClientSet) UpdateFieldOfCurrentASG(field, value string) error {
 	var (
 		err        error
 		valueInt64 int64
@@ -117,35 +128,35 @@ func (c *Client) UpdateFieldOfCurrentASG(field, value string) error {
 
 	if field == "LaunchConfigurationName" {
 		_, err = c.ASClient.UpdateAutoScalingGroup(&autoscaling.UpdateAutoScalingGroupInput{
-			AutoScalingGroupName:    aws.String(c.AsgName),
+			AutoScalingGroupName:    aws.String(c.asgName),
 			LaunchConfigurationName: aws.String(value),
 		})
 
 		if err != nil {
-			return errors.Errorf("Failed updating field %v to %v of ASG %v: %v", field, value, c.AsgName, err)
+			return errors.Errorf("Failed updating field %v to %v of ASG %v: %v", field, value, c.asgName, err)
 		}
 		return nil
 	}
 
 	valueInt64, err = strconv.ParseInt(value, 10, 64)
 	if err != nil {
-		return errors.Errorf("Failed to convert %v to int64 while trying to update field %v of ASG %v", value, field, c.AsgName)
+		return errors.Errorf("Failed to convert %v to int64 while trying to update field %v of ASG %v", value, field, c.asgName)
 	}
 
 	switch field {
 	case "MinSize":
 		_, err = c.ASClient.UpdateAutoScalingGroup(&autoscaling.UpdateAutoScalingGroupInput{
-			AutoScalingGroupName: aws.String(c.AsgName),
+			AutoScalingGroupName: aws.String(c.asgName),
 			MinSize:              aws.Int64(valueInt64),
 		})
 	case "DesiredCapacity":
 		_, err = c.ASClient.UpdateAutoScalingGroup(&autoscaling.UpdateAutoScalingGroupInput{
-			AutoScalingGroupName: aws.String(c.AsgName),
+			AutoScalingGroupName: aws.String(c.asgName),
 			DesiredCapacity:      aws.Int64(valueInt64),
 		})
 	case "MaxSize":
 		_, err = c.ASClient.UpdateAutoScalingGroup(&autoscaling.UpdateAutoScalingGroupInput{
-			AutoScalingGroupName: aws.String(c.AsgName),
+			AutoScalingGroupName: aws.String(c.asgName),
 			MaxSize:              aws.Int64(valueInt64),
 		})
 	default:
@@ -153,46 +164,14 @@ func (c *Client) UpdateFieldOfCurrentASG(field, value string) error {
 	}
 
 	if err != nil {
-		return errors.Errorf("Failed updating field %v to %v of ASG %v: %v", field, value, c.AsgName, err)
+		return errors.Errorf("Failed updating field %v to %v of ASG %v: %v", field, value, c.asgName, err)
 	}
 	return nil
 }
 
-/*
-GetAWSCredsAndClients checks if there is a valid credential available and uses it to update the AS Client.
-*/
-func (c *Client) GetAWSCredsAndClients() error {
-	var (
-		sess     *session.Session
-		identity *sts.GetCallerIdentityOutput
-		err      error
-	)
-
-	if sess, err = session.NewSession(); err != nil {
-		return err
-	}
-
-	svc := sts.New(sess)
-
-	if identity, err = svc.GetCallerIdentity(&sts.GetCallerIdentityInput{}); err != nil {
-		return err
-	}
-
-	arn := aws.StringValue(identity.Arn)
-	log.Infof("[KUBEDOG] Credentials: %v", arn)
-
-	c.ASClient = autoscaling.New(sess)
-	c.EKSClient = eks.New(sess)
-	c.Route53Client = route53.New(sess)
-	c.IAMClient = iam.New(sess)
-	c.STSClient = sts.New(sess)
-
-	return nil
-}
-
-func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
-	accountId := GetAccountNumber(c.STSClient)
-	clusterName, err := util.GetClusterName()
+func (c *ClientSet) IamRoleTrust(action, entityName, roleName string) error {
+	accountId := getAccountNumber(c.STSClient)
+	clusterName, err := getClusterName()
 	if err != nil {
 		return err
 	}
@@ -215,7 +194,7 @@ func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
 		Statement: make([]StatementEntry, 0),
 	}
 
-	role, err := GetIamRole(roleName, c.IAMClient)
+	role, err := kIam.GetIamRole(roleName, c.IAMClient)
 	if err != nil {
 		return err
 	}
@@ -265,7 +244,7 @@ func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
 		return err
 	}
 
-	_, err = UpdateIAMAssumeRole(roleName, policyJSON, c.IAMClient)
+	_, err = kIam.UpdateIAMAssumeRole(roleName, policyJSON, c.IAMClient)
 	if err != nil {
 		return err
 	}
@@ -273,12 +252,12 @@ func (c *Client) IamRoleTrust(action, entityName, roleName string) error {
 	return nil
 }
 
-func (c *Client) ClusterSharedIamOperation(operation string) error {
+func (c *ClientSet) ClusterSharedIamOperation(operation string) error {
 	var (
-		accountId = GetAccountNumber(c.STSClient)
+		accountId = getAccountNumber(c.STSClient)
 		iamFmt    = "arn:aws:iam::%s:%s/%s"
 	)
-	clusterName, err := util.GetClusterName()
+	clusterName, err := getClusterName()
 	if err != nil {
 		return err
 	}
@@ -295,24 +274,24 @@ func (c *Client) ClusterSharedIamOperation(operation string) error {
 	clusterSharedPolicy := fmt.Sprintf(iamFmt, accountId, "policy", roleName)
 	switch operation {
 	case "add":
-		role, err := PutIAMRole(roleName, "shared cluster role", roleDocument, c.IAMClient)
+		role, err := kIam.PutIAMRole(roleName, "shared cluster role", roleDocument, c.IAMClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to create shared cluster role")
 		}
 		log.Infof("BDD >> created shared iam role: %s", aws.StringValue(role.Arn))
 
-		policy, err := PutManagedPolicy(roleName, clusterSharedPolicy, "shared cluster policy", policyDocument, c.IAMClient)
+		policy, err := kIam.PutManagedPolicy(roleName, clusterSharedPolicy, "shared cluster policy", policyDocument, c.IAMClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to create shared cluster managed policy")
 		}
 		log.Infof("BDD >> created shared iam policy: %s", aws.StringValue(policy.Arn))
 	case "remove":
-		err := DeleteManagedPolicy(clusterSharedPolicy, c.IAMClient)
+		err := kIam.DeleteManagedPolicy(clusterSharedPolicy, c.IAMClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete shared cluster role")
 		}
 
-		err = DeleteIAMRole(roleName, c.IAMClient)
+		err = kIam.DeleteIAMRole(roleName, c.IAMClient)
 		if err != nil {
 			return errors.Wrap(err, "failed to delete shared cluster managed policy")
 		}
@@ -320,28 +299,13 @@ func (c *Client) ClusterSharedIamOperation(operation string) error {
 	return nil
 }
 
-func (c *Client) GetEksVpc() (string, error) {
-	clusterName, err := util.GetClusterName()
-	if err != nil {
-		return "", err
-	}
-	input := &eks.DescribeClusterInput{
-		Name: aws.String(clusterName),
-	}
-	result, err := c.EKSClient.DescribeCluster(input)
-	if err != nil {
-		return "", err
-	}
-	return aws.StringValue(result.Cluster.ResourcesVpcConfig.VpcId), nil
-}
-
-func (c *Client) DnsNameShouldOrNotInHostedZoneID(dnsName, shouldOrNot, hostedZoneID string) error {
+func (c *ClientSet) DnsNameShouldOrNotInHostedZoneID(dnsName, shouldOrNot, hostedZoneID string) error {
 	switch shouldOrNot {
 	case "should":
-		return c.DnsNameInHostedZoneID(dnsName, hostedZoneID)
+		return c.dnsNameInHostedZoneID(dnsName, hostedZoneID)
 
 	case "should not":
-		if err := c.DnsNameInHostedZoneID(dnsName, hostedZoneID); err == nil {
+		if err := c.dnsNameInHostedZoneID(dnsName, hostedZoneID); err == nil {
 			return errors.Errorf("unexpected DNS %s exists in hostedZoneID %s", hostedZoneID, dnsName)
 		}
 		log.Infof("records for hostedZoneID %s with dnsName %s doesn't exists", hostedZoneID, dnsName)
