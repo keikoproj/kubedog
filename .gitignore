@@ -3,6 +3,7 @@
 .DS_Store
 *.test
 test/templates/generated_*
+examples/templating/generic/files/generated_*
 kubedog
 coverage.txt
 
