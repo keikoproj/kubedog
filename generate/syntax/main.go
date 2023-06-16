@@ -1,10 +1,24 @@
+/*
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -19,9 +33,11 @@ const (
 	actionBegin              = "begin"
 	actionEnd                = "end"
 	actionTitle              = "title"
-	titleBeginning           = "## "
+	titleDelimiter           = "-"
+	titleRankStep            = "#"
+	processedTitleBeginning  = "## "
 	processedStepBeginning   = "- "
-	stepIndicator            = "kdt.scenarioContext.Step"
+	stepIndicator            = "kdt.scenario.Step"
 	stepDelimiter            = "`"
 	stepPrefix               = "^"
 	stepSuffix               = "$"
@@ -47,12 +63,12 @@ var replacers = []struct {
 }
 
 func main() {
-	sourceFil, err := os.Open(sourceFilePath)
+	sourceFile, err := os.Open(sourceFilePath)
 	if err != nil {
 		log.Error(err)
 	}
-	defer sourceFil.Close()
-	fileScanner := bufio.NewScanner(sourceFil)
+	defer sourceFile.Close()
+	fileScanner := bufio.NewScanner(sourceFile)
 	fileScanner.Split(bufio.ScanLines)
 	rawSyntax := []string{}
 	for fileScanner.Scan() {
@@ -73,10 +89,10 @@ func main() {
 	log.Infof("found raw syntax to process as:")
 	printStringSlice(rawSyntax)
 	processedSyntax := processSyntax(rawSyntax)
-	generateSyntax(processedSyntax)
+	createSyntaxDocumentation(processedSyntax)
 }
 
-func generateSyntax(processedSyntax []string) {
+func createSyntaxDocumentation(processedSyntax []string) {
 	if err := os.Remove(destinationFilePath); err != nil {
 		log.Fatal(err)
 	}
@@ -102,7 +118,8 @@ func processSyntax(rawSyntax []string) []string {
 	for _, rawLine := range rawSyntax {
 		switch {
 		case strings.Contains(rawLine, actionIndicator):
-			title := mustGetTitle(rawLine)
+			title, titleRank := mustGetTitle(rawLine)
+			titleBeginning := getTitleProcessedRank(titleRank)
 			processedTitle := newLine + titleBeginning + title + newLine
 			log.Debugf("processed '%s' as: '%s'", rawLine, processedTitle)
 			processedSyntax = append(processedSyntax, processedTitle)
@@ -135,15 +152,32 @@ func processStep(rawStep string) string {
 	return markdownCodeDelimiter + gherkinKeyword + " " + processedStep + markdownCodeDelimiter + method
 }
 
-func mustGetTitle(line string) string {
+func mustGetTitle(line string) (string, int) {
 	action, afterAction := getAction(line)
+	actionSplit := strings.Split(action, titleDelimiter)
+	if len(actionSplit) != 2 {
+		log.Fatalf("expected '%s' to meet format '%s%s<digit>'", action, actionTitle, titleDelimiter)
+	}
+	action, titleRankString := actionSplit[0], actionSplit[1]
 	if action != actionTitle {
 		log.Fatalf("expected '%s' to contain '%s%s%s'", line, actionIndicator, actionDelimiter, actionTitle)
+	}
+	titleRank, err := strconv.Atoi(titleRankString)
+	if err != nil {
+		log.Fatalf("failed converting '%s' to integer: '%v'", titleRankString, err)
 	}
 	if afterAction == "" {
 		log.Fatalf("expected '%s' to contain '%s%s%s%s<title>'", line, actionIndicator, actionDelimiter, actionTitle, actionDelimiter)
 	}
-	return afterAction
+	return afterAction, titleRank
+}
+
+func getTitleProcessedRank(rank int) string {
+	if rank < 0 || rank > 9 {
+		log.Fatalf("expected '%d' to be a digit between 1 and 9)", rank)
+	}
+	totalRankString := strings.Repeat(titleRankStep, rank)
+	return totalRankString + processedTitleBeginning
 }
 
 func isEndAction(line string) bool {
@@ -188,7 +222,7 @@ func printStringSlice(slice []string) {
 }
 
 func printFile(path string) {
-	file, err := ioutil.ReadFile(path)
+	file, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalf("failed reading '%s': '%v'", path, err)
 	}
