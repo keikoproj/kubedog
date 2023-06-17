@@ -37,7 +37,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.WaiterConfig, expectedNodes int, selector, state string) error {
+func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.WaiterConfig, expectedNodes int, labelSelector, state string) error {
 	var (
 		counter int
 		found   bool
@@ -51,7 +51,7 @@ func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.Wait
 		var (
 			nodesCount int
 			opts       = metav1.ListOptions{
-				LabelSelector: selector,
+				LabelSelector: labelSelector,
 			}
 		)
 
@@ -87,7 +87,7 @@ func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.Wait
 			break
 		}
 
-		log.Infof("found %v nodes, waiting for %v nodes to be %v with selector %v", nodesCount, expectedNodes, state, selector)
+		log.Infof("found %v nodes, waiting for %v nodes to be %v with selector %v", nodesCount, expectedNodes, state, labelSelector)
 
 		counter++
 		time.Sleep(w.GetInterval())
