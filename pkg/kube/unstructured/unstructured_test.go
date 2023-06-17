@@ -769,7 +769,6 @@ func TestGetResource(t *testing.T) {
 	}
 	templateMap := templateArgsToMap(t, templateArgs...)
 	generatedPath := generateFileFromTemplate(t, templatedPath, templateMap)
-	defer os.Remove(generatedPath)
 	generatedResource := getResourceFromYaml(t, generatedPath)
 	analysisTemplatePath := getFilePath("analysis-template.yaml")
 	analysisTemplateResource := getResourceFromYaml(t, analysisTemplatePath)
