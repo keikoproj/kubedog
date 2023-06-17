@@ -243,7 +243,7 @@ metadata:
 
 	var (
 		g                    = gomega.NewWithT(t)
-		testTemplatesPath, _ = filepath.Abs("./test-fixtures")
+		testTemplatesPath, _ = filepath.Abs("./test")
 		tests                = []struct {
 			templatedFilePath string
 			args              templateArgs

@@ -3,8 +3,8 @@
 .DS_Store
 *.test
 examples/templating/generic/files/generated_*
-pkg/generic/test-fixtures/generated_*
-pkg/kube/unstructured/test-fixtures/templates/generated_*
+pkg/generic/test/generated_*
+pkg/kube/unstructured/test/templates/generated_*
 kubedog
 coverage.txt
 
