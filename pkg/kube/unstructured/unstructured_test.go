@@ -930,7 +930,7 @@ func resourceToList(t *testing.T, resource unstructuredResource) *unstructured.U
 }
 
 func getTestDirPath() string {
-	return "./test-fixtures"
+	return "./test"
 }
 
 func getTestFilesDirPath() string {
