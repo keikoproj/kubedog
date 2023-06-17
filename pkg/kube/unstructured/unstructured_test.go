@@ -19,10 +19,13 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/keikoproj/kubedog/internal/util"
+	"github.com/keikoproj/kubedog/pkg/generic"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -635,7 +638,7 @@ func TestDeleteResourcesAtPath(t *testing.T) {
 	resourcesPath := getFilePath("multi-resource.yaml")
 	resources := getResourcesFromYaml(t, resourcesPath)
 	clientWithResources := newFakeDynamicClientWithResourcesAndResourcesLists(resources...)
-	clientWithResourcesInTestDir := newFakeDynamicClientWithResourcesInDir(t, getTestFilesPath())
+	clientWithResourcesInTestDir := newFakeDynamicClientWithResourcesInDir(t, getTestFilesDirPath())
 
 	tests := []struct {
 		name    string
@@ -647,7 +650,7 @@ func TestDeleteResourcesAtPath(t *testing.T) {
 			args: args{
 				dynamicClient: clientWithResourcesInTestDir,
 				dc:            newFakeDiscoveryClient(&clientWithResourcesInTestDir.Fake),
-				resourcesPath: getTestFilesPath(),
+				resourcesPath: getTestFilesDirPath(),
 			},
 		},
 		{
@@ -741,12 +744,205 @@ func TestVerifyInstanceGroups(t *testing.T) {
 	}
 }
 
-func getTestFilesPath() string {
+func TestGetResource(t *testing.T) {
+	type args struct {
+		dc                discovery.DiscoveryInterface
+		TemplateArguments interface{}
+		resourceFilePath  string
+	}
+	resourcePath := getFilePath("resource.yaml")
+	resource := getResourceFromYaml(t, resourcePath)
+	templatedPath := getTemplatedFilePath("templated.yaml")
+	templateArgs := []generic.TemplateArgument{
+		{
+			Key:     "Kind",
+			Default: "myKind",
+		},
+		{
+			Key:     "ApiVersion",
+			Default: "myApiVersion",
+		},
+		{
+			Key:     "Name",
+			Default: "myName",
+		},
+	}
+	templateMap := templateArgsToMap(t, templateArgs...)
+	generatedPath := generateFileFromTemplate(t, templatedPath, templateMap)
+	defer os.Remove(generatedPath)
+	generatedResource := getResourceFromYaml(t, generatedPath)
+	analysisTemplatePath := getFilePath("analysis-template.yaml")
+	analysisTemplateResource := getResourceFromYaml(t, analysisTemplatePath)
+	tests := []struct {
+		name    string
+		args    args
+		want    unstructuredResource
+		wantErr bool
+	}{
+		// TODO: add negative tests
+		{
+			name: "Positive Test",
+			args: args{
+				dc:                newFakeDiscoveryClient(&newFakeDynamicClientWithResourceList(resource).Fake),
+				TemplateArguments: nil,
+				resourceFilePath:  resourcePath,
+			},
+			want: resource,
+		},
+		{
+			name: "Positive Test: templated",
+			args: args{
+				dc:                newFakeDiscoveryClient(&newFakeDynamicClientWithResourceList(generatedResource).Fake),
+				TemplateArguments: templateMap,
+				resourceFilePath:  templatedPath,
+			},
+			want: generatedResource,
+		},
+		{
+			name: "Positive Test: templated file BUT no template arguments",
+			args: args{
+				dc:                newFakeDiscoveryClient(&newFakeDynamicClientWithResourceList(analysisTemplateResource).Fake),
+				TemplateArguments: nil,
+				resourceFilePath:  analysisTemplatePath,
+			},
+			want: analysisTemplateResource,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetResource(tt.args.dc, tt.args.TemplateArguments, tt.args.resourceFilePath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetResource() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetResource() = %s, want %s", util.StructToPrettyString(got), util.StructToPrettyString(tt.want))
+
+			}
+		})
+	}
+}
+
+func TestGetResources(t *testing.T) {
+	type args struct {
+		dc                discovery.DiscoveryInterface
+		TemplateArguments interface{}
+		resourcesFilePath string
+	}
+	resourcesPath := getFilePath("multi-resource.yaml")
+	resources := getResourcesFromYaml(t, resourcesPath)
+	tests := []struct {
+		name    string
+		args    args
+		want    []unstructuredResource
+		wantErr bool
+	}{
+		// TODO: add negative tests
+		{
+			name: "Positive Test",
+			args: args{
+				dc:                newFakeDiscoveryClient(&newFakeDynamicClientWithResourcesLists(resources...).Fake),
+				TemplateArguments: nil,
+				resourcesFilePath: resourcesPath,
+			},
+			want:    resources,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetResources(tt.args.dc, tt.args.TemplateArguments, tt.args.resourcesFilePath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetResources() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetResources() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestListInstanceGroups(t *testing.T) {
+	type args struct {
+		dynamicClient dynamic.Interface
+	}
+	resource := getInstanceGroupFromYaml(t, getFilePath("instance-group.yaml"))
+	tests := []struct {
+		name    string
+		args    args
+		want    *unstructured.UnstructuredList
+		wantErr bool
+	}{
+		// TODO: add negative tests
+		{
+			name: "Positive Test",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithCustomListKinds(resource),
+			},
+			want: resourceToList(t, resource),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ListInstanceGroups(tt.args.dynamicClient)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ListInstanceGroups() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ListInstanceGroups() = %s, want %s", util.StructToPrettyString(got), util.StructToPrettyString(tt.want))
+			}
+		})
+	}
+}
+
+func templateArgsToMap(t *testing.T, args ...generic.TemplateArgument) map[string]string {
+	argsMap, err := generic.TemplateArgumentsToMap(args...)
+	if err != nil {
+		t.Error(err)
+	}
+	return argsMap
+}
+
+func generateFileFromTemplate(t *testing.T, templatedFilePath string, templateArgs interface{}) string {
+	generatedPath, err := generic.GenerateFileFromTemplate(templatedFilePath, templateArgs)
+	if err != nil {
+		t.Error(err)
+	}
+	return generatedPath
+}
+
+func resourceToList(t *testing.T, resource unstructuredResource) *unstructured.UnstructuredList {
+	unstructList := unstructured.Unstructured{}
+	unstructList.SetUnstructuredContent(map[string]interface{}{
+		"apiVersion": resource.Resource.GetAPIVersion(),
+		"kind":       resource.Resource.GetKind() + "List",
+		"metadata": map[string]interface{}{
+			"resourceVersion": "",
+		},
+	})
+	list, err := unstructList.ToList()
+	if err != nil {
+		t.Error(err)
+	}
+	list.Items = append(list.Items, *resource.Resource)
+	return list
+}
+
+func getTestDirPath() string {
 	return "./test-fixtures"
 }
 
+func getTestFilesDirPath() string {
+	return filepath.Join(getTestDirPath(), "files")
+}
+
 func getFilePath(testFileName string) string {
-	return filepath.Join(getTestFilesPath(), testFileName)
+	return filepath.Join(getTestFilesDirPath(), testFileName)
+}
+func getTemplatedFilePath(testFileName string) string {
+	return filepath.Join(getTestDirPath(), "templates", testFileName)
 }
 
 func getInstanceGroupFromYaml(t *testing.T, resourceFilePath string) unstructuredResource {
@@ -853,6 +1049,23 @@ func newFakeDynamicClientWithResourceList(resource unstructuredResource) *fakeDy
 		resource.Resource.GetKind(),
 		namespaced,
 	))
+	return client
+}
+
+func newFakeDynamicClientWithResourcesLists(resources ...unstructuredResource) *fakeDynamic.FakeDynamicClient {
+	client := fakeDynamic.NewSimpleDynamicClient(runtime.NewScheme())
+	for _, resource := range resources {
+		namespaced := true
+		if resource.Resource.GetNamespace() == "" {
+			namespaced = false
+		}
+		client.Resources = append(client.Resources, newAPIResourceList(
+			resource.GVR.GroupVersionKind.GroupVersion(),
+			resource.Resource.GetName(),
+			resource.Resource.GetKind(),
+			namespaced,
+		))
+	}
 	return client
 }
 
