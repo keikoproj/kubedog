@@ -18,48 +18,48 @@ import (
 	"context"
 	"testing"
 
+	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-// func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
-
-// 	var (
-// 		g                 = gomega.NewWithT(t)
-// 		testReadySelector = "testing-ShouldBeReady=some-value"
-// 		testFoundSelector = "testing-ShouldBeFound=some-value"
-// 		testReadyLabel    = map[string]string{"testing-ShouldBeReady": "some-value"}
-// 		testFoundLabel    = map[string]string{"testing-ShouldBeFound": "some-value"}
-// 		fakeClient        *fake.Clientset
-// 	)
-
-// 	fakeClient = fake.NewSimpleClientset(&v1.Node{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:   "SomeReady-Node",
-// 			Labels: testReadyLabel,
-// 		},
-// 		Status: v1.NodeStatus{
-// 			Conditions: []v1.NodeCondition{
-// 				{
-// 					Type:   v1.NodeReady,
-// 					Status: v1.ConditionTrue,
-// 				},
-// 			},
-// 		},
-// 	}, &v1.Node{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:   "SomeFound-name",
-// 			Labels: testFoundLabel,
-// 		},
-// 	})
-
-// 	err := NodesWithSelectorShouldBe(fakeClient, common.WaiterConfig{}, 1, testReadySelector, common.StateReady)
-// 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-// 	err = NodesWithSelectorShouldBe(fakeClient, common.WaiterConfig{}, 1, testFoundSelector, common.StateFound)
-// 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-// }
+func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
+	var (
+		g                 = gomega.NewWithT(t)
+		testReadySelector = "testing-ShouldBeReady=some-value"
+		testFoundSelector = "testing-ShouldBeFound=some-value"
+		testReadyLabel    = map[string]string{"testing-ShouldBeReady": "some-value"}
+		testFoundLabel    = map[string]string{"testing-ShouldBeFound": "some-value"}
+		fakeClient        *fake.Clientset
+	)
+	fakeClient = fake.NewSimpleClientset(&v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "SomeReady-Node",
+			Labels: testReadyLabel,
+		},
+		Status: v1.NodeStatus{
+			Conditions: []v1.NodeCondition{
+				{
+					Type:   v1.NodeReady,
+					Status: v1.ConditionTrue,
+				},
+			},
+		},
+	}, &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "SomeFound-name",
+			Labels: testFoundLabel,
+		},
+	})
+	err := NodesWithSelectorShouldBe(fakeClient, common.WaiterConfig{}, 1, testReadySelector, common.StateReady)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	err = NodesWithSelectorShouldBe(fakeClient, common.WaiterConfig{}, 1, testFoundSelector, common.StateFound)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+}
 
 // func TestResourceInNamespace(t *testing.T) {
 // 	var (
@@ -140,34 +140,34 @@ import (
 // 	}
 // }
 
-// func TestScaleDeployment(t *testing.T) {
-// 	var (
-// 		err          error
-// 		g            = gomega.NewWithT(t)
-// 		fakeClient   = fake.NewSimpleClientset()
-// 		namespace    = "test_ns"
-// 		deployName   = "test_deploy"
-// 		replicaCount = int32(1)
-// 	)
-// 	_, _ = fakeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name: namespace,
-// 		},
-// 		Status: v1.NamespaceStatus{Phase: v1.NamespaceActive},
-// 	}, metav1.CreateOptions{})
-// 	_, _ = fakeClient.AppsV1().Deployments(namespace).Create(context.Background(), &appsv1.Deployment{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name: deployName,
-// 		},
-// 		Spec: appsv1.DeploymentSpec{
-// 			Replicas: &replicaCount,
-// 		},
-// 	}, metav1.CreateOptions{})
-// 	err = ScaleDeployment(fakeClient, deployName, namespace, 2)
-// 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-// 	s, _ := fakeClient.AppsV1().Deployments(namespace).GetScale(context.Background(), deployName, metav1.GetOptions{})
-// 	g.Expect(s.Spec.Replicas).To(gomega.Equal(int32(2)))
-// }
+func TestScaleDeployment(t *testing.T) {
+	var (
+		err          error
+		g            = gomega.NewWithT(t)
+		fakeClient   = fake.NewSimpleClientset()
+		namespace    = "test_ns"
+		deployName   = "test_deploy"
+		replicaCount = int32(1)
+	)
+	_, _ = fakeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+		Status: v1.NamespaceStatus{Phase: v1.NamespaceActive},
+	}, metav1.CreateOptions{})
+	_, _ = fakeClient.AppsV1().Deployments(namespace).Create(context.Background(), &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: deployName,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicaCount,
+		},
+	}, metav1.CreateOptions{})
+	err = ScaleDeployment(fakeClient, deployName, namespace, 2)
+	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	s, _ := fakeClient.AppsV1().Deployments(namespace).GetScale(context.Background(), deployName, metav1.GetOptions{})
+	g.Expect(s.Spec.Replicas).To(gomega.Equal(int32(2)))
+}
 
 func TestClusterRoleAndBindingIsFound(t *testing.T) {
 	var (

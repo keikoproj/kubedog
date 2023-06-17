@@ -75,28 +75,28 @@ func TestNodesWithSelectorShouldBe(t *testing.T) {
 	}
 }
 
-func TestScaleDeployment(t *testing.T) {
-	type args struct {
-		kubeClientset kubernetes.Interface
-		name          string
-		namespace     string
-		replicas      int32
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := ScaleDeployment(tt.args.kubeClientset, tt.args.name, tt.args.namespace, tt.args.replicas); (err != nil) != tt.wantErr {
-				t.Errorf("ScaleDeployment() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
+// func TestScaleDeployment(t *testing.T) {
+// 	type args struct {
+// 		kubeClientset kubernetes.Interface
+// 		name          string
+// 		namespace     string
+// 		replicas      int32
+// 	}
+// 	tests := []struct {
+// 		name    string
+// 		args    args
+// 		wantErr bool
+// 	}{
+// 		// TODO: Add test cases.
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			if err := ScaleDeployment(tt.args.kubeClientset, tt.args.name, tt.args.namespace, tt.args.replicas); (err != nil) != tt.wantErr {
+// 				t.Errorf("ScaleDeployment() error = %v, wantErr %v", err, tt.wantErr)
+// 			}
+// 		})
+// 	}
+// }
 
 func TestClusterRbacIsFound(t *testing.T) {
 	type args struct {
