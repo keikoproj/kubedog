@@ -1,4 +1,0 @@
-kind: myKind
-apiVersion: myApiVersion
-metadata:
-  name: myName
