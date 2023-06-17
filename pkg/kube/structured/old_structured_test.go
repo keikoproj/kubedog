@@ -68,7 +68,6 @@ import (
 // 		fakeClient = fake.NewSimpleClientset()
 // 		namespace  = "test_ns"
 // 	)
-
 // 	tests := []struct {
 // 		resource string
 // 		name     string
@@ -102,20 +101,17 @@ import (
 // 			name:     "mock_service_account",
 // 		},
 // 	}
-
 // 	_, _ = fakeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
 // 		ObjectMeta: metav1.ObjectMeta{
 // 			Name: namespace,
 // 		},
 // 		Status: v1.NamespaceStatus{Phase: v1.NamespaceActive},
 // 	}, metav1.CreateOptions{})
-
 // 	for _, tt := range tests {
 // 		t.Run(tt.resource, func(t *testing.T) {
 // 			meta := metav1.ObjectMeta{
 // 				Name: tt.name,
 // 			}
-
 // 			switch tt.resource {
 // 			case "deployment":
 // 				_, _ = fakeClient.AppsV1().Deployments(namespace).Create(context.Background(), &appsv1.Deployment{
@@ -153,14 +149,12 @@ import (
 // 		deployName   = "test_deploy"
 // 		replicaCount = int32(1)
 // 	)
-
 // 	_, _ = fakeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
 // 		ObjectMeta: metav1.ObjectMeta{
 // 			Name: namespace,
 // 		},
 // 		Status: v1.NamespaceStatus{Phase: v1.NamespaceActive},
 // 	}, metav1.CreateOptions{})
-
 // 	_, _ = fakeClient.AppsV1().Deployments(namespace).Create(context.Background(), &appsv1.Deployment{
 // 		ObjectMeta: metav1.ObjectMeta{
 // 			Name: deployName,
