@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-{{.Namespace}}
+  namespace: {{.Namespace}}
+  labels:
+    tier: backend
+spec:
+  containers:
+  - name: hello
+    image: {{.Image}}
+    command: ['sh', '-c', 'echo "{{.Message}}" && sleep 3600']
+  restartPolicy: OnFailure
