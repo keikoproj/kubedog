@@ -66,7 +66,7 @@ func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
 	g.Expect(err).ShouldNot(gomega.HaveOccurred())
 }
 
-func TestPositiveResourceInNamespace(t *testing.T) {
+func TestResourceInNamespace(t *testing.T) {
 	var (
 		err        error
 		g          = gomega.NewWithT(t)
@@ -75,36 +75,49 @@ func TestPositiveResourceInNamespace(t *testing.T) {
 	)
 
 	tests := []struct {
-		resource string
-		name     string
+		resource  string
+		name      string
+		isOrIsNot string
 	}{
 		{
-			resource: "deployment",
-			name:     "test_deploy",
+			resource:  "deployment",
+			name:      "test_deploy",
+			isOrIsNot: "is",
 		},
 		{
-			resource: "service",
-			name:     "test_service",
+			resource:  "service",
+			name:      "test_service",
+			isOrIsNot: "is",
 		},
 		{
-			resource: "hpa",
-			name:     "test_hpa",
+			resource:  "hpa",
+			name:      "test_hpa",
+			isOrIsNot: "is",
 		},
 		{
-			resource: "horizontalpodautoscaler",
-			name:     "test_hpa",
+			resource:  "horizontalpodautoscaler",
+			name:      "test_hpa",
+			isOrIsNot: "is",
 		},
 		{
-			resource: "pdb",
-			name:     "test_pdb",
+			resource:  "pdb",
+			name:      "test_pdb",
+			isOrIsNot: "is",
 		},
 		{
-			resource: "poddisruptionbudget",
-			name:     "test_pdb",
+			resource:  "poddisruptionbudget",
+			name:      "test_pdb",
+			isOrIsNot: "is",
 		},
 		{
-			resource: "serviceaccount",
-			name:     "mock_service_account",
+			resource:  "serviceaccount",
+			name:      "mock_service_account",
+			isOrIsNot: "is",
+		},
+		{
+			resource:  "deployment",
+			name:      "test_deploy_not_present",
+			isOrIsNot: "is not",
 		},
 	}
 
@@ -117,90 +130,36 @@ func TestPositiveResourceInNamespace(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.resource, func(t *testing.T) {
-			meta := metav1.ObjectMeta{
-				Name: tt.name,
+			if tt.isOrIsNot == "is" {
+				meta := metav1.ObjectMeta{
+					Name: tt.name,
+				}
+
+				switch tt.resource {
+				case "deployment":
+					_, _ = fakeClient.AppsV1().Deployments(namespace).Create(context.Background(), &appsv1.Deployment{
+						ObjectMeta: meta,
+					}, metav1.CreateOptions{})
+				case "service":
+					_, _ = fakeClient.CoreV1().Services(namespace).Create(context.Background(), &v1.Service{
+						ObjectMeta: meta,
+					}, metav1.CreateOptions{})
+				case "hpa":
+					_, _ = fakeClient.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Create(context.Background(), &hpa.HorizontalPodAutoscaler{
+						ObjectMeta: meta,
+					}, metav1.CreateOptions{})
+				case "pdb":
+					_, _ = fakeClient.PolicyV1beta1().PodDisruptionBudgets(namespace).Create(context.Background(), &policy.PodDisruptionBudget{
+						ObjectMeta: meta,
+					}, metav1.CreateOptions{})
+				case "serviceaccount":
+					_, _ = fakeClient.CoreV1().ServiceAccounts(namespace).Create(context.Background(), &v1.ServiceAccount{
+						ObjectMeta: meta,
+					}, metav1.CreateOptions{})
+				}
 			}
 
-			switch tt.resource {
-			case "deployment":
-				_, _ = fakeClient.AppsV1().Deployments(namespace).Create(context.Background(), &appsv1.Deployment{
-					ObjectMeta: meta,
-				}, metav1.CreateOptions{})
-			case "service":
-				_, _ = fakeClient.CoreV1().Services(namespace).Create(context.Background(), &v1.Service{
-					ObjectMeta: meta,
-				}, metav1.CreateOptions{})
-			case "hpa":
-				_, _ = fakeClient.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Create(context.Background(), &hpa.HorizontalPodAutoscaler{
-					ObjectMeta: meta,
-				}, metav1.CreateOptions{})
-			case "pdb":
-				_, _ = fakeClient.PolicyV1beta1().PodDisruptionBudgets(namespace).Create(context.Background(), &policy.PodDisruptionBudget{
-					ObjectMeta: meta,
-				}, metav1.CreateOptions{})
-			case "serviceaccount":
-				_, _ = fakeClient.CoreV1().ServiceAccounts(namespace).Create(context.Background(), &v1.ServiceAccount{
-					ObjectMeta: meta,
-				}, metav1.CreateOptions{})
-			}
-			err = ResourceInNamespace(fakeClient, tt.resource, tt.name, namespace, "is")
-			g.Expect(err).ShouldNot(gomega.HaveOccurred())
-		})
-	}
-}
-
-func TestNegativeResourceInNamespace(t *testing.T) {
-	var (
-		err        error
-		g          = gomega.NewWithT(t)
-		fakeClient = fake.NewSimpleClientset()
-		namespace  = "test_ns"
-	)
-
-	tests := []struct {
-		resource string
-		name     string
-	}{
-		{
-			resource: "deployment",
-			name:     "test_deploy",
-		},
-		{
-			resource: "service",
-			name:     "test_service",
-		},
-		{
-			resource: "hpa",
-			name:     "test_hpa",
-		},
-		{
-			resource: "horizontalpodautoscaler",
-			name:     "test_hpa",
-		},
-		{
-			resource: "pdb",
-			name:     "test_pdb",
-		},
-		{
-			resource: "poddisruptionbudget",
-			name:     "test_pdb",
-		},
-		{
-			resource: "serviceaccount",
-			name:     "mock_service_account",
-		},
-	}
-
-	_, _ = fakeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-		},
-		Status: v1.NamespaceStatus{Phase: v1.NamespaceActive},
-	}, metav1.CreateOptions{})
-
-	for _, tt := range tests {
-		t.Run(tt.resource, func(t *testing.T) {
-			err = ResourceInNamespace(fakeClient, tt.resource, tt.name, namespace, "is not")
+			err = ResourceInNamespace(fakeClient, tt.resource, tt.name, namespace, tt.isOrIsNot)
 			g.Expect(err).ShouldNot(gomega.HaveOccurred())
 		})
 	}
