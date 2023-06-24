@@ -273,8 +273,8 @@ func (kc *ClientSet) NodesWithSelectorShouldBe(expectedNodes int, selector, stat
 	return structured.NodesWithSelectorShouldBe(kc.KubeInterface, kc.getWaiterConfig(), expectedNodes, selector, state)
 }
 
-func (kc *ClientSet) ResourceInNamespace(resourceType, name, namespace string) error {
-	return structured.ResourceInNamespace(kc.KubeInterface, resourceType, name, namespace)
+func (kc *ClientSet) ResourceInNamespace(resourceType, name, namespace, isOrIsNot string) error {
+	return structured.ResourceInNamespace(kc.KubeInterface, resourceType, name, namespace, isOrIsNot)
 }
 
 func (kc *ClientSet) ScaleDeployment(name, namespace string, replicas int32) error {

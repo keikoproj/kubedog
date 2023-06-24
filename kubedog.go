@@ -71,7 +71,7 @@ func (kdt *Test) SetScenario(scenario *godog.ScenarioContext) {
 	kdt.scenario.Step(`^(?:I )?(create|submit|update) (?:the )?secret (\S+) in namespace (\S+) from (?:environment variable )?(\S+)$`, kdt.KubeClientSet.SecretOperationFromEnvironmentVariable)
 	kdt.scenario.Step(`^(?:I )?delete (?:the )?secret (\S+) in namespace (\S+)$`, kdt.KubeClientSet.SecretDelete)
 	kdt.scenario.Step(`^(\d+) node(?:s)? with selector (\S+) should be (found|ready)$`, kdt.KubeClientSet.NodesWithSelectorShouldBe)
-	kdt.scenario.Step(`^(?:the )?(deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) ([^"]*) is in namespace ([^"]*)$`, kdt.KubeClientSet.ResourceInNamespace)
+	kdt.scenario.Step(`^(?:the )?(deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) ([^"]*) (is|is not) in namespace ([^"]*)$`, kdt.KubeClientSet.ResourceInNamespace)
 	kdt.scenario.Step(`^(?:I )?scale (?:the )?deployment ([^"]*) in namespace ([^"]*) to (\d+)$`, kdt.KubeClientSet.ScaleDeployment)
 	kdt.scenario.Step(`^(?:I )?validate Prometheus Statefulset ([^"]*) in namespace ([^"]*) has volumeClaimTemplates name ([^"]*)$`, kdt.KubeClientSet.ValidatePrometheusVolumeClaimTemplatesName)
 	kdt.scenario.Step(`^(?:I )?get (?:the )?nodes list$`, kdt.KubeClientSet.GetNodes)

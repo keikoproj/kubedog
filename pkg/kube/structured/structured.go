@@ -377,7 +377,7 @@ func SendTrafficToIngress(kubeClientset kubernetes.Interface, w common.WaiterCon
 	return nil
 }
 
-func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name, namespace string) error {
+func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name, namespace, isOrIsNot string) error {
 	var err error
 
 	if err := common.ValidateClientset(kubeClientset); err != nil {
@@ -398,9 +398,23 @@ func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name,
 	default:
 		return errors.Errorf("Invalid resource type")
 	}
-
-	if err != nil {
-		return err
+	if isOrIsNot == "is not" {
+		if kerrors.IsNotFound(err) {
+			return nil
+		} else if err == nil {
+			return errors.Errorf("expected resource '%s/%s' to not be found in ns '%s'", resourceType, name, namespace)
+		} else {
+			return err
+		}
+	} else if isOrIsNot == "is" {
+		if kerrors.IsNotFound(err) {
+			return errors.Errorf("expected resource '%s/%s' to be found in ns '%s'", resourceType, name, namespace)
+		} else if err == nil {
+			return nil
+		} else {
+			return err
+		}
+	} else {
+		return errors.Errorf("paramter isOrIsNot can only be 'is' or 'is not'")
 	}
-	return nil
 }
