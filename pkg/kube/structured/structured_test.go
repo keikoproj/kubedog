@@ -159,7 +159,7 @@ func TestResourceInNamespace(t *testing.T) {
 				}
 			}
 
-			err = ResourceInNamespace(fakeClient, tt.resource, tt.name, namespace, tt.isOrIsNot)
+			err = ResourceInNamespace(fakeClient, tt.resource, tt.name, tt.isOrIsNot, namespace)
 			g.Expect(err).ShouldNot(gomega.HaveOccurred())
 		})
 	}
