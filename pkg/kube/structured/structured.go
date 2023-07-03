@@ -377,7 +377,7 @@ func SendTrafficToIngress(kubeClientset kubernetes.Interface, w common.WaiterCon
 	return nil
 }
 
-func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name, namespace, isOrIsNot string) error {
+func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name, isOrIsNot, namespace string) error {
 	var err error
 
 	if err := common.ValidateClientset(kubeClientset); err != nil {
@@ -415,6 +415,6 @@ func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name,
 			return err
 		}
 	} else {
-		return errors.Errorf("paramter isOrIsNot can only be 'is' or 'is not'")
+		return errors.Errorf("parameter isOrIsNot can only be 'is' or 'is not'")
 	}
 }
