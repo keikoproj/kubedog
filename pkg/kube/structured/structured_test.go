@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/keikoproj/kubedog/internal/util"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/autoscaling/v2beta2"
@@ -41,6 +42,7 @@ const (
 	clusterRoleType        = "clusterrole"
 	clusterRoleBindingType = "clusterrolebinding"
 	nodeType               = "node"
+	daemonsetType          = "daemonset"
 )
 
 func TestNodesWithSelectorShouldBe(t *testing.T) {
@@ -263,7 +265,6 @@ func TestGetNodes(t *testing.T) {
 	}
 }
 
-// TODO: implement
 func TestDaemonSetIsRunning(t *testing.T) {
 	type args struct {
 		kubeClientset kubernetes.Interface
@@ -271,17 +272,21 @@ func TestDaemonSetIsRunning(t *testing.T) {
 		name          string
 		namespace     string
 	}
+	daemonsetName := "daemonset1"
+	namespace := "namespace1"
 	tests := []struct {
 		name    string
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// TODO: add negative tests
 		{
 			name: "Positive Test",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(),
-				// expBackoff: ,
+				kubeClientset: fake.NewSimpleClientset(getResource(t, daemonsetType, daemonsetName, namespace, "")),
+				expBackoff:    util.DefaultRetry,
+				name:          daemonsetName,
+				namespace:     namespace,
 			},
 		},
 	}
@@ -563,6 +568,14 @@ func getResource(t *testing.T, resourceType, name, namespace, label string) runt
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   name,
 				Labels: labels,
+			},
+		}
+	case daemonsetType:
+		return &appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
 			},
 		}
 	default:
