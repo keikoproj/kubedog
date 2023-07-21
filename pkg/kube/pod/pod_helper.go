@@ -26,7 +26,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -43,16 +42,6 @@ func ListPodsWithLabelSelector(kubeClientset kubernetes.Interface, namespace, se
 	}
 
 	return pods.(*corev1.PodList), nil
-}
-
-func GetExpBackoff(steps int) wait.Backoff {
-	return wait.Backoff{
-		Duration: 2 * time.Second,
-		Factor:   2.0,
-		Jitter:   0.5,
-		Steps:    steps,
-		Cap:      10 * time.Minute,
-	}
 }
 
 func countStringInPodLogs(kubeClientset kubernetes.Interface, pod corev1.Pod, since time.Time, stringsToFind ...string) (int, error) {

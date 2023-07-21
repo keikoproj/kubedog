@@ -87,6 +87,16 @@ func IsRetriable(err error) bool {
 	return false
 }
 
+func GetExpBackoff(steps int) wait.Backoff {
+	return wait.Backoff{
+		Duration: 2 * time.Second,
+		Factor:   2.0,
+		Jitter:   0.5,
+		Steps:    steps,
+		Cap:      10 * time.Minute,
+	}
+}
+
 func RetryOnError(backoff *wait.Backoff, retryExpected func(error) bool, fn FuncToRetryWithReturn) (interface{}, error) {
 	var ex, lastErr error
 	var out interface{}
