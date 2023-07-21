@@ -12,12 +12,12 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [I] store [the] current time as <any-characters-except-(")>` kdt.KubeClientSet.SetTimestamp
 
 ### Unstructured Resources
-- `<GK> [I] (create|submit|delete|update) [the] resource <non-whitespace-characters>` kdt.KubeClientSet.ResourceOperation
-- `<GK> [I] (create|submit|delete|update) [the] resource <non-whitespace-characters> in [the] <any-characters-except-(")> namespace` kdt.KubeClientSet.ResourceOperationInNamespace
-- `<GK> [I] (create|submit|delete|update) [the] resources in <non-whitespace-characters>` kdt.KubeClientSet.ResourcesOperation
-- `<GK> [I] (create|submit|delete|update) [the] resources in <non-whitespace-characters> in [the] <any-characters-except-(")> namespace` kdt.KubeClientSet.ResourcesOperationInNamespace
-- `<GK> [I] (create|submit|delete|update) [the] resource <non-whitespace-characters>, the operation should (succeed|fail)` kdt.KubeClientSet.ResourceOperationWithResult
-- `<GK> [I] (create|submit|delete|update) [the] resource <non-whitespace-characters> in [the] <any-characters-except-(")> namespace, the operation should (succeed|fail)` kdt.KubeClientSet.ResourceOperationWithResultInNamespace
+- `<GK> [I] (create|submit|delete|update|upsert) [the] resource <non-whitespace-characters>` kdt.KubeClientSet.ResourceOperation
+- `<GK> [I] (create|submit|delete|update|upsert) [the] resource <non-whitespace-characters> in [the] <any-characters-except-(")> namespace` kdt.KubeClientSet.ResourceOperationInNamespace
+- `<GK> [I] (create|submit|delete|update|upsert) [the] resources in <non-whitespace-characters>` kdt.KubeClientSet.ResourcesOperation
+- `<GK> [I] (create|submit|delete|update|upsert) [the] resources in <non-whitespace-characters> in [the] <any-characters-except-(")> namespace` kdt.KubeClientSet.ResourcesOperationInNamespace
+- `<GK> [I] (create|submit|delete|update|upsert) [the] resource <non-whitespace-characters>, the operation should (succeed|fail)` kdt.KubeClientSet.ResourceOperationWithResult
+- `<GK> [I] (create|submit|delete|update|upsert) [the] resource <non-whitespace-characters> in [the] <any-characters-except-(")> namespace, the operation should (succeed|fail)` kdt.KubeClientSet.ResourceOperationWithResultInNamespace
 - `<GK> [the] resource <any-characters-except-(")> should be (created|deleted)` kdt.KubeClientSet.ResourceShouldBe
 - `<GK> [the] resource <any-characters-except-(")> [should] converge to selector <non-whitespace-characters>` kdt.KubeClientSet.ResourceShouldConvergeToSelector
 - `<GK> [the] resource <any-characters-except-(")> condition <any-characters-except-(")> should be <any-characters-except-(")>` kdt.KubeClientSet.ResourceConditionShouldBe

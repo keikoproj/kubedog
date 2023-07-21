@@ -26,6 +26,7 @@ const (
 	OperationSubmit = "submit"
 	OperationUpdate = "update"
 	OperationDelete = "delete"
+	OperationUpsert = "upsert"
 
 	StateCreated  = "created"
 	StateDeleted  = "deleted"

@@ -96,6 +96,30 @@ func ResourceOperationInNamespace(dynamicClient dynamic.Interface, resource unst
 			return err
 		}
 		log.Infof("%s %s has been updated in namespace %s", unstruct.GetKind(), unstruct.GetName(), namespace)
+	case common.OperationUpsert:
+		currentResourceVersion, err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		if err != nil {
+			if kerrors.IsNotFound(err) {
+				_, err = dynamicClient.Resource(gvr.Resource).Namespace(namespace).Create(context.Background(), unstruct, metav1.CreateOptions{})
+				if err != nil {
+					return err
+				}
+
+				log.Infof("%s %s has been created in namespace %s", unstruct.GetKind(), unstruct.GetName(), namespace)
+
+				return nil
+			} else {
+				return err
+			}
+		}
+
+		unstruct.SetResourceVersion(currentResourceVersion.DeepCopy().GetResourceVersion())
+
+		_, err = dynamicClient.Resource(gvr.Resource).Namespace(namespace).Update(context.Background(), unstruct, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+		log.Infof("%s %s has been updated in namespace %s", unstruct.GetKind(), unstruct.GetName(), namespace)
 	case common.OperationDelete:
 		err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Delete(context.Background(), unstruct.GetName(), metav1.DeleteOptions{})
 		if err != nil {

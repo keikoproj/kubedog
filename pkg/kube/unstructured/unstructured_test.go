@@ -372,6 +372,39 @@ func TestResourceOperationInNamespace(t *testing.T) {
 	}
 }
 
+func TestResourceOperationInNamespaceUpsertOperation(t *testing.T) {
+	dynScheme := runtime.NewScheme()
+	fakeDynamicClient := fakeDynamic.NewSimpleDynamicClient(dynScheme)
+
+	deploymentFromYaml, err := resourceFromYaml("../../test/templates/resource-without-namespace.yaml")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	deploymentUnstructured := unstructuredResource{
+		GVR:      &meta.RESTMapping{},
+		Resource: deploymentFromYaml,
+	}
+
+	if err := ResourceOperationInNamespace(fakeDynamicClient, deploymentUnstructured, "upsert", "test-namespace"); err != nil {
+		t.Errorf("ResourceOperationInNamespace() error = %v", err)
+	}
+
+	deploymentFromYamlUpdate, err := resourceFromYaml("../../test/templates/resource-without-namespace-update.yaml")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	deploymentUnstructuredUpdate := unstructuredResource{
+		GVR:      &meta.RESTMapping{},
+		Resource: deploymentFromYamlUpdate,
+	}
+
+	if err := ResourceOperationInNamespace(fakeDynamicClient, deploymentUnstructuredUpdate, "upsert", "test-namespace"); err != nil {
+		t.Errorf("ResourceOperationInNamespace() error = %v", err)
+	}
+}
+
 func resourcePath(resourceFileName string) string {
 	return filepath.Join("../../../test/templates", resourceFileName)
 }
