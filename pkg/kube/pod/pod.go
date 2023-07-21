@@ -30,10 +30,16 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// TODO: look into functions name with verbs in names that do not match the behavior,
+// pay attention to return object, some are function have verb List because they return a List,
+// but that should be call Get<Resource>List instead
+
+// TODO: should be ListPods because it prints them
 func Pods(kubeClientset kubernetes.Interface, namespace string) error {
 	return PodsWithSelector(kubeClientset, namespace, "")
 }
 
+// TODO: should be ListPodsWithSelector because it prints them
 func PodsWithSelector(kubeClientset kubernetes.Interface, namespace, selector string) error {
 	var readyCountFn = func(conditions []corev1.ContainerStatus) string {
 		var readyCount = 0

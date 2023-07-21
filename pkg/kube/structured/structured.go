@@ -223,7 +223,6 @@ func PersistentVolExists(kubeClientset kubernetes.Interface, name, expectedPhase
 }
 
 func ValidatePrometheusVolumeClaimTemplatesName(kubeClientset kubernetes.Interface, statefulsetName, namespace, volumeClaimTemplatesName string) error {
-	var sfsvolumeClaimTemplatesName string
 	// Prometheus StatefulSets deployed, then validate volumeClaimTemplate name.
 	// Validation required:
 	// 	- To retain existing persistent volumes and not to loose any data.
@@ -232,23 +231,38 @@ func ValidatePrometheusVolumeClaimTemplatesName(kubeClientset kubernetes.Interfa
 	if err != nil {
 		return err
 	}
+
+	var sfsvolumeClaimTemplatesNames []string
 	for _, sfsItem := range sfs.Items {
 		if sfsItem.Name == statefulsetName {
-			pvcClaimRef := sfsItem.Spec.VolumeClaimTemplates
-			sfsvolumeClaimTemplatesName = pvcClaimRef[0].Name
+			pvcClaimRefs := sfsItem.Spec.VolumeClaimTemplates
+			for _, pvcClaimRef := range pvcClaimRefs {
+				if pvcClaimRef.Name != "" {
+					sfsvolumeClaimTemplatesNames = append(sfsvolumeClaimTemplatesNames, pvcClaimRef.Name)
+				}
+			}
 		}
 	}
-	if sfsvolumeClaimTemplatesName == "" {
-		return errors.Errorf("prometheus statefulset not deployed, name given: %v", volumeClaimTemplatesName)
-	} else if sfsvolumeClaimTemplatesName != volumeClaimTemplatesName {
-		return errors.Errorf("Prometheus volumeClaimTemplate name changed', got: %v", sfsvolumeClaimTemplatesName)
+	if len(sfsvolumeClaimTemplatesNames) == 0 {
+		return errors.Errorf("StatefulSet '%s' had no VolumeClaimTemplates with non empty name", statefulsetName)
 	}
+
+	found := false
+	for _, sfsvolumeClaimTemplatesName := range sfsvolumeClaimTemplatesNames {
+		if sfsvolumeClaimTemplatesName == volumeClaimTemplatesName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return errors.Errorf("StatefulSet '%s' had no VolumeClaimTemplates with name '%s'", statefulsetName, volumeClaimTemplatesName)
+	}
+
 	// Validate Persistent Volume label
 	err = validatePrometheusPVLabels(kubeClientset, volumeClaimTemplatesName)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 

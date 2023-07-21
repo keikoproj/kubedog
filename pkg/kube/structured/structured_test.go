@@ -42,7 +42,9 @@ const (
 	clusterRoleType        = "clusterrole"
 	clusterRoleBindingType = "clusterrolebinding"
 	nodeType               = "node"
-	daemonsetType          = "daemonset"
+	daemonSetType          = "daemonset"
+	persistentVolumeType   = "persistentvolume"
+	statefulSetType        = "statefulset"
 )
 
 func TestNodesWithSelectorShouldBe(t *testing.T) {
@@ -63,7 +65,7 @@ func TestNodesWithSelectorShouldBe(t *testing.T) {
 		{
 			name: "Positive Test: state found",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, nodeType, "node1", "", label)),
+				kubeClientset: fake.NewSimpleClientset(getResourceWithLabel(t, nodeType, "node1", label)),
 				expectedNodes: 1,
 				labelSelector: label,
 				state:         common.StateFound,
@@ -113,7 +115,7 @@ func TestResourceInNamespace(t *testing.T) {
 		{
 			name: "Positive Test: deployment",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, deploymentType, deploymentName, namespace, "")),
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, deploymentType, deploymentName, namespace)),
 				resourceType:  deploymentType,
 				name:          deploymentName,
 				namespace:     namespace,
@@ -122,7 +124,7 @@ func TestResourceInNamespace(t *testing.T) {
 		{
 			name: "Positive Test: service",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, serviceType, serviceName, namespace, "")),
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, serviceType, serviceName, namespace)),
 				resourceType:  serviceType,
 				name:          serviceName,
 				namespace:     namespace,
@@ -131,7 +133,7 @@ func TestResourceInNamespace(t *testing.T) {
 		{
 			name: "Positive Test: horizontalpodautoscaler",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, hpaType, hpaName, namespace, "")),
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, hpaType, hpaName, namespace)),
 				resourceType:  hpaType,
 				name:          hpaName,
 				namespace:     namespace,
@@ -140,7 +142,7 @@ func TestResourceInNamespace(t *testing.T) {
 		{
 			name: "Positive Test: poddisruptionbudget",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, pdbType, pdbName, namespace, "")),
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, pdbType, pdbName, namespace)),
 				resourceType:  pdbType,
 				name:          pdbName,
 				namespace:     namespace,
@@ -149,7 +151,7 @@ func TestResourceInNamespace(t *testing.T) {
 		{
 			name: "Positive Test: serviceaccount",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, saType, saName, namespace, "")),
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, saType, saName, namespace)),
 				resourceType:  saType,
 				name:          saName,
 				namespace:     namespace,
@@ -183,7 +185,7 @@ func TestScaleDeployment(t *testing.T) {
 		{
 			name: "Positive Test",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, deploymentType, deploymentName, namespace, "")),
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, deploymentType, deploymentName, namespace)),
 				name:          deploymentName,
 				namespace:     namespace,
 				replicas:      0,
@@ -216,7 +218,7 @@ func TestClusterRbacIsFound(t *testing.T) {
 		{
 			name: "Positive Test: ClusterRole",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, clusterRoleType, clusterRoleName, "", "")),
+				kubeClientset: fake.NewSimpleClientset(getResource(t, clusterRoleType, clusterRoleName)),
 				resourceType:  clusterRoleType,
 				name:          clusterRoleName,
 			},
@@ -224,7 +226,7 @@ func TestClusterRbacIsFound(t *testing.T) {
 		{
 			name: "Positive Test: ClusterRoleBinding",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, clusterRoleBindingType, clusterRoleBindingName, "", "")),
+				kubeClientset: fake.NewSimpleClientset(getResource(t, clusterRoleBindingType, clusterRoleBindingName)),
 				resourceType:  clusterRoleBindingType,
 				name:          clusterRoleBindingName,
 			},
@@ -252,7 +254,7 @@ func TestGetNodes(t *testing.T) {
 		{
 			name: "Positive Test",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, nodeType, "node1", "", "")),
+				kubeClientset: fake.NewSimpleClientset(getResource(t, nodeType, "node1")),
 			},
 		},
 	}
@@ -283,7 +285,7 @@ func TestDaemonSetIsRunning(t *testing.T) {
 		{
 			name: "Positive Test",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, daemonsetType, daemonsetName, namespace, "")),
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, daemonSetType, daemonsetName, namespace)),
 				expBackoff:    util.DefaultRetry,
 				name:          daemonsetName,
 				namespace:     namespace,
@@ -316,7 +318,7 @@ func TestDeploymentIsRunning(t *testing.T) {
 		{
 			name: "Positive Test",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, deploymentType, deploymentName, namespace, "")),
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, deploymentType, deploymentName, namespace)),
 				name:          deploymentName,
 				namespace:     namespace,
 			},
@@ -331,19 +333,28 @@ func TestDeploymentIsRunning(t *testing.T) {
 	}
 }
 
-// TODO: implement
 func TestPersistentVolExists(t *testing.T) {
 	type args struct {
 		kubeClientset kubernetes.Interface
 		name          string
 		expectedPhase string
 	}
+	// expectedPhase: Available|Bound|Released|Failed|Pending
+	persistentvolumeName := "persistentvolume1"
 	tests := []struct {
 		name    string
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// TODO: add negative tests and other positive test cases
+		{
+			name: "Positive Test",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, persistentVolumeType, persistentvolumeName)),
+				name:          persistentvolumeName,
+				expectedPhase: "",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -354,7 +365,6 @@ func TestPersistentVolExists(t *testing.T) {
 	}
 }
 
-// TODO: implement
 func TestValidatePrometheusVolumeClaimTemplatesName(t *testing.T) {
 	type args struct {
 		kubeClientset            kubernetes.Interface
@@ -362,12 +372,24 @@ func TestValidatePrometheusVolumeClaimTemplatesName(t *testing.T) {
 		namespace                string
 		volumeClaimTemplatesName string
 	}
+	statefulSetName := "statefulset1"
+	namespace := "namespace1"
+	volumeClaimTemplatesName := "volumeclaimtemplates1"
 	tests := []struct {
 		name    string
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// TODO: add negative tests and other positive test cases
+		{
+			name: "Positive Test",
+			args: args{
+				kubeClientset:            fake.NewSimpleClientset(getStatefulSetWithVolumeClaimTemplate(t, statefulSetName, namespace, volumeClaimTemplatesName)),
+				statefulsetName:          statefulSetName,
+				namespace:                namespace,
+				volumeClaimTemplatesName: volumeClaimTemplatesName,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -482,8 +504,24 @@ func TestSendTrafficToIngress(t *testing.T) {
 	}
 }
 
+func getStatefulSetWithVolumeClaimTemplate(t *testing.T, name, namespace, volumeClaimTemplatesName string) runtime.Object {
+	statefulSetInterface := getResourceWithNamespace(t, statefulSetType, name, namespace)
+	statefulSet, ok := statefulSetInterface.(*appsv1.StatefulSet)
+	if !ok {
+		t.Errorf("'runtime.Object' could not be cast to '*appsv1.StatefulSet': %v", statefulSetInterface)
+	}
+	statefulSet.Spec.VolumeClaimTemplates = []corev1.PersistentVolumeClaim{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: volumeClaimTemplatesName,
+			},
+		},
+	}
+	return statefulSet
+}
+
 func getNodeWithStatus(t *testing.T, name, label string, statusType corev1.NodeConditionType, status corev1.ConditionStatus) runtime.Object {
-	nodeInterface := getResource(t, nodeType, name, "", label)
+	nodeInterface := getResourceWithLabel(t, nodeType, name, label)
 	node, ok := nodeInterface.(*corev1.Node)
 	if !ok {
 		t.Errorf("'runtime.Object' could not be cast to '*corev1.Node': %v", nodeInterface)
@@ -499,15 +537,19 @@ func getNodeWithStatus(t *testing.T, name, label string, statusType corev1.NodeC
 	return node
 }
 
-func getLabelParts(t *testing.T, label string) (string, string) {
-	labelSplit := strings.Split(label, "=")
-	if len(labelSplit) != 2 {
-		t.Errorf("expected label format '<key>=<value>', got '%s'", label)
-	}
-	return labelSplit[0], labelSplit[1]
+func getResource(t *testing.T, resourceType, name string) runtime.Object {
+	return getResourceWithAll(t, resourceType, name, "", "")
 }
 
-func getResource(t *testing.T, resourceType, name, namespace, label string) runtime.Object {
+func getResourceWithNamespace(t *testing.T, resourceType, name, namespace string) runtime.Object {
+	return getResourceWithAll(t, resourceType, name, namespace, "")
+}
+
+func getResourceWithLabel(t *testing.T, resourceType, name, label string) runtime.Object {
+	return getResourceWithAll(t, resourceType, name, "", label)
+}
+
+func getResourceWithAll(t *testing.T, resourceType, name, namespace, label string) runtime.Object {
 	labels := map[string]string{}
 	if label != "" {
 		key, value := getLabelParts(t, label)
@@ -579,8 +621,24 @@ func getResource(t *testing.T, resourceType, name, namespace, label string) runt
 				Labels: labels,
 			},
 		}
-	case daemonsetType:
+	case daemonSetType:
 		return &appsv1.DaemonSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
+			},
+		}
+	case persistentVolumeType:
+		return &corev1.PersistentVolume{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
+			},
+		}
+	case statefulSetType:
+		return &appsv1.StatefulSet{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
@@ -591,6 +649,14 @@ func getResource(t *testing.T, resourceType, name, namespace, label string) runt
 		t.Errorf("Invalid resource type: %s", resourceType)
 	}
 	return nil
+}
+
+func getLabelParts(t *testing.T, label string) (string, string) {
+	labelSplit := strings.Split(label, "=")
+	if len(labelSplit) != 2 {
+		t.Errorf("expected label format '<key>=<value>', got '%s'", label)
+	}
+	return labelSplit[0], labelSplit[1]
 }
 
 func errorIfNamespaceNotEmpty(t *testing.T, ns string) {

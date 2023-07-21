@@ -29,6 +29,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// TODO: should be GetPodsWithLabelSelector because it returns the objects and not list/print them
 func ListPodsWithLabelSelector(kubeClientset kubernetes.Interface, namespace, selector string) (*corev1.PodList, error) {
 	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return nil, err
