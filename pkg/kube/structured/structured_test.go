@@ -40,6 +40,7 @@ const (
 	saType                 = "serviceaccount"
 	clusterRoleType        = "clusterrole"
 	clusterRoleBindingType = "clusterrolebinding"
+	nodeType               = "node"
 )
 
 func TestNodesWithSelectorShouldBe(t *testing.T) {
@@ -60,7 +61,7 @@ func TestNodesWithSelectorShouldBe(t *testing.T) {
 		{
 			name: "Positive Test: state found",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getNodeWithLabel(t, "node1", label)),
+				kubeClientset: fake.NewSimpleClientset(getResource(t, nodeType, "node1", "", label)),
 				expectedNodes: 1,
 				labelSelector: label,
 				state:         common.StateFound,
@@ -69,7 +70,7 @@ func TestNodesWithSelectorShouldBe(t *testing.T) {
 		{
 			name: "Positive Test: state ready",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getNodeWithLabelAndStatus(t, "node1", label, corev1.NodeReady, corev1.ConditionTrue)),
+				kubeClientset: fake.NewSimpleClientset(getNodeWithStatus(t, "node1", label, corev1.NodeReady, corev1.ConditionTrue)),
 				expectedNodes: 1,
 				labelSelector: label,
 				state:         common.StateReady,
@@ -110,7 +111,7 @@ func TestResourceInNamespace(t *testing.T) {
 		{
 			name: "Positive Test: deployment",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, deploymentType, deploymentName, namespace)),
+				kubeClientset: fake.NewSimpleClientset(getResource(t, deploymentType, deploymentName, namespace, "")),
 				resourceType:  deploymentType,
 				name:          deploymentName,
 				namespace:     namespace,
@@ -119,7 +120,7 @@ func TestResourceInNamespace(t *testing.T) {
 		{
 			name: "Positive Test: service",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, serviceType, serviceName, namespace)),
+				kubeClientset: fake.NewSimpleClientset(getResource(t, serviceType, serviceName, namespace, "")),
 				resourceType:  serviceType,
 				name:          serviceName,
 				namespace:     namespace,
@@ -128,7 +129,7 @@ func TestResourceInNamespace(t *testing.T) {
 		{
 			name: "Positive Test: horizontalpodautoscaler",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, hpaType, hpaName, namespace)),
+				kubeClientset: fake.NewSimpleClientset(getResource(t, hpaType, hpaName, namespace, "")),
 				resourceType:  hpaType,
 				name:          hpaName,
 				namespace:     namespace,
@@ -137,7 +138,7 @@ func TestResourceInNamespace(t *testing.T) {
 		{
 			name: "Positive Test: poddisruptionbudget",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, pdbType, pdbName, namespace)),
+				kubeClientset: fake.NewSimpleClientset(getResource(t, pdbType, pdbName, namespace, "")),
 				resourceType:  pdbType,
 				name:          pdbName,
 				namespace:     namespace,
@@ -146,7 +147,7 @@ func TestResourceInNamespace(t *testing.T) {
 		{
 			name: "Positive Test: serviceaccount",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, saType, saName, namespace)),
+				kubeClientset: fake.NewSimpleClientset(getResource(t, saType, saName, namespace, "")),
 				resourceType:  saType,
 				name:          saName,
 				namespace:     namespace,
@@ -180,7 +181,7 @@ func TestScaleDeployment(t *testing.T) {
 		{
 			name: "Positive Test",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, deploymentType, deploymentName, namespace)),
+				kubeClientset: fake.NewSimpleClientset(getResource(t, deploymentType, deploymentName, namespace, "")),
 				name:          deploymentName,
 				namespace:     namespace,
 				replicas:      0,
@@ -213,7 +214,7 @@ func TestClusterRbacIsFound(t *testing.T) {
 		{
 			name: "Positive Test: ClusterRole",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, clusterRoleType, clusterRoleName, "")),
+				kubeClientset: fake.NewSimpleClientset(getResource(t, clusterRoleType, clusterRoleName, "", "")),
 				resourceType:  clusterRoleType,
 				name:          clusterRoleName,
 			},
@@ -221,7 +222,7 @@ func TestClusterRbacIsFound(t *testing.T) {
 		{
 			name: "Positive Test: ClusterRoleBinding",
 			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResource(t, clusterRoleBindingType, clusterRoleBindingName, "")),
+				kubeClientset: fake.NewSimpleClientset(getResource(t, clusterRoleBindingType, clusterRoleBindingName, "", "")),
 				resourceType:  clusterRoleBindingType,
 				name:          clusterRoleBindingName,
 			},
@@ -236,7 +237,6 @@ func TestClusterRbacIsFound(t *testing.T) {
 	}
 }
 
-// TODO: implement
 func TestGetNodes(t *testing.T) {
 	type args struct {
 		kubeClientset kubernetes.Interface
@@ -246,7 +246,13 @@ func TestGetNodes(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// TODO: add negative tests
+		{
+			name: "Positive Test",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, nodeType, "node1", "", "")),
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -271,6 +277,13 @@ func TestDaemonSetIsRunning(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
+		{
+			name: "Positive Test",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(),
+				// expBackoff: ,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -455,36 +468,21 @@ func TestSendTrafficToIngress(t *testing.T) {
 	}
 }
 
-func getNodeWithLabel(t *testing.T, name, label string) *corev1.Node {
-	key, value := getLabelParts(t, label)
-	return &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				key: value,
+func getNodeWithStatus(t *testing.T, name, label string, statusType corev1.NodeConditionType, status corev1.ConditionStatus) runtime.Object {
+	nodeInterface := getResource(t, nodeType, name, "", label)
+	node, ok := nodeInterface.(*corev1.Node)
+	if !ok {
+		t.Errorf("'runtime.Object' could not be cast to '*corev1.Node': %v", nodeInterface)
+	}
+	node.Status = corev1.NodeStatus{
+		Conditions: []corev1.NodeCondition{
+			{
+				Type:   statusType,
+				Status: status,
 			},
 		},
 	}
-}
-
-func getNodeWithLabelAndStatus(t *testing.T, name, label string, statusType corev1.NodeConditionType, status corev1.ConditionStatus) *corev1.Node {
-	key, value := getLabelParts(t, label)
-	return &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				key: value,
-			},
-		},
-		Status: corev1.NodeStatus{
-			Conditions: []corev1.NodeCondition{
-				{
-					Type:   statusType,
-					Status: status,
-				},
-			},
-		},
-	}
+	return node
 }
 
 func getLabelParts(t *testing.T, label string) (string, string) {
@@ -495,42 +493,86 @@ func getLabelParts(t *testing.T, label string) (string, string) {
 	return labelSplit[0], labelSplit[1]
 }
 
-func getResource(t *testing.T, resourceType, name, namespace string) runtime.Object {
-	meta := metav1.ObjectMeta{
-		Name:      name,
-		Namespace: namespace,
+func getResource(t *testing.T, resourceType, name, namespace, label string) runtime.Object {
+	labels := map[string]string{}
+	if label != "" {
+		key, value := getLabelParts(t, label)
+		labels[key] = value
 	}
+
 	switch resourceType {
 	case deploymentType:
 		return &appsv1.Deployment{
-			ObjectMeta: meta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
+			},
 		}
 	case serviceType:
 		return &corev1.Service{
-			ObjectMeta: meta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
+			},
 		}
 	case "hpa", hpaType:
 		return &v2beta2.HorizontalPodAutoscaler{
-			ObjectMeta: meta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
+			},
 		}
 	case "pdb", pdbType:
 		return &v1beta1.PodDisruptionBudget{
-			ObjectMeta: meta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
+			},
 		}
 	case "sa", saType:
 		return &corev1.ServiceAccount{
-			ObjectMeta: meta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
+			},
 		}
 	case clusterRoleType:
+		errorIfNamespaceNotEmpty(t, namespace)
 		return &rbacv1.ClusterRole{
-			ObjectMeta: meta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   name,
+				Labels: labels,
+			},
 		}
 	case clusterRoleBindingType:
+		errorIfNamespaceNotEmpty(t, namespace)
 		return &rbacv1.ClusterRoleBinding{
-			ObjectMeta: meta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   name,
+				Labels: labels,
+			},
+		}
+	case nodeType:
+		errorIfNamespaceNotEmpty(t, namespace)
+		return &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   name,
+				Labels: labels,
+			},
 		}
 	default:
 		t.Errorf("Invalid resource type: %s", resourceType)
 	}
 	return nil
+}
+
+func errorIfNamespaceNotEmpty(t *testing.T, ns string) {
+	if ns != "" {
+		t.Errorf("Namespace should be empty, but is: %s", ns)
+	}
 }
