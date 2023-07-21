@@ -179,7 +179,7 @@ func TestScaleDeployment(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: add negative tests
+		// TODO: add negative tests and other positive test cases
 		{
 			name: "Positive Test",
 			args: args{
@@ -248,7 +248,7 @@ func TestGetNodes(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: add negative tests
+		// TODO: add negative tests and other positive test cases
 		{
 			name: "Positive Test",
 			args: args{
@@ -279,7 +279,7 @@ func TestDaemonSetIsRunning(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: add negative tests
+		// TODO: add negative tests and other positive test cases
 		{
 			name: "Positive Test",
 			args: args{
@@ -299,19 +299,28 @@ func TestDaemonSetIsRunning(t *testing.T) {
 	}
 }
 
-// TODO: implement
 func TestDeploymentIsRunning(t *testing.T) {
 	type args struct {
 		kubeClientset kubernetes.Interface
 		name          string
 		namespace     string
 	}
+	deploymentName := "deployment1"
+	namespace := "namespace1"
 	tests := []struct {
 		name    string
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// TODO: add negative tests and other positive test cases
+		{
+			name: "Positive Test",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, deploymentType, deploymentName, namespace, "")),
+				name:          deploymentName,
+				namespace:     namespace,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
