@@ -15,228 +15,522 @@ limitations under the License.
 package structured
 
 import (
-	"context"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/keikoproj/kubedog/pkg/kube/common"
-	"github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
-	hpa "k8s.io/api/autoscaling/v2beta2"
-	v1 "k8s.io/api/core/v1"
-	policy "k8s.io/api/policy/v1beta1"
+	"k8s.io/api/autoscaling/v2beta2"
+	corev1 "k8s.io/api/core/v1"
+	v1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-func TestPositiveNodesWithSelectorShouldBe(t *testing.T) {
+const (
+	deploymentType         = "deployment"
+	serviceType            = "service"
+	hpaType                = "horizontalpodautoscaler"
+	pdbType                = "poddisruptionbudget"
+	saType                 = "serviceaccount"
+	clusterRoleType        = "clusterrole"
+	clusterRoleBindingType = "clusterrolebinding"
+)
 
-	var (
-		g                 = gomega.NewWithT(t)
-		testReadySelector = "testing-ShouldBeReady=some-value"
-		testFoundSelector = "testing-ShouldBeFound=some-value"
-		testReadyLabel    = map[string]string{"testing-ShouldBeReady": "some-value"}
-		testFoundLabel    = map[string]string{"testing-ShouldBeFound": "some-value"}
-		fakeClient        *fake.Clientset
-	)
-
-	fakeClient = fake.NewSimpleClientset(&v1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "SomeReady-Node",
-			Labels: testReadyLabel,
-		},
-		Status: v1.NodeStatus{
-			Conditions: []v1.NodeCondition{
-				{
-					Type:   v1.NodeReady,
-					Status: v1.ConditionTrue,
-				},
+func TestNodesWithSelectorShouldBe(t *testing.T) {
+	type args struct {
+		kubeClientset kubernetes.Interface
+		w             common.WaiterConfig
+		expectedNodes int
+		labelSelector string
+		state         string
+	}
+	label := "some-label-key=some-label-value"
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: add negative tests
+		{
+			name: "Positive Test: state found",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getNodeWithLabel(t, "node1", label)),
+				expectedNodes: 1,
+				labelSelector: label,
+				state:         common.StateFound,
 			},
 		},
-	}, &v1.Node{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   "SomeFound-name",
-			Labels: testFoundLabel,
+		{
+			name: "Positive Test: state ready",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getNodeWithLabelAndStatus(t, "node1", label, corev1.NodeReady, corev1.ConditionTrue)),
+				expectedNodes: 1,
+				labelSelector: label,
+				state:         common.StateReady,
+			},
 		},
-	})
-
-	err := NodesWithSelectorShouldBe(fakeClient, common.WaiterConfig{}, 1, testReadySelector, common.StateReady)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	err = NodesWithSelectorShouldBe(fakeClient, common.WaiterConfig{}, 1, testFoundSelector, common.StateFound)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.w = common.NewWaiterConfig(1, time.Second)
+			if err := NodesWithSelectorShouldBe(tt.args.kubeClientset, tt.args.w, tt.args.expectedNodes, tt.args.labelSelector, tt.args.state); (err != nil) != tt.wantErr {
+				t.Errorf("NodesWithSelectorShouldBe() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
 }
 
 func TestResourceInNamespace(t *testing.T) {
-	var (
-		err        error
-		g          = gomega.NewWithT(t)
-		fakeClient = fake.NewSimpleClientset()
-		namespace  = "test_ns"
-	)
-
-	tests := []struct {
-		resource  string
-		name      string
-		isOrIsNot string
-	}{
-		{
-			resource:  "deployment",
-			name:      "test_deploy",
-			isOrIsNot: "is",
-		},
-		{
-			resource:  "service",
-			name:      "test_service",
-			isOrIsNot: "is",
-		},
-		{
-			resource:  "hpa",
-			name:      "test_hpa",
-			isOrIsNot: "is",
-		},
-		{
-			resource:  "horizontalpodautoscaler",
-			name:      "test_hpa",
-			isOrIsNot: "is",
-		},
-		{
-			resource:  "pdb",
-			name:      "test_pdb",
-			isOrIsNot: "is",
-		},
-		{
-			resource:  "poddisruptionbudget",
-			name:      "test_pdb",
-			isOrIsNot: "is",
-		},
-		{
-			resource:  "serviceaccount",
-			name:      "mock_service_account",
-			isOrIsNot: "is",
-		},
-		{
-			resource:  "deployment",
-			name:      "test_deploy_not_present",
-			isOrIsNot: "is not",
-		},
+	type args struct {
+		kubeClientset kubernetes.Interface
+		resourceType  string
+		name          string
+		namespace     string
 	}
 
-	_, _ = fakeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
+	deploymentName := "deployment1"
+	serviceName := "service1"
+	hpaName := "horizontalpodautoscaler1"
+	pdbName := "poddisruptionbudget1"
+	saName := "serviceaccount1"
+
+	namespace := "namespace1"
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: add negative tests
+		{
+			name: "Positive Test: deployment",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, deploymentType, deploymentName, namespace)),
+				resourceType:  deploymentType,
+				name:          deploymentName,
+				namespace:     namespace,
+			},
 		},
-		Status: v1.NamespaceStatus{Phase: v1.NamespaceActive},
-	}, metav1.CreateOptions{})
-
+		{
+			name: "Positive Test: service",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, serviceType, serviceName, namespace)),
+				resourceType:  serviceType,
+				name:          serviceName,
+				namespace:     namespace,
+			},
+		},
+		{
+			name: "Positive Test: horizontalpodautoscaler",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, hpaType, hpaName, namespace)),
+				resourceType:  hpaType,
+				name:          hpaName,
+				namespace:     namespace,
+			},
+		},
+		{
+			name: "Positive Test: poddisruptionbudget",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, pdbType, pdbName, namespace)),
+				resourceType:  pdbType,
+				name:          pdbName,
+				namespace:     namespace,
+			},
+		},
+		{
+			name: "Positive Test: serviceaccount",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, saType, saName, namespace)),
+				resourceType:  saType,
+				name:          saName,
+				namespace:     namespace,
+			},
+		},
+	}
 	for _, tt := range tests {
-		t.Run(tt.resource, func(t *testing.T) {
-			if tt.isOrIsNot == "is" {
-				meta := metav1.ObjectMeta{
-					Name: tt.name,
-				}
-
-				switch tt.resource {
-				case "deployment":
-					_, _ = fakeClient.AppsV1().Deployments(namespace).Create(context.Background(), &appsv1.Deployment{
-						ObjectMeta: meta,
-					}, metav1.CreateOptions{})
-				case "service":
-					_, _ = fakeClient.CoreV1().Services(namespace).Create(context.Background(), &v1.Service{
-						ObjectMeta: meta,
-					}, metav1.CreateOptions{})
-				case "hpa":
-					_, _ = fakeClient.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Create(context.Background(), &hpa.HorizontalPodAutoscaler{
-						ObjectMeta: meta,
-					}, metav1.CreateOptions{})
-				case "pdb":
-					_, _ = fakeClient.PolicyV1beta1().PodDisruptionBudgets(namespace).Create(context.Background(), &policy.PodDisruptionBudget{
-						ObjectMeta: meta,
-					}, metav1.CreateOptions{})
-				case "serviceaccount":
-					_, _ = fakeClient.CoreV1().ServiceAccounts(namespace).Create(context.Background(), &v1.ServiceAccount{
-						ObjectMeta: meta,
-					}, metav1.CreateOptions{})
-				}
+		t.Run(tt.name, func(t *testing.T) {
+			if err := ResourceInNamespace(tt.args.kubeClientset, tt.args.resourceType, tt.args.name, tt.args.namespace); (err != nil) != tt.wantErr {
+				t.Errorf("ResourceInNamespace() error = %v, wantErr %v", err, tt.wantErr)
 			}
-
-			err = ResourceInNamespace(fakeClient, tt.resource, tt.name, tt.isOrIsNot, namespace)
-			g.Expect(err).ShouldNot(gomega.HaveOccurred())
 		})
 	}
 }
 
 func TestScaleDeployment(t *testing.T) {
-	var (
-		err          error
-		g            = gomega.NewWithT(t)
-		fakeClient   = fake.NewSimpleClientset()
-		namespace    = "test_ns"
-		deployName   = "test_deploy"
-		replicaCount = int32(1)
-	)
-
-	_, _ = fakeClient.CoreV1().Namespaces().Create(context.Background(), &v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-		},
-		Status: v1.NamespaceStatus{Phase: v1.NamespaceActive},
-	}, metav1.CreateOptions{})
-
-	_, _ = fakeClient.AppsV1().Deployments(namespace).Create(context.Background(), &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: deployName,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicaCount,
-		},
-	}, metav1.CreateOptions{})
-	err = ScaleDeployment(fakeClient, deployName, namespace, 2)
-	g.Expect(err).ShouldNot(gomega.HaveOccurred())
-	s, _ := fakeClient.AppsV1().Deployments(namespace).GetScale(context.Background(), deployName, metav1.GetOptions{})
-	g.Expect(s.Spec.Replicas).To(gomega.Equal(int32(2)))
-}
-
-func TestClusterRoleAndBindingIsFound(t *testing.T) {
-	var (
-		err        error
-		g          = gomega.NewWithT(t)
-		fakeClient = fake.NewSimpleClientset()
-	)
-
+	type args struct {
+		kubeClientset kubernetes.Interface
+		name          string
+		namespace     string
+		replicas      int32
+	}
+	deploymentName := "deployment1"
+	namespace := "namespace1"
 	tests := []struct {
-		resource string
-		name     string
+		name    string
+		args    args
+		wantErr bool
 	}{
+		// TODO: add negative tests
 		{
-			resource: "clusterrole",
-			name:     "mock_cluster_role",
-		},
-		{
-			resource: "clusterrolebinding",
-			name:     "mock_cluster_role_binding",
+			name: "Positive Test",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, deploymentType, deploymentName, namespace)),
+				name:          deploymentName,
+				namespace:     namespace,
+				replicas:      0,
+			},
 		},
 	}
-
 	for _, tt := range tests {
-		t.Run(tt.resource, func(t *testing.T) {
-			meta := metav1.ObjectMeta{
-				Name: tt.name,
+		t.Run(tt.name, func(t *testing.T) {
+			if err := ScaleDeployment(tt.args.kubeClientset, tt.args.name, tt.args.namespace, tt.args.replicas); (err != nil) != tt.wantErr {
+				t.Errorf("ScaleDeployment() error = %v, wantErr %v", err, tt.wantErr)
 			}
-
-			switch tt.resource {
-			case "clusterrole":
-				_, _ = fakeClient.RbacV1().ClusterRoles().Create(context.Background(), &rbacv1.ClusterRole{
-
-					ObjectMeta: meta,
-				}, metav1.CreateOptions{})
-			case "clusterrolebinding":
-				_, _ = fakeClient.RbacV1().ClusterRoleBindings().Create(context.Background(), &rbacv1.ClusterRoleBinding{
-
-					ObjectMeta: meta,
-				}, metav1.CreateOptions{})
-			}
-			err = ClusterRbacIsFound(fakeClient, tt.resource, tt.name)
-			g.Expect(err).ShouldNot(gomega.HaveOccurred())
 		})
 	}
+}
+
+func TestClusterRbacIsFound(t *testing.T) {
+	type args struct {
+		kubeClientset kubernetes.Interface
+		resourceType  string
+		name          string
+	}
+	clusterRoleName := "clusterrole1"
+	clusterRoleBindingName := "clusterrolebinding1"
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: add negative tests
+		{
+			name: "Positive Test: ClusterRole",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, clusterRoleType, clusterRoleName, "")),
+				resourceType:  clusterRoleType,
+				name:          clusterRoleName,
+			},
+		},
+		{
+			name: "Positive Test: ClusterRoleBinding",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, clusterRoleBindingType, clusterRoleBindingName, "")),
+				resourceType:  clusterRoleBindingType,
+				name:          clusterRoleBindingName,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := ClusterRbacIsFound(tt.args.kubeClientset, tt.args.resourceType, tt.args.name); (err != nil) != tt.wantErr {
+				t.Errorf("ClusterRbacIsFound() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TODO: implement
+func TestGetNodes(t *testing.T) {
+	type args struct {
+		kubeClientset kubernetes.Interface
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := GetNodes(tt.args.kubeClientset); (err != nil) != tt.wantErr {
+				t.Errorf("GetNodes() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TODO: implement
+func TestDaemonSetIsRunning(t *testing.T) {
+	type args struct {
+		kubeClientset kubernetes.Interface
+		expBackoff    wait.Backoff
+		name          string
+		namespace     string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := DaemonSetIsRunning(tt.args.kubeClientset, tt.args.expBackoff, tt.args.name, tt.args.namespace); (err != nil) != tt.wantErr {
+				t.Errorf("DaemonSetIsRunning() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TODO: implement
+func TestDeploymentIsRunning(t *testing.T) {
+	type args struct {
+		kubeClientset kubernetes.Interface
+		name          string
+		namespace     string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := DeploymentIsRunning(tt.args.kubeClientset, tt.args.name, tt.args.namespace); (err != nil) != tt.wantErr {
+				t.Errorf("DeploymentIsRunning() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TODO: implement
+func TestPersistentVolExists(t *testing.T) {
+	type args struct {
+		kubeClientset kubernetes.Interface
+		name          string
+		expectedPhase string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := PersistentVolExists(tt.args.kubeClientset, tt.args.name, tt.args.expectedPhase); (err != nil) != tt.wantErr {
+				t.Errorf("PersistentVolExists() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TODO: implement
+func TestValidatePrometheusVolumeClaimTemplatesName(t *testing.T) {
+	type args struct {
+		kubeClientset            kubernetes.Interface
+		statefulsetName          string
+		namespace                string
+		volumeClaimTemplatesName string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := ValidatePrometheusVolumeClaimTemplatesName(tt.args.kubeClientset, tt.args.statefulsetName, tt.args.namespace, tt.args.volumeClaimTemplatesName); (err != nil) != tt.wantErr {
+				t.Errorf("ValidatePrometheusVolumeClaimTemplatesName() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TODO: implement
+func TestSecretDelete(t *testing.T) {
+	type args struct {
+		kubeClientset kubernetes.Interface
+		name          string
+		namespace     string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := SecretDelete(tt.args.kubeClientset, tt.args.name, tt.args.namespace); (err != nil) != tt.wantErr {
+				t.Errorf("SecretDelete() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TODO: implement
+func TestSecretOperationFromEnvironmentVariable(t *testing.T) {
+	type args struct {
+		kubeClientset       kubernetes.Interface
+		operation           string
+		name                string
+		namespace           string
+		environmentVariable string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := SecretOperationFromEnvironmentVariable(tt.args.kubeClientset, tt.args.operation, tt.args.name, tt.args.namespace, tt.args.environmentVariable); (err != nil) != tt.wantErr {
+				t.Errorf("SecretOperationFromEnvironmentVariable() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TODO: implement
+func TestIngressAvailable(t *testing.T) {
+	type args struct {
+		kubeClientset kubernetes.Interface
+		w             common.WaiterConfig
+		name          string
+		namespace     string
+		port          int
+		path          string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := IngressAvailable(tt.args.kubeClientset, tt.args.w, tt.args.name, tt.args.namespace, tt.args.port, tt.args.path); (err != nil) != tt.wantErr {
+				t.Errorf("IngressAvailable() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// TODO: implement
+func TestSendTrafficToIngress(t *testing.T) {
+	type args struct {
+		kubeClientset  kubernetes.Interface
+		w              common.WaiterConfig
+		tps            int
+		name           string
+		namespace      string
+		port           int
+		path           string
+		duration       int
+		durationUnits  string
+		expectedErrors int
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := SendTrafficToIngress(tt.args.kubeClientset, tt.args.w, tt.args.tps, tt.args.name, tt.args.namespace, tt.args.port, tt.args.path, tt.args.duration, tt.args.durationUnits, tt.args.expectedErrors); (err != nil) != tt.wantErr {
+				t.Errorf("SendTrafficToIngress() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func getNodeWithLabel(t *testing.T, name, label string) *corev1.Node {
+	key, value := getLabelParts(t, label)
+	return &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				key: value,
+			},
+		},
+	}
+}
+
+func getNodeWithLabelAndStatus(t *testing.T, name, label string, statusType corev1.NodeConditionType, status corev1.ConditionStatus) *corev1.Node {
+	key, value := getLabelParts(t, label)
+	return &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+			Labels: map[string]string{
+				key: value,
+			},
+		},
+		Status: corev1.NodeStatus{
+			Conditions: []corev1.NodeCondition{
+				{
+					Type:   statusType,
+					Status: status,
+				},
+			},
+		},
+	}
+}
+
+func getLabelParts(t *testing.T, label string) (string, string) {
+	labelSplit := strings.Split(label, "=")
+	if len(labelSplit) != 2 {
+		t.Errorf("expected label format '<key>=<value>', got '%s'", label)
+	}
+	return labelSplit[0], labelSplit[1]
+}
+
+func getResource(t *testing.T, resourceType, name, namespace string) runtime.Object {
+	meta := metav1.ObjectMeta{
+		Name:      name,
+		Namespace: namespace,
+	}
+	switch resourceType {
+	case deploymentType:
+		return &appsv1.Deployment{
+			ObjectMeta: meta,
+		}
+	case serviceType:
+		return &corev1.Service{
+			ObjectMeta: meta,
+		}
+	case "hpa", hpaType:
+		return &v2beta2.HorizontalPodAutoscaler{
+			ObjectMeta: meta,
+		}
+	case "pdb", pdbType:
+		return &v1beta1.PodDisruptionBudget{
+			ObjectMeta: meta,
+		}
+	case "sa", saType:
+		return &corev1.ServiceAccount{
+			ObjectMeta: meta,
+		}
+	case clusterRoleType:
+		return &rbacv1.ClusterRole{
+			ObjectMeta: meta,
+		}
+	case clusterRoleBindingType:
+		return &rbacv1.ClusterRoleBinding{
+			ObjectMeta: meta,
+		}
+	default:
+		t.Errorf("Invalid resource type: %s", resourceType)
+	}
+	return nil
 }
