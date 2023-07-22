@@ -274,7 +274,14 @@ func (kc *ClientSet) NodesWithSelectorShouldBe(expectedNodes int, selector, stat
 }
 
 func (kc *ClientSet) ResourceInNamespace(resourceType, name, isOrIsNot, namespace string) error {
-	return structured.ResourceInNamespace(kc.KubeInterface, resourceType, name, isOrIsNot, namespace)
+	switch isOrIsNot {
+	case "is":
+		return structured.ResourceInNamespace(kc.KubeInterface, resourceType, name, namespace)
+	case "is not":
+		return structured.ResourceNotInNamespace(kc.KubeInterface, resourceType, name, namespace)
+	default:
+		return errors.Errorf("paramter isOrIsNot can only be 'is' or 'is not'")
+	}
 }
 
 func (kc *ClientSet) ScaleDeployment(name, namespace string, replicas int32) error {
