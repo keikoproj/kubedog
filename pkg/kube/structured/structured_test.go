@@ -25,6 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	v1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,6 +48,7 @@ const (
 	persistentVolumeType   = "persistentvolume"
 	statefulSetType        = "statefulset"
 	secretType             = "secret"
+	ingressType            = "ingress"
 )
 
 func TestNodesWithSelectorShouldBe(t *testing.T) {
@@ -479,7 +481,6 @@ func TestSecretOperationFromEnvironmentVariable(t *testing.T) {
 	}
 }
 
-// TODO: implement
 func TestIngressAvailable(t *testing.T) {
 	type args struct {
 		kubeClientset kubernetes.Interface
@@ -489,12 +490,26 @@ func TestIngressAvailable(t *testing.T) {
 		port          int
 		path          string
 	}
+	ingressName := "ingress1"
+	namespace := "namespace1"
 	tests := []struct {
 		name    string
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// TODO: add positive tests, will likely need to refactor IngressAvailable to fake http.Client
+		{
+			name: "Negative Test: endpoint not available",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getIngressWithHostname(t, ingressName, namespace, "localhost")),
+				w:             common.NewWaiterConfig(1, time.Millisecond),
+				name:          ingressName,
+				namespace:     namespace,
+				port:          6060,
+				path:          "/",
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -505,7 +520,6 @@ func TestIngressAvailable(t *testing.T) {
 	}
 }
 
-// TODO: implement
 func TestSendTrafficToIngress(t *testing.T) {
 	type args struct {
 		kubeClientset  kubernetes.Interface
@@ -519,12 +533,29 @@ func TestSendTrafficToIngress(t *testing.T) {
 		durationUnits  string
 		expectedErrors int
 	}
+	ingressName := "ingress1"
+	namespace := "namespace1"
 	tests := []struct {
 		name    string
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// TODO: add positive test expectedErrors = 0, will likely need to fake the endpoint
+		{
+			name: "Positive Test: expectedErrors = 1",
+			args: args{
+				kubeClientset:  fake.NewSimpleClientset(getIngressWithHostname(t, ingressName, namespace, "localhost")),
+				w:              common.NewWaiterConfig(1, time.Millisecond),
+				tps:            1,
+				name:           ingressName,
+				namespace:      namespace,
+				port:           6060,
+				path:           "/",
+				duration:       1,
+				durationUnits:  util.DurationSeconds,
+				expectedErrors: 1,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -533,6 +564,20 @@ func TestSendTrafficToIngress(t *testing.T) {
 			}
 		})
 	}
+}
+
+func getIngressWithHostname(t *testing.T, name, namespace, hostname string) runtime.Object {
+	ingressInterface := getResourceWithNamespace(t, ingressType, name, namespace)
+	ingress, ok := ingressInterface.(*networkingv1.Ingress)
+	if !ok {
+		t.Errorf("'runtime.Object' could not be cast to '*appsv1.StatefulSet': %v", ingressInterface)
+	}
+	ingress.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
+		{
+			Hostname: hostname,
+		},
+	}
+	return ingress
 }
 
 func getStatefulSetWithVolumeClaimTemplate(t *testing.T, name, namespace, volumeClaimTemplatesName string) runtime.Object {
@@ -678,6 +723,14 @@ func getResourceWithAll(t *testing.T, resourceType, name, namespace, label strin
 		}
 	case secretType:
 		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
+			},
+		}
+	case ingressType:
+		return &networkingv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,

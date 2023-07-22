@@ -130,6 +130,7 @@ func GetIngress(kubeClientset kubernetes.Interface, name, namespace string) (*ne
 	return ingress.(*networkingv1.Ingress), nil
 }
 
+// TODO: remove use of service.beta.kubernetes.io/aws-load-balancer-subnets or make generic
 func GetIngressEndpoint(kubeClientset kubernetes.Interface, w common.WaiterConfig, name, namespace string, port int, path string) (string, error) {
 	var (
 		counter int
