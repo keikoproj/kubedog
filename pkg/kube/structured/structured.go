@@ -296,8 +296,7 @@ func SecretOperationFromEnvironmentVariable(kubeClientset kubernetes.Interface, 
 		}
 		_, err := kubeClientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 		if kerrors.IsAlreadyExists(err) {
-			log.Infof("secret '%s' already created", name)
-			return nil
+			return fmt.Errorf("secret '%s' already created", name)
 		}
 		return err
 	case common.OperationUpdate:
@@ -315,7 +314,7 @@ func SecretOperationFromEnvironmentVariable(kubeClientset kubernetes.Interface, 
 	case common.OperationDelete:
 		err := kubeClientset.CoreV1().Secrets(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 		if kerrors.IsNotFound(err) {
-			log.Infof("secret '%s' already deleted", name)
+			log.Infof("secret '%s' was not found", name)
 			return nil
 		}
 		return err

@@ -15,6 +15,7 @@ limitations under the License.
 package structured
 
 import (
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -45,6 +46,7 @@ const (
 	daemonSetType          = "daemonset"
 	persistentVolumeType   = "persistentvolume"
 	statefulSetType        = "statefulset"
+	secretType             = "secret"
 )
 
 func TestNodesWithSelectorShouldBe(t *testing.T) {
@@ -400,7 +402,6 @@ func TestValidatePrometheusVolumeClaimTemplatesName(t *testing.T) {
 	}
 }
 
-// TODO: implement
 func TestSecretDelete(t *testing.T) {
 	type args struct {
 		kubeClientset kubernetes.Interface
@@ -412,7 +413,15 @@ func TestSecretDelete(t *testing.T) {
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// TODO: add negative tests and other positive test cases
+		{
+			name: "Positive Test",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(),
+				name:          "secret1",
+				namespace:     "namespace1",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -423,7 +432,6 @@ func TestSecretDelete(t *testing.T) {
 	}
 }
 
-// TODO: implement
 func TestSecretOperationFromEnvironmentVariable(t *testing.T) {
 	type args struct {
 		kubeClientset       kubernetes.Interface
@@ -432,15 +440,38 @@ func TestSecretOperationFromEnvironmentVariable(t *testing.T) {
 		namespace           string
 		environmentVariable string
 	}
+	secretName := "secret1"
+	namespace := "namespace1"
 	tests := []struct {
 		name    string
 		args    args
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// TODO: add negative tests
+		{
+			name: "Positive Test: create/submit",
+			args: args{
+				kubeClientset:       fake.NewSimpleClientset(),
+				operation:           common.OperationCreate,
+				name:                secretName,
+				namespace:           namespace,
+				environmentVariable: "MY_TEST_SECRET",
+			},
+		},
+		{
+			name: "Positive Test: update",
+			args: args{
+				kubeClientset:       fake.NewSimpleClientset(getResourceWithNamespace(t, secretType, secretName, namespace)),
+				operation:           common.OperationUpdate,
+				name:                secretName,
+				namespace:           namespace,
+				environmentVariable: "MY_TEST_SECRET",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv(tt.args.environmentVariable, "some-test-secret-value")
 			if err := SecretOperationFromEnvironmentVariable(tt.args.kubeClientset, tt.args.operation, tt.args.name, tt.args.namespace, tt.args.environmentVariable); (err != nil) != tt.wantErr {
 				t.Errorf("SecretOperationFromEnvironmentVariable() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -639,6 +670,14 @@ func getResourceWithAll(t *testing.T, resourceType, name, namespace, label strin
 		}
 	case statefulSetType:
 		return &appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
+			},
+		}
+	case secretType:
+		return &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
