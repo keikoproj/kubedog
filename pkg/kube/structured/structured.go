@@ -416,11 +416,11 @@ func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name,
 
 func ResourceNotInNamespace(kubeClientset kubernetes.Interface, resourceType, name, namespace string) error {
 	err := ResourceInNamespace(kubeClientset, resourceType, name, namespace)
-	if !kerrors.IsNotFound(err) {
-		return err
-	}
 	if err == nil {
 		return errors.Errorf("expected resource '%s/%s' to not be found in ns '%s'", resourceType, name, namespace)
+	}
+	if !kerrors.IsNotFound(err) {
+		return err
 	}
 	return nil
 }

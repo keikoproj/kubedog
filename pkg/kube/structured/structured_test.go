@@ -171,6 +171,49 @@ func TestResourceInNamespace(t *testing.T) {
 	}
 }
 
+func TestResourceNotInNamespace(t *testing.T) {
+	type args struct {
+		kubeClientset kubernetes.Interface
+		resourceType  string
+		name          string
+		namespace     string
+	}
+	deploymentName := "deployment1"
+	namespace := "namespace1"
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Positive Test: deployment",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(),
+				resourceType:  deploymentType,
+				name:          deploymentName,
+				namespace:     namespace,
+			},
+		},
+		{
+			name: "Negative Test: deployment",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, deploymentType, deploymentName, namespace)),
+				resourceType:  deploymentType,
+				name:          deploymentName,
+				namespace:     namespace,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := ResourceNotInNamespace(tt.args.kubeClientset, tt.args.resourceType, tt.args.name, tt.args.namespace); (err != nil) != tt.wantErr {
+				t.Errorf("ResourceNotInNamespace() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestScaleDeployment(t *testing.T) {
 	type args struct {
 		kubeClientset kubernetes.Interface
