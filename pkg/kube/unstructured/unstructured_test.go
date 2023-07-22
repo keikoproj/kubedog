@@ -120,6 +120,45 @@ func TestResourceOperationInNamespace(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "Positive Test: Upsert resource, ns in file",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(resource),
+				resource:      resource,
+				operation:     common.OperationUpsert,
+				namespace:     "",
+			},
+		},
+		{
+			name: "Positive Test: Upsert resource, 'Get' call fails with IsNotFound",
+			args: args{
+				dynamicClient: newFakeDynamicClient(),
+				resource:      resource,
+				operation:     common.OperationUpsert,
+				namespace:     "",
+			},
+		},
+		{
+			name: "Negative Test: Upsert resource, 'Update' call fails",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithReactors(
+					&kTesting.SimpleReactor{
+						Verb:     "get",
+						Resource: resource.Resource.GetName(),
+						Reaction: newReactionFunc(),
+					},
+					&kTesting.SimpleReactor{
+						Verb:     "update",
+						Resource: resource.Resource.GetName(),
+						Reaction: newReactionFuncWithError(errors.New("an error")),
+					},
+				),
+				resource:  resource,
+				operation: common.OperationUpsert,
+				namespace: "",
+			},
+			wantErr: true,
+		},
+		{
 			name: "Positive Test: Delete resource, ns in file",
 			args: args{
 				dynamicClient: newFakeDynamicClientWithResource(resource),
