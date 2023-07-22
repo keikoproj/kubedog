@@ -138,7 +138,7 @@ func ClusterRbacIsFound(kubeClientset kubernetes.Interface, resourceType, name s
 	return nil
 }
 
-func GetNodes(kubeClientset kubernetes.Interface) error {
+func ListNodes(kubeClientset kubernetes.Interface) error {
 
 	var readyStatus = func(conditions []corev1.NodeCondition) string {
 		var status = false
@@ -158,7 +158,7 @@ func GetNodes(kubeClientset kubernetes.Interface) error {
 		return "NotReady"
 	}
 	// List nodes
-	nodes, _ := ListNodes(kubeClientset)
+	nodes, _ := GetNodeList(kubeClientset)
 	if nodes != nil {
 		tableFormat := "%-64s%-12s%-24s%-16s"
 		log.Infof(tableFormat, "NAME", "STATUS", "INSTANCEGROUP", "AZ")
@@ -188,7 +188,7 @@ func DaemonSetIsRunning(kubeClientset kubernetes.Interface, expBackoff wait.Back
 	})
 	if err != nil {
 		// Print Pods after failure
-		_ = pod.Pods(kubeClientset, namespace)
+		_ = pod.ListPods(kubeClientset, namespace)
 		return fmt.Errorf("daemonset '%s/%s' not updated: '%v'", namespace, name, err)
 	}
 	return nil
@@ -227,7 +227,7 @@ func ValidatePrometheusVolumeClaimTemplatesName(kubeClientset kubernetes.Interfa
 	// Validation required:
 	// 	- To retain existing persistent volumes and not to loose any data.
 	//	- And avoid creating new name persistent volumes.
-	sfs, err := ListStatefulSets(kubeClientset, namespace)
+	sfs, err := GetStatefulSetList(kubeClientset, namespace)
 	if err != nil {
 		return err
 	}

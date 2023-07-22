@@ -72,7 +72,7 @@ func GetResources(dc discovery.DiscoveryInterface, TemplateArguments interface{}
 	return resourceList, err
 }
 
-func ListInstanceGroups(dynamicClient dynamic.Interface) (*unstructured.UnstructuredList, error) {
+func GetInstanceGroupList(dynamicClient dynamic.Interface) (*unstructured.UnstructuredList, error) {
 	const (
 		instanceGroupNamespace   = "instance-manager"
 		customResourceGroup      = "instancemgr"

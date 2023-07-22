@@ -288,7 +288,7 @@ func TestClusterRbacIsFound(t *testing.T) {
 	}
 }
 
-func TestGetNodes(t *testing.T) {
+func TestListNodes(t *testing.T) {
 	type args struct {
 		kubeClientset kubernetes.Interface
 	}
@@ -307,8 +307,8 @@ func TestGetNodes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := GetNodes(tt.args.kubeClientset); (err != nil) != tt.wantErr {
-				t.Errorf("GetNodes() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ListNodes(tt.args.kubeClientset); (err != nil) != tt.wantErr {
+				t.Errorf("ListNodes() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

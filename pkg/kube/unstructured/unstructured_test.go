@@ -901,7 +901,7 @@ func TestGetResources(t *testing.T) {
 	}
 }
 
-func TestListInstanceGroups(t *testing.T) {
+func TestGetInstanceGroupList(t *testing.T) {
 	type args struct {
 		dynamicClient dynamic.Interface
 	}
@@ -923,13 +923,13 @@ func TestListInstanceGroups(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ListInstanceGroups(tt.args.dynamicClient)
+			got, err := GetInstanceGroupList(tt.args.dynamicClient)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ListInstanceGroups() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetInstanceGroupList() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ListInstanceGroups() = %s, want %s", util.StructToPrettyString(got), util.StructToPrettyString(tt.want))
+				t.Errorf("GetInstanceGroupList() = %s, want %s", util.StructToPrettyString(got), util.StructToPrettyString(tt.want))
 			}
 		})
 	}

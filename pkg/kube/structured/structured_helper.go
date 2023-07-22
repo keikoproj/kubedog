@@ -30,7 +30,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func ListNodes(kubeClientset kubernetes.Interface) (*corev1.NodeList, error) {
+func GetNodeList(kubeClientset kubernetes.Interface) (*corev1.NodeList, error) {
 	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return nil, err
 	}
@@ -87,8 +87,7 @@ func GetPersistentVolume(kubeClientset kubernetes.Interface, name string) (*core
 	return pvs.(*corev1.PersistentVolume), nil
 }
 
-// TODO: should be get not list because it returns the object instead printing it
-func ListStatefulSets(kubeClientset kubernetes.Interface, namespace string) (*appsv1.StatefulSetList, error) {
+func GetStatefulSetList(kubeClientset kubernetes.Interface, namespace string) (*appsv1.StatefulSetList, error) {
 	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return nil, err
 	}
@@ -102,7 +101,7 @@ func ListStatefulSets(kubeClientset kubernetes.Interface, namespace string) (*ap
 	return sts.(*appsv1.StatefulSetList), nil
 }
 
-func ListPersistentVolumes(kubeClientset kubernetes.Interface) (*corev1.PersistentVolumeList, error) {
+func GetPersistentVolumeList(kubeClientset kubernetes.Interface) (*corev1.PersistentVolumeList, error) {
 	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return nil, err
 	}
@@ -167,7 +166,7 @@ func GetIngressEndpoint(kubeClientset kubernetes.Interface, w common.WaiterConfi
 // TODO: This is hardcoded based on prometheus names in IKS clusters. Might be worth making it more generic in the future
 func validatePrometheusPVLabels(kubeClientset kubernetes.Interface, volumeClaimTemplatesName string) error {
 	// Get prometheus PersistentVolume list
-	pv, err := ListPersistentVolumes(kubeClientset)
+	pv, err := GetPersistentVolumeList(kubeClientset)
 	if err != nil {
 		log.Fatal(err)
 	}

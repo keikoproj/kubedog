@@ -419,7 +419,7 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 }
 
 func VerifyInstanceGroups(dynamicClient dynamic.Interface) error {
-	igs, err := ListInstanceGroups(dynamicClient)
+	igs, err := GetInstanceGroupList(dynamicClient)
 	if err != nil {
 		return err
 	}

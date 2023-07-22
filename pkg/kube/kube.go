@@ -104,7 +104,7 @@ func (kc *ClientSet) SetTimestamp(timestampName string) error {
 func (kc *ClientSet) KubernetesClusterShouldBe(state string) error {
 	switch state {
 	case common.StateCreated, common.StateUpgraded:
-		if err := pod.Pods(kc.KubeInterface, metav1.NamespaceSystem); err != nil {
+		if err := pod.ListPods(kc.KubeInterface, metav1.NamespaceSystem); err != nil {
 			return errors.Errorf("failed validating cluster create/update, could not get pods: '%v'", err)
 		}
 		return nil
@@ -209,12 +209,12 @@ func (kc *ClientSet) VerifyInstanceGroups() error {
 	return unstruct.VerifyInstanceGroups(kc.DynamicInterface)
 }
 
-func (kc *ClientSet) Pods(namespace string) error {
-	return pod.Pods(kc.KubeInterface, namespace)
+func (kc *ClientSet) ListPods(namespace string) error {
+	return pod.ListPods(kc.KubeInterface, namespace)
 }
 
-func (kc *ClientSet) PodsWithSelector(namespace, selector string) error {
-	return pod.PodsWithSelector(kc.KubeInterface, namespace, selector)
+func (kc *ClientSet) ListPodsWithSelector(namespace, selector string) error {
+	return pod.ListPodsWithSelector(kc.KubeInterface, namespace, selector)
 }
 
 func (kc *ClientSet) PodsWithSelectorHaveRestartCountLessThan(namespace, selector string, restartCount int) error {
@@ -292,8 +292,8 @@ func (kc *ClientSet) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName,
 	return structured.ValidatePrometheusVolumeClaimTemplatesName(kc.KubeInterface, statefulsetName, namespace, volumeClaimTemplatesName)
 }
 
-func (kc *ClientSet) GetNodes() error {
-	return structured.GetNodes(kc.KubeInterface)
+func (kc *ClientSet) ListNodes() error {
+	return structured.ListNodes(kc.KubeInterface)
 }
 
 func (kc *ClientSet) DaemonSetIsRunning(name, namespace string) error {
