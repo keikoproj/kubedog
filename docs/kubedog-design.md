@@ -101,7 +101,8 @@
 
 # Kubedog's Design
 <!--
-rename to structure and not design?
+TODO: rename title to structure and not design?
+TODO: rename fila to contributing and add instructions on how to set local environment for development (replace directive)?
 -->
 
 ```
