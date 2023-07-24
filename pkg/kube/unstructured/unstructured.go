@@ -338,6 +338,7 @@ func UpdateResourceWithField(dynamicClient dynamic.Interface, resource unstructu
 	return nil
 }
 
+// TODO: refactor so it doesnt need the dynamic and discovery clients
 func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.DiscoveryInterface, TemplateArguments interface{}, w common.WaiterConfig, resourcesPath string) error {
 	if err := validateDynamicClient(dynamicClient); err != nil {
 		return err

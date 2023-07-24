@@ -32,6 +32,15 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// TODO: write down the design of Kubedog: why pkgs are how they are, methods names and the use of correct verbs,
+// how kube is broken into multiple pkgs and then used from there in a sort-of-like a divide-and-conquer manner
+// to keep methods with a single functionality and not use inputs to change their behavior, instead create one function per
+// behavior. In this manner we have the syntax ( which will make us want to have functions change their behavior based on
+// the input) then we use kube to use behavior-changing inputs to call different functions with specific behaviors or functions
+// in a different manner.
+
+// TODO: add a gif animation of how to use kubedog like some open source projects do
+
 type ClientSet struct {
 	KubeInterface    kubernetes.Interface
 	DynamicInterface dynamic.Interface
@@ -130,6 +139,7 @@ func (kc *ClientSet) ResourceOperation(operation, resourceFileName string) error
 	if err != nil {
 		return err
 	}
+	// TODO: use ResourceOperationInNamespace should like ResourceOperation does, ResourceOperation is redundant
 	return unstruct.ResourceOperation(kc.DynamicInterface, resource, operation)
 }
 
@@ -210,6 +220,7 @@ func (kc *ClientSet) VerifyInstanceGroups() error {
 }
 
 func (kc *ClientSet) ListPods(namespace string) error {
+	// TODO: use ListPodsWithSelector like ListPods does, ListPods is redundant
 	return pod.ListPods(kc.KubeInterface, namespace)
 }
 
@@ -226,6 +237,7 @@ func (kc *ClientSet) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTi
 	if err != nil {
 		return err
 	}
+	// TODO: refactor SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime to not have the input someOrAll change its behavior, instead have different methods
 	return pod.SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(kc.KubeInterface, kc.getExpBackoff(), someOrAll, namespace, selector, searchKeyword, timestamp)
 }
 
@@ -266,6 +278,7 @@ func (kc *ClientSet) SecretOperationFromEnvironmentVariable(operation, name, nam
 }
 
 func (kc *ClientSet) SecretDelete(name, namespace string) error {
+	// TODO: use SecretOperationFromEnvironmentVariable directly like SecretDelete does, SecretDelete is redundant
 	return structured.SecretDelete(kc.KubeInterface, name, namespace)
 }
 
@@ -278,6 +291,7 @@ func (kc *ClientSet) ResourceInNamespace(resourceType, name, isOrIsNot, namespac
 	case "is":
 		return structured.ResourceInNamespace(kc.KubeInterface, resourceType, name, namespace)
 	case "is not":
+		// TODO: is this redundant too? call ResourceInNamespace like ResourceNotInNamespace does?
 		return structured.ResourceNotInNamespace(kc.KubeInterface, resourceType, name, namespace)
 	default:
 		return errors.Errorf("paramter isOrIsNot can only be 'is' or 'is not'")
