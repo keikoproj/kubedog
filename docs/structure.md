@@ -99,9 +99,7 @@
 29 directories, 67 files
 ```
 
-# Kubedog's Design
 <!--
-TODO: rename title to structure and not design?
 TODO: rename fila to contributing and add instructions on how to set local environment for development (replace directive)?
 -->
 
@@ -160,7 +158,7 @@ TODO: rename fila to contributing and add instructions on how to set local envir
         └── util.go
 ```
 
-## Kubedog Structure
+## Structure
 
 Kubedog follows [golang-standards/project-layout](https://github.com/golang-standards/project-layout).
 
@@ -212,33 +210,17 @@ pkg/kube
 
 ```
 pkg/kube/unstructured
+├── test
 ├── unstructured.go
 ├── unstructured_helper.go
 └── unstructured_test.go
 ```
 
 `unstructured.go`: steps implementations only.
-`unstructured_helper.go`: aids steps implementations and other non steps related implementations
+`unstructured_helper.go`: aids steps implementations and other non steps related implementations.
+`test`: test files used in `unstructured_test.go`.
 <!-- 
 TODO: how about kube_helper.go? maybe merge with kube.go or move non steps related implementations from kube.go to kube_helper.go
--->
-
-<!--
-TODO: talk about the `test` directory and the sub-directory
-
-    ├── test
-    │   ├── files
-    │   │   ├── analysis-template.yaml
-    │   │   ├── instance-group-not-ready.yaml
-    │   │   ├── instance-group.yaml
-    │   │   ├── multi-resource-no-ns.yaml
-    │   │   ├── multi-resource.yaml
-    │   │   ├── resource-no-ns.yaml
-    │   │   └── resource.yaml
-    │   └── templates
-    │       ├── generated_templated.yaml
-    │       └── templated.yaml
-
 -->
 
 ### aws
