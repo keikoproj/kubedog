@@ -27,8 +27,8 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 ### Structured Resources
 
 #### Pods
-- `<GK> [I] get [the] pods in namespace <any-characters-except-(")>` kdt.KubeClientSet.Pods
-- `<GK> [I] get [the] pods in namespace <any-characters-except-(")> with selector <non-whitespace-characters>` kdt.KubeClientSet.PodsWithSelector
+- `<GK> [I] get [the] pods in namespace <any-characters-except-(")>` kdt.KubeClientSet.ListPods
+- `<GK> [I] get [the] pods in namespace <any-characters-except-(")> with selector <non-whitespace-characters>` kdt.KubeClientSet.ListPodsWithSelector
 - `<GK> [the] pods in namespace <any-characters-except-(")> with selector <non-whitespace-characters> have restart count less than <digits>` kdt.KubeClientSet.PodsWithSelectorHaveRestartCountLessThan
 - `<GK> (some|all) pods in namespace <non-whitespace-characters> with selector <non-whitespace-characters> have "<any-characters-except-(")>" in logs since <any-characters-except-(")> time` kdt.KubeClientSet.SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime
 - `<GK> some pods in namespace <non-whitespace-characters> with selector <non-whitespace-characters> don't have "<any-characters-except-(")>" in logs since <any-characters-except-(")> time` kdt.KubeClientSet.SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime
@@ -44,7 +44,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [the] (deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) <any-characters-except-(")> (is|is not) in namespace <any-characters-except-(")>` kdt.KubeClientSet.ResourceInNamespace
 - `<GK> [I] scale [the] deployment <any-characters-except-(")> in namespace <any-characters-except-(")> to <digits>` kdt.KubeClientSet.ScaleDeployment
 - `<GK> [I] validate Prometheus Statefulset <any-characters-except-(")> in namespace <any-characters-except-(")> has volumeClaimTemplates name <any-characters-except-(")>` kdt.KubeClientSet.ValidatePrometheusVolumeClaimTemplatesName
-- `<GK> [I] get [the] nodes list` kdt.KubeClientSet.GetNodes
+- `<GK> [I] get [the] nodes list` kdt.KubeClientSet.ListNodes
 - `<GK> [the] daemonset <any-characters-except-(")> is running in namespace <any-characters-except-(")>` kdt.KubeClientSet.DaemonSetIsRunning
 - `<GK> [the] deployment <any-characters-except-(")> is running in namespace <any-characters-except-(")>` kdt.KubeClientSet.DeploymentIsRunning
 - `<GK> [the] persistentvolume <any-characters-except-(")> exists with status (Available|Bound|Released|Failed|Pending)` kdt.KubeClientSet.PersistentVolExists

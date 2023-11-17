@@ -19,8 +19,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/keikoproj/kubedog/internal/util"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
-	"github.com/keikoproj/kubedog/pkg/kube/pod"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
@@ -79,7 +79,7 @@ func (kc *ClientSet) getWaiterConfig() common.WaiterConfig {
 }
 
 func (kc *ClientSet) getExpBackoff() wait.Backoff {
-	return pod.GetExpBackoff(kc.getWaiterTries())
+	return util.GetExpBackoff(kc.getWaiterTries())
 }
 
 func (kc *ClientSet) getDiscoveryClient() discovery.DiscoveryInterface {

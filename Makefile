@@ -12,7 +12,7 @@ build: test
 	GOOS=linux GOARCH=amd64 go build $(GO_LDFLAGS) -o ${BINARY} ./
 
 test: fmt vet
-	go test -v -race -timeout=300s -tags test -coverprofile=${COVER_FILE} ./...
+	go test -race -timeout=300s -tags test -coverprofile=${COVER_FILE} ./...
 
 .PHONY: fmt
 fmt:

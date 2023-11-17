@@ -58,8 +58,8 @@ func (kdt *Test) SetScenario(scenario *godog.ScenarioContext) {
 	kdt.scenario.Step(`^(?:I )?verify InstanceGroups (?:are )?in "ready" state$`, kdt.KubeClientSet.VerifyInstanceGroups)
 	//syntax-generation:title-1:Structured Resources
 	//syntax-generation:title-2:Pods
-	kdt.scenario.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*)$`, kdt.KubeClientSet.Pods)
-	kdt.scenario.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*) with selector (\S+)$`, kdt.KubeClientSet.PodsWithSelector)
+	kdt.scenario.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*)$`, kdt.KubeClientSet.ListPods)
+	kdt.scenario.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*) with selector (\S+)$`, kdt.KubeClientSet.ListPodsWithSelector)
 	kdt.scenario.Step(`^(?:the )?pods in namespace ([^"]*) with selector (\S+) have restart count less than (\d+)$`, kdt.KubeClientSet.PodsWithSelectorHaveRestartCountLessThan)
 	kdt.scenario.Step(`^(some|all) pods in namespace (\S+) with selector (\S+) have "([^"]*)" in logs since ([^"]*) time$`, kdt.KubeClientSet.SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime)
 	kdt.scenario.Step(`^some pods in namespace (\S+) with selector (\S+) don't have "([^"]*)" in logs since ([^"]*) time$`, kdt.KubeClientSet.SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime)
@@ -74,7 +74,7 @@ func (kdt *Test) SetScenario(scenario *godog.ScenarioContext) {
 	kdt.scenario.Step(`^(?:the )?(deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) ([^"]*) (is|is not) in namespace ([^"]*)$`, kdt.KubeClientSet.ResourceInNamespace)
 	kdt.scenario.Step(`^(?:I )?scale (?:the )?deployment ([^"]*) in namespace ([^"]*) to (\d+)$`, kdt.KubeClientSet.ScaleDeployment)
 	kdt.scenario.Step(`^(?:I )?validate Prometheus Statefulset ([^"]*) in namespace ([^"]*) has volumeClaimTemplates name ([^"]*)$`, kdt.KubeClientSet.ValidatePrometheusVolumeClaimTemplatesName)
-	kdt.scenario.Step(`^(?:I )?get (?:the )?nodes list$`, kdt.KubeClientSet.GetNodes)
+	kdt.scenario.Step(`^(?:I )?get (?:the )?nodes list$`, kdt.KubeClientSet.ListNodes)
 	kdt.scenario.Step(`^(?:the )?daemonset ([^"]*) is running in namespace ([^"]*)$`, kdt.KubeClientSet.DaemonSetIsRunning)
 	kdt.scenario.Step(`^(?:the )?deployment ([^"]*) is running in namespace ([^"]*)$`, kdt.KubeClientSet.DeploymentIsRunning)
 	kdt.scenario.Step(`^(?:the )?persistentvolume ([^"]*) exists with status (Available|Bound|Released|Failed|Pending)$`, kdt.KubeClientSet.PersistentVolExists)

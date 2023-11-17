@@ -37,7 +37,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.WaiterConfig, expectedNodes int, selector, state string) error {
+func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.WaiterConfig, expectedNodes int, labelSelector, state string) error {
 	var (
 		counter int
 		found   bool
@@ -51,7 +51,7 @@ func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.Wait
 		var (
 			nodesCount int
 			opts       = metav1.ListOptions{
-				LabelSelector: selector,
+				LabelSelector: labelSelector,
 			}
 		)
 
@@ -87,7 +87,7 @@ func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.Wait
 			break
 		}
 
-		log.Infof("found %v nodes, waiting for %v nodes to be %v with selector %v", nodesCount, expectedNodes, state, selector)
+		log.Infof("found %v nodes, waiting for %v nodes to be %v with selector %v", nodesCount, expectedNodes, state, labelSelector)
 
 		counter++
 		time.Sleep(w.GetInterval())
@@ -138,7 +138,7 @@ func ClusterRbacIsFound(kubeClientset kubernetes.Interface, resourceType, name s
 	return nil
 }
 
-func GetNodes(kubeClientset kubernetes.Interface) error {
+func ListNodes(kubeClientset kubernetes.Interface) error {
 
 	var readyStatus = func(conditions []corev1.NodeCondition) string {
 		var status = false
@@ -158,7 +158,7 @@ func GetNodes(kubeClientset kubernetes.Interface) error {
 		return "NotReady"
 	}
 	// List nodes
-	nodes, _ := ListNodes(kubeClientset)
+	nodes, _ := GetNodeList(kubeClientset)
 	if nodes != nil {
 		tableFormat := "%-64s%-12s%-24s%-16s"
 		log.Infof(tableFormat, "NAME", "STATUS", "INSTANCEGROUP", "AZ")
@@ -188,7 +188,7 @@ func DaemonSetIsRunning(kubeClientset kubernetes.Interface, expBackoff wait.Back
 	})
 	if err != nil {
 		// Print Pods after failure
-		_ = pod.Pods(kubeClientset, namespace)
+		_ = pod.ListPods(kubeClientset, namespace)
 		return fmt.Errorf("daemonset '%s/%s' not updated: '%v'", namespace, name, err)
 	}
 	return nil
@@ -223,32 +223,46 @@ func PersistentVolExists(kubeClientset kubernetes.Interface, name, expectedPhase
 }
 
 func ValidatePrometheusVolumeClaimTemplatesName(kubeClientset kubernetes.Interface, statefulsetName, namespace, volumeClaimTemplatesName string) error {
-	var sfsvolumeClaimTemplatesName string
 	// Prometheus StatefulSets deployed, then validate volumeClaimTemplate name.
 	// Validation required:
 	// 	- To retain existing persistent volumes and not to loose any data.
 	//	- And avoid creating new name persistent volumes.
-	sfs, err := ListStatefulSets(kubeClientset, namespace)
+	sfs, err := GetStatefulSetList(kubeClientset, namespace)
 	if err != nil {
 		return err
 	}
+
+	var sfsvolumeClaimTemplatesNames []string
 	for _, sfsItem := range sfs.Items {
 		if sfsItem.Name == statefulsetName {
-			pvcClaimRef := sfsItem.Spec.VolumeClaimTemplates
-			sfsvolumeClaimTemplatesName = pvcClaimRef[0].Name
+			pvcClaimRefs := sfsItem.Spec.VolumeClaimTemplates
+			for _, pvcClaimRef := range pvcClaimRefs {
+				if pvcClaimRef.Name != "" {
+					sfsvolumeClaimTemplatesNames = append(sfsvolumeClaimTemplatesNames, pvcClaimRef.Name)
+				}
+			}
 		}
 	}
-	if sfsvolumeClaimTemplatesName == "" {
-		return errors.Errorf("prometheus statefulset not deployed, name given: %v", volumeClaimTemplatesName)
-	} else if sfsvolumeClaimTemplatesName != volumeClaimTemplatesName {
-		return errors.Errorf("Prometheus volumeClaimTemplate name changed', got: %v", sfsvolumeClaimTemplatesName)
+	if len(sfsvolumeClaimTemplatesNames) == 0 {
+		return errors.Errorf("StatefulSet '%s' had no VolumeClaimTemplates with non empty name", statefulsetName)
 	}
+
+	found := false
+	for _, sfsvolumeClaimTemplatesName := range sfsvolumeClaimTemplatesNames {
+		if sfsvolumeClaimTemplatesName == volumeClaimTemplatesName {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return errors.Errorf("StatefulSet '%s' had no VolumeClaimTemplates with name '%s'", statefulsetName, volumeClaimTemplatesName)
+	}
+
 	// Validate Persistent Volume label
 	err = validatePrometheusPVLabels(kubeClientset, volumeClaimTemplatesName)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -282,8 +296,7 @@ func SecretOperationFromEnvironmentVariable(kubeClientset kubernetes.Interface, 
 		}
 		_, err := kubeClientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 		if kerrors.IsAlreadyExists(err) {
-			log.Infof("secret '%s' already created", name)
-			return nil
+			return fmt.Errorf("secret '%s' already created", name)
 		}
 		return err
 	case common.OperationUpdate:
@@ -301,7 +314,7 @@ func SecretOperationFromEnvironmentVariable(kubeClientset kubernetes.Interface, 
 	case common.OperationDelete:
 		err := kubeClientset.CoreV1().Secrets(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 		if kerrors.IsNotFound(err) {
-			log.Infof("secret '%s' already deleted", name)
+			log.Infof("secret '%s' was not found", name)
 			return nil
 		}
 		return err
@@ -377,9 +390,8 @@ func SendTrafficToIngress(kubeClientset kubernetes.Interface, w common.WaiterCon
 	return nil
 }
 
-func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name, isOrIsNot, namespace string) error {
+func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name, namespace string) error {
 	var err error
-
 	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return err
 	}
@@ -398,23 +410,17 @@ func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name,
 	default:
 		return errors.Errorf("Invalid resource type")
 	}
-	if isOrIsNot == "is not" {
-		if kerrors.IsNotFound(err) {
-			return nil
-		} else if err == nil {
-			return errors.Errorf("expected resource '%s/%s' to not be found in ns '%s'", resourceType, name, namespace)
-		} else {
-			return err
-		}
-	} else if isOrIsNot == "is" {
-		if kerrors.IsNotFound(err) {
-			return errors.Errorf("expected resource '%s/%s' to be found in ns '%s'", resourceType, name, namespace)
-		} else if err == nil {
-			return nil
-		} else {
-			return err
-		}
-	} else {
-		return errors.Errorf("parameter isOrIsNot can only be 'is' or 'is not'")
+	return err
+
+}
+
+func ResourceNotInNamespace(kubeClientset kubernetes.Interface, resourceType, name, namespace string) error {
+	err := ResourceInNamespace(kubeClientset, resourceType, name, namespace)
+	if err == nil {
+		return errors.Errorf("expected resource '%s/%s' to not be found in ns '%s'", resourceType, name, namespace)
 	}
+	if !kerrors.IsNotFound(err) {
+		return err
+	}
+	return nil
 }
