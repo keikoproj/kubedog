@@ -3,7 +3,7 @@ module github.com/keikoproj/kubedog
 go 1.19
 
 require (
-	github.com/aws/aws-sdk-go v1.33.8
+	github.com/aws/aws-sdk-go v1.34.0
 	github.com/cucumber/godog v0.12.6
 	github.com/onsi/gomega v1.20.1
 	github.com/pkg/errors v0.9.1
