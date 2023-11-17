@@ -78,6 +78,10 @@ func RunCommand(command string, args, successOrFail string) error {
 	cmdStr := toRun.String()
 	log.Infof("Running command: %s", cmdStr)
 	err := toRun.Run()
+	if len(stdout.String()) > 0 {
+		log.Infof("Logging stdout from command: %s", stdout.String())
+	}
+
 	if successOrFail == "succeeds" && err != nil {
 		return fmt.Errorf("command '%s' did not succeed. error: '%v'. stderr: '%s'", cmdStr, err, stderr.String())
 	}
