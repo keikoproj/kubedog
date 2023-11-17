@@ -104,7 +104,7 @@ func (kc *ClientSet) SetTimestamp(timestampName string) error {
 func (kc *ClientSet) KubernetesClusterShouldBe(state string) error {
 	switch state {
 	case common.StateCreated, common.StateUpgraded:
-		if err := pod.Pods(kc.KubeInterface, metav1.NamespaceSystem); err != nil {
+		if err := pod.ListPods(kc.KubeInterface, metav1.NamespaceSystem); err != nil {
 			return errors.Errorf("failed validating cluster create/update, could not get pods: '%v'", err)
 		}
 		return nil
@@ -130,6 +130,7 @@ func (kc *ClientSet) ResourceOperation(operation, resourceFileName string) error
 	if err != nil {
 		return err
 	}
+	// TODO: use ResourceOperationInNamespace should like ResourceOperation does, ResourceOperation is redundant
 	return unstruct.ResourceOperation(kc.DynamicInterface, resource, operation)
 }
 
@@ -209,12 +210,13 @@ func (kc *ClientSet) VerifyInstanceGroups() error {
 	return unstruct.VerifyInstanceGroups(kc.DynamicInterface)
 }
 
-func (kc *ClientSet) Pods(namespace string) error {
-	return pod.Pods(kc.KubeInterface, namespace)
+func (kc *ClientSet) ListPods(namespace string) error {
+	// TODO: use ListPodsWithSelector like ListPods does, ListPods is redundant
+	return pod.ListPods(kc.KubeInterface, namespace)
 }
 
-func (kc *ClientSet) PodsWithSelector(namespace, selector string) error {
-	return pod.PodsWithSelector(kc.KubeInterface, namespace, selector)
+func (kc *ClientSet) ListPodsWithSelector(namespace, selector string) error {
+	return pod.ListPodsWithSelector(kc.KubeInterface, namespace, selector)
 }
 
 func (kc *ClientSet) PodsWithSelectorHaveRestartCountLessThan(namespace, selector string, restartCount int) error {
@@ -226,6 +228,7 @@ func (kc *ClientSet) SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTi
 	if err != nil {
 		return err
 	}
+	// TODO: refactor SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime to not have the input someOrAll change its behavior, instead have different methods
 	return pod.SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(kc.KubeInterface, kc.getExpBackoff(), someOrAll, namespace, selector, searchKeyword, timestamp)
 }
 
@@ -266,6 +269,7 @@ func (kc *ClientSet) SecretOperationFromEnvironmentVariable(operation, name, nam
 }
 
 func (kc *ClientSet) SecretDelete(name, namespace string) error {
+	// TODO: use SecretOperationFromEnvironmentVariable directly like SecretDelete does, SecretDelete is redundant
 	return structured.SecretDelete(kc.KubeInterface, name, namespace)
 }
 
@@ -274,7 +278,14 @@ func (kc *ClientSet) NodesWithSelectorShouldBe(expectedNodes int, selector, stat
 }
 
 func (kc *ClientSet) ResourceInNamespace(resourceType, name, isOrIsNot, namespace string) error {
-	return structured.ResourceInNamespace(kc.KubeInterface, resourceType, name, isOrIsNot, namespace)
+	switch isOrIsNot {
+	case "is":
+		return structured.ResourceInNamespace(kc.KubeInterface, resourceType, name, namespace)
+	case "is not":
+		return structured.ResourceNotInNamespace(kc.KubeInterface, resourceType, name, namespace)
+	default:
+		return errors.Errorf("paramter isOrIsNot can only be 'is' or 'is not'")
+	}
 }
 
 func (kc *ClientSet) ScaleDeployment(name, namespace string, replicas int32) error {
@@ -285,8 +296,8 @@ func (kc *ClientSet) ValidatePrometheusVolumeClaimTemplatesName(statefulsetName,
 	return structured.ValidatePrometheusVolumeClaimTemplatesName(kc.KubeInterface, statefulsetName, namespace, volumeClaimTemplatesName)
 }
 
-func (kc *ClientSet) GetNodes() error {
-	return structured.GetNodes(kc.KubeInterface)
+func (kc *ClientSet) ListNodes() error {
+	return structured.ListNodes(kc.KubeInterface)
 }
 
 func (kc *ClientSet) DaemonSetIsRunning(name, namespace string) error {

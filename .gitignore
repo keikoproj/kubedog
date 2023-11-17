@@ -2,8 +2,8 @@
 .idea
 .DS_Store
 *.test
-test/templates/generated_*
-examples/templating/generic/files/generated_*
+pkg/generic/test/generated_*
+pkg/kube/unstructured/test/templates/generated_*
 kubedog
 coverage.txt
 

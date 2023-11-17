@@ -71,7 +71,7 @@ func GetResources(dc discovery.DiscoveryInterface, TemplateArguments interface{}
 	return resourceList, err
 }
 
-func ListInstanceGroups(dynamicClient dynamic.Interface) (*unstructured.UnstructuredList, error) {
+func GetInstanceGroupList(dynamicClient dynamic.Interface) (*unstructured.UnstructuredList, error) {
 	const (
 		instanceGroupNamespace   = "instance-manager"
 		customResourceGroup      = "instancemgr"
@@ -135,10 +135,8 @@ func getGVR(gvk *schema.GroupVersionKind, dc discovery.DiscoveryInterface) (*met
 	CachedDiscoveryInterface := memory.NewMemCacheClient(dc)
 	DeferredDiscoveryRESTMapper := restmapper.NewDeferredDiscoveryRESTMapper(CachedDiscoveryInterface)
 	RESTMapping, err := DeferredDiscoveryRESTMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-
 	if err != nil {
 		return nil, err
 	}
-
 	return RESTMapping, nil
 }
