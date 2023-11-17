@@ -10,7 +10,7 @@ require (
 	github.com/go-logr/logr v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	k8s.io/apimachinery v0.22.17 // indirect
 	k8s.io/klog/v2 v2.60.1 // indirect
 )
