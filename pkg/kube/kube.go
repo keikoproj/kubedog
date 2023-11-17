@@ -32,15 +32,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// TODO: write down the design of Kubedog: why pkgs are how they are, methods names and the use of correct verbs,
-// how kube is broken into multiple pkgs and then used from there in a sort-of-like a divide-and-conquer manner
-// to keep methods with a single functionality and not use inputs to change their behavior, instead create one function per
-// behavior. In this manner we have the syntax ( which will make us want to have functions change their behavior based on
-// the input) then we use kube to use behavior-changing inputs to call different functions with specific behaviors or functions
-// in a different manner.
-
-// TODO: add a gif animation of how to use kubedog like some open source projects do
-
 type ClientSet struct {
 	KubeInterface    kubernetes.Interface
 	DynamicInterface dynamic.Interface

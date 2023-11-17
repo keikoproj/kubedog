@@ -30,22 +30,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// TODO: unit test for this package
-
-/*
-// TODO: should the verb be list?
-
-Other functions for pods have no verb and list sounds like a verb that should not failed if nothing was found?
-
-// TODO: look at all the other functions names, make sure to find a way to make things concistant with their names and verbs
-
-We dont want to make breaking changes again, the code within the functions is easy to change without breaking things
-but the name is a breaking changes and it should make sense to set the library standard
-
-I am thinking functions that do not return should not be Get but List, now in the syntax it can and should be Get even tho it lists
-to be consistant with kubectl (get lists and fails if not found, list can just list whats there with no fail).
-If we make things that list be named Get here in code it will get confused with the functions that actually Get things and return
-*/
 func ListPods(kubeClientset kubernetes.Interface, namespace string) error {
 	return ListPodsWithSelector(kubeClientset, namespace, "")
 }
