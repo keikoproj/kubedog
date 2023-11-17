@@ -21,7 +21,7 @@ jobs:
     - name: Run 'all' make target
       run: make all
     - name: Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
         file: ./coverage.txt # optional
         flags: unittests # optional
