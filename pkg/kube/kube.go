@@ -282,7 +282,6 @@ func (kc *ClientSet) ResourceInNamespace(resourceType, name, isOrIsNot, namespac
 	case "is":
 		return structured.ResourceInNamespace(kc.KubeInterface, resourceType, name, namespace)
 	case "is not":
-		// TODO: is this redundant too? call ResourceInNamespace like ResourceNotInNamespace does?
 		return structured.ResourceNotInNamespace(kc.KubeInterface, resourceType, name, namespace)
 	default:
 		return errors.Errorf("paramter isOrIsNot can only be 'is' or 'is not'")
