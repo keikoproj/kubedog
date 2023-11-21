@@ -402,7 +402,7 @@ func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name,
 	case "service":
 		_, err = kubeClientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	case "hpa", "horizontalpodautoscaler":
-		_, err = kubeClientset.AutoscalingV2beta2().HorizontalPodAutoscalers(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		_, err = kubeClientset.AutoscalingV2().HorizontalPodAutoscalers(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	case "pdb", "poddisruptionbudget":
 		_, err = kubeClientset.PolicyV1().PodDisruptionBudgets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	case "sa", "serviceaccount":

@@ -23,10 +23,10 @@ import (
 	"github.com/keikoproj/kubedog/internal/util"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/api/autoscaling/v2beta2"
+	v2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
-	v1beta1 "k8s.io/api/policy/v1beta1"
+	v1 "k8s.io/api/policy/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -693,7 +693,7 @@ func getResourceWithAll(t *testing.T, resourceType, name, namespace, label strin
 			},
 		}
 	case "hpa", hpaType:
-		return &v2beta2.HorizontalPodAutoscaler{
+		return &v2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
@@ -701,7 +701,7 @@ func getResourceWithAll(t *testing.T, resourceType, name, namespace, label strin
 			},
 		}
 	case "pdb", pdbType:
-		return &v1beta1.PodDisruptionBudget{
+		return &v1.PodDisruptionBudget{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,
