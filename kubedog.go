@@ -52,7 +52,7 @@ func (kdt *Test) SetScenario(scenario *godog.ScenarioContext) {
 	kdt.scenario.Step(`^(?:I )?(create|submit|delete|update|upsert) (?:the )?resource (\S+), the operation should (succeed|fail)$`, kdt.KubeClientSet.ResourceOperationWithResult)
 	kdt.scenario.Step(`^(?:I )?(create|submit|delete|update|upsert) (?:the )?resource (\S+) in (?:the )?([^"]*) namespace, the operation should (succeed|fail)$`, kdt.KubeClientSet.ResourceOperationWithResultInNamespace)
 	kdt.scenario.Step(`^(?:the )?resource ([^"]*) should be (created|deleted)$`, kdt.KubeClientSet.ResourceShouldBe)
-	kdt.scenario.Step(`^(?:the )?resource ([^"]*) (?:should )?converge to selector (\S+)$`, kdt.KubeClientSet.ResourceShouldConvergeToSelector)
+	kdt.scenario.Step(`^(?:the )?resource (\S+) (?:should )?converge to selector (\S+)$`, kdt.KubeClientSet.ResourceShouldConvergeToSelector)
 	kdt.scenario.Step(`^(?:the )?resource ([^"]*) condition ([^"]*) should be ([^"]*)$`, kdt.KubeClientSet.ResourceConditionShouldBe)
 	kdt.scenario.Step(`^(?:I )?update (?:the )?resource ([^"]*) with ([^"]*) set to ([^"]*)$`, kdt.KubeClientSet.UpdateResourceWithField)
 	kdt.scenario.Step(`^(?:I )?verify InstanceGroups (?:are )?in "ready" state$`, kdt.KubeClientSet.VerifyInstanceGroups)
