@@ -3,7 +3,7 @@ module github.com/keikoproj/kubedog
 go 1.19
 
 require (
-	github.com/aws/aws-sdk-go v1.34.0
+	github.com/aws/aws-sdk-go v1.49.13
 	github.com/cucumber/godog v0.13.0
 	github.com/onsi/gomega v1.30.0
 	github.com/pkg/errors v0.9.1
@@ -39,7 +39,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.10 // indirect
 	github.com/influxdata/tdigest v0.0.1 // indirect
-	github.com/jmespath/go-jmespath v0.3.0 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
