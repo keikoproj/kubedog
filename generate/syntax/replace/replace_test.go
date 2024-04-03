@@ -1,59 +1,23 @@
+/*
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package replace
 
 import (
 	"reflect"
 	"testing"
 )
-
-// func TestReplacement_Replace(t *testing.T) {
-// 	type fields struct {
-// 		Replacee string
-// 		Replacer string
-// 	}
-// 	type args struct {
-// 		src string
-// 	}
-// 	tests := []struct {
-// 		name   string
-// 		fields fields
-// 		args   args
-// 		want   string
-// 	}{
-// 		// TODO: Add test cases.
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			r := Replacement{
-// 				Replacee: tt.fields.Replacee,
-// 				Replacer: tt.fields.Replacer,
-// 			}
-// 			if got := r.Replace(tt.args.src); got != tt.want {
-// 				t.Errorf("Replacement.Replace() = %v, want %v", got, tt.want)
-// 			}
-// 		})
-// 	}
-// }
-
-// func TestReplacements_Replace(t *testing.T) {
-// 	type args struct {
-// 		src string
-// 	}
-// 	tests := []struct {
-// 		name string
-// 		rs   Replacements
-// 		args args
-// 		want string
-// 	}{
-// 		// TODO: Add test cases.
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			if got := tt.rs.Replace(tt.args.src); got != tt.want {
-// 				t.Errorf("Replacements.Replace() = %v, want %v", got, tt.want)
-// 			}
-// 		})
-// 	}
-// }
 
 func TestBracketsReplacement_Replace(t *testing.T) {
 	type fields struct {
@@ -119,6 +83,40 @@ func TestBracketsReplacement_Replace(t *testing.T) {
 				src: `[all] [the] (?:pod|pods) in [the] namespace (\S+) with [the] label selector (\S+) [should] converge to [the] field selector (\S+)`,
 			},
 			want: `[all] [the] (pod|pods) in [the] namespace (\S+) with [the] label selector (\S+) [should] converge to [the] field selector (\S+)`,
+		},
+		{
+			name: "Positive Test: '(?:' & ' )?' Case 3",
+			fields: fields{
+				Opening: Replacement{
+					Replacee: "(?:",
+					Replacer: "[",
+				},
+				Closing: Replacement{
+					Replacee: " )?",
+					Replacer: "] ",
+				},
+			},
+			args: args{
+				src: `(?:I )?send (\d+) tps to ingress (\S+) in (?:the )?namespace (\S+) (?:available )?on port (\d+) and path ([^"]*) for (\d+) (minutes|seconds) expecting up to (\d+) error(?:s)?`,
+			},
+			want: `[I] send (\d+) tps to ingress (\S+) in [the] namespace (\S+) [available] on port (\d+) and path ([^"]*) for (\d+) (minutes|seconds) expecting up to (\d+) error(?:s)?`,
+		},
+		{
+			name: "Positive Test: '(?:' & ')?' Case 1",
+			fields: fields{
+				Opening: Replacement{
+					Replacee: "(?:",
+					Replacer: "[",
+				},
+				Closing: Replacement{
+					Replacee: ")?",
+					Replacer: "]",
+				},
+			},
+			args: args{
+				src: `[I] send (\d+) tps to ingress (\S+) in [the] namespace (\S+) [available] on port (\d+) and path ([^"]*) for (\d+) (minutes|seconds) expecting up to (\d+) error(?:s)?`,
+			},
+			want: `[I] send (\d+) tps to ingress (\S+) in [the] namespace (\S+) [available] on port (\d+) and path ([^"]*) for (\d+) (minutes|seconds) expecting up to (\d+) error[s]`,
 		},
 	}
 	for _, tt := range tests {
@@ -218,7 +216,7 @@ func TestBracketsReplacement_getRegExp(t *testing.T) {
 					Replacer: ")",
 				},
 			},
-			want: `\(\?\:` + regExp_CharsWithinBrackets + `\)`,
+			want: `\(\?\:` + regExp_CharsWithinBrackets + `\ \)`,
 		},
 	}
 	for _, tt := range tests {
@@ -259,24 +257,3 @@ func Test_escapeEveryCharacter(t *testing.T) {
 		})
 	}
 }
-
-// func TestBracketsReplacements_Replace(t *testing.T) {
-// 	type args struct {
-// 		src string
-// 	}
-// 	tests := []struct {
-// 		name string
-// 		brs  BracketsReplacements
-// 		args args
-// 		want string
-// 	}{
-// 		// TODO: Add test cases.
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			if got := tt.brs.Replace(tt.args.src); got != tt.want {
-// 				t.Errorf("BracketsReplacements.Replace() = %v, want %v", got, tt.want)
-// 			}
-// 		})
-// 	}
-// }
