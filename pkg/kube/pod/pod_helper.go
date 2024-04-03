@@ -29,13 +29,17 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func GetPodListWithLabelSelector(kubeClientset kubernetes.Interface, namespace, selector string) (*corev1.PodList, error) {
+func GetPodListWithLabelSelector(kubeClientset kubernetes.Interface, namespace, labelSelector string) (*corev1.PodList, error) {
+	return GetPodListWithLabelSelectorAndFieldSelector(kubeClientset, namespace, labelSelector, "")
+}
+
+func GetPodListWithLabelSelectorAndFieldSelector(kubeClientset kubernetes.Interface, namespace, labelSelector, fieldSelector string) (*corev1.PodList, error) {
 	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return nil, err
 	}
 
 	pods, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
-		return kubeClientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: selector})
+		return kubeClientset.CoreV1().Pods(namespace).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector, FieldSelector: fieldSelector})
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list pods")

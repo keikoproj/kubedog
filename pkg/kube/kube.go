@@ -256,6 +256,10 @@ func (kc *ClientSet) PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(na
 	return pod.PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime(kc.KubeInterface, namespace, selector, timestamp)
 }
 
+func (kc *ClientSet) PodsInNamespaceWithLabelSelectorConvergeToFieldSelector(namespace, labelSelector, fieldSelector string) error {
+	return pod.PodsInNamespaceWithLabelSelectorConvergeToFieldSelector(kc.KubeInterface, kc.getExpBackoff(), namespace, labelSelector, fieldSelector)
+}
+
 func (kc *ClientSet) PodsInNamespaceWithSelectorShouldHaveLabels(namespace, selector, labels string) error {
 	return pod.PodsInNamespaceWithSelectorShouldHaveLabels(kc.KubeInterface, namespace, selector, labels)
 }
