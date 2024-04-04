@@ -114,7 +114,7 @@ func PodsInNamespaceWithLabelSelectorConvergeToFieldSelector(kubeClientset kuber
 		}
 		podsUIDs := []string{}
 		podsWithSelectorUIDs := []string{}
-		for i, _ := range podList.Items {
+		for i := range podList.Items {
 			podsUIDs = append(podsUIDs, string(podList.Items[i].UID))
 			podsWithSelectorUIDs = append(podsWithSelectorUIDs, string(podListWithSelector.Items[i].UID))
 		}
