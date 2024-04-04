@@ -16,6 +16,7 @@ package replace
 
 import (
 	"bytes"
+	"log"
 	"regexp"
 	"strings"
 )
@@ -47,8 +48,10 @@ type BracketsReplacement struct {
 }
 
 func (br BracketsReplacement) Replace(src string) string {
-	re, _ := regexp.Compile(br.getRegExp())
-	// TODO: check error
+	re, err := regexp.Compile(br.getRegExp())
+	if err != nil {
+		log.Fatal(err)
+	}
 	new := re.ReplaceAllFunc([]byte(src), br.replaceSingle)
 	return string(new)
 }
