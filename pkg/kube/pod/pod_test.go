@@ -17,9 +17,11 @@ package pod
 import (
 	"testing"
 
+	"github.com/keikoproj/kubedog/internal/util"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	fakeDiscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/dynamic"
 	fakeDynamic "k8s.io/client-go/dynamic/fake"
@@ -127,6 +129,64 @@ func Test_PodsInNamespaceWithSelectorShouldHaveLabels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := PodsInNamespaceWithSelectorShouldHaveLabels(tt.fields.KubeInterface, tt.args.namespace, tt.args.selector, tt.args.labels); (err != nil) != tt.wantErr {
 				t.Errorf("ThePodsInNamespaceWithSelectorShouldHaveLabels() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestPodsInNamespaceWithLabelSelectorConvergeToFieldSelector(t *testing.T) {
+	type args struct {
+		kubeClientset kubernetes.Interface
+		expBackoff    wait.Backoff
+		namespace     string
+		labelSelector string
+		fieldSelector string
+	}
+	namespaceName := "test-ns"
+	ns := v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespaceName}}
+	podSucceeded := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-xhhxj",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				"app": "test-service",
+			},
+		},
+		Status: v1.PodStatus{
+			Phase: v1.PodSucceeded,
+		},
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Positive Test",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(&ns, &podSucceeded),
+				expBackoff:    util.DefaultRetry,
+				namespace:     namespaceName,
+				labelSelector: "app=test-service",
+				fieldSelector: "status.phase=Succeeded",
+			},
+		},
+		{
+			name: "Negative Test: no pods with label selector",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(&ns),
+				expBackoff:    util.DefaultRetry,
+				namespace:     namespaceName,
+				labelSelector: "app=test-service",
+				fieldSelector: "status.phase=Succeeded",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := PodsInNamespaceWithLabelSelectorConvergeToFieldSelector(tt.args.kubeClientset, tt.args.expBackoff, tt.args.namespace, tt.args.labelSelector, tt.args.fieldSelector); (err != nil) != tt.wantErr {
+				t.Errorf("PodsInNamespaceWithLabelSelectorConvergeToFieldSelector() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
