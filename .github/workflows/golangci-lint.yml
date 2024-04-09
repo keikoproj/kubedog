@@ -1,4 +1,4 @@
-name: golangci-lint
+name: CI
 on:
   push:
     tags:
@@ -9,16 +9,15 @@ on:
 permissions:
   contents: read
 jobs:
-  golangci:
-    name: lint
+  build:
+    name: golangci-lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-go@v4
         with:
           go-version: 1.19
       - uses: actions/checkout@v4
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - uses: golangci/golangci-lint-action@v3
         with:
           version: v1.55.2
           args: --timeout 3m --verbose
