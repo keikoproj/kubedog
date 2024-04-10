@@ -257,3 +257,134 @@ func Test_escapeEveryCharacter(t *testing.T) {
 		})
 	}
 }
+
+func TestReplacement_Replace(t *testing.T) {
+	type fields struct {
+		Replacee string
+		Replacer string
+	}
+	type args struct {
+		src string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   string
+	}{
+		{
+			name: "Positive Test",
+			fields: fields{
+				Replacee: "replace-me",
+				Replacer: "replaced-by-me",
+			},
+			args: args{
+				src: "replace-me as many times as replace-me appears in a string containing replace-me",
+			},
+			want: "replaced-by-me as many times as replaced-by-me appears in a string containing replaced-by-me",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := Replacement{
+				Replacee: tt.fields.Replacee,
+				Replacer: tt.fields.Replacer,
+			}
+			if got := r.Replace(tt.args.src); got != tt.want {
+				t.Errorf("Replacement.Replace() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestReplacements_Replace(t *testing.T) {
+	type args struct {
+		src string
+	}
+	tests := []struct {
+		name string
+		rs   Replacements
+		args args
+		want string
+	}{
+		{
+			name: "Positive Test",
+			rs: Replacements{
+				{
+					Replacee: "replace-me-1",
+					Replacer: "replaced-by-me-1",
+				},
+				{
+					Replacee: "replace-me-2",
+					Replacer: "replaced-by-me-2",
+				},
+			},
+			args: args{
+				src: `replace-me-1 as me times as replace-me-1 appears in a string containing replace-me-1,
+replace-me-2 as me times as replace-me-2 appears in a string containing replace-me-2`,
+			},
+			want: `replaced-by-me-1 as me times as replaced-by-me-1 appears in a string containing replaced-by-me-1,
+replaced-by-me-2 as me times as replaced-by-me-2 appears in a string containing replaced-by-me-2`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.rs.Replace(tt.args.src); got != tt.want {
+				t.Errorf("Replacements.Replace() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBracketsReplacements_Replace(t *testing.T) {
+	type args struct {
+		src string
+	}
+	tests := []struct {
+		name string
+		brs  BracketsReplacements
+		args args
+		want string
+	}{
+		{
+			name: "Positive Test",
+			brs: BracketsReplacements{
+				{
+					Opening: Replacement{
+						Replacee: `(?:`, Replacer: `[`},
+					Closing: Replacement{
+						Replacee: ` )?`, Replacer: `] `},
+				},
+				{
+					Opening: Replacement{
+						Replacee: `(?:`, Replacer: `[`},
+					Closing: Replacement{
+						Replacee: `)?`, Replacer: `]`},
+				},
+				{
+					Opening: Replacement{
+						Replacee: `(?:`, Replacer: `(`},
+					Closing: Replacement{
+						Replacee: `)`, Replacer: `)`},
+				},
+				{
+					Opening: Replacement{
+						Replacee: `\(`, Replacer: `(`},
+					Closing: Replacement{
+						Replacee: `\)`, Replacer: `)`},
+				},
+			},
+			args: args{
+				src: `(?:<something> )?(?:<something>)? (?:<something>) \(<something>\)`,
+			},
+			want: "[<something>] [<something>] (<something>) (<something>)",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.brs.Replace(tt.args.src); got != tt.want {
+				t.Errorf("BracketsReplacements.Replace() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
