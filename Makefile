@@ -3,7 +3,9 @@ BINARY := kubedog
 COVER_FILE := coverage.txt
 
 
-all: generate check-dirty-repo build
+all: check-syntax build
+
+check-syntax: generate check-dirty-repo
 
 generate: download
 	go generate kubedog.go

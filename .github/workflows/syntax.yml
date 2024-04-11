@@ -1,0 +1,19 @@
+name: CI
+on:
+  push:
+    tags:
+      - v*
+    branches:
+      - master
+  pull_request:
+jobs:
+  build:
+    name: syntax
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-go@v4
+      with:
+        go-version: ^1.19
+      id: go
+    - uses: actions/checkout@v4
+    - run: make check-syntax

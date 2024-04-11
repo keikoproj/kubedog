@@ -17,6 +17,7 @@ package pod
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -83,6 +84,46 @@ func PodsWithSelectorHaveRestartCountLessThan(kubeClientset kubernetes.Interface
 	}
 
 	return nil
+}
+
+func PodsInNamespaceWithLabelSelectorConvergeToFieldSelector(kubeClientset kubernetes.Interface, expBackoff wait.Backoff, namespace, labelSelector, fieldSelector string) error {
+	return util.RetryOnAnyError(&expBackoff, func() error {
+		podList, err := GetPodListWithLabelSelector(kubeClientset, namespace, labelSelector)
+		if err != nil {
+			return err
+		}
+		n := len(podList.Items)
+		if n == 0 {
+			return fmt.Errorf("no pods matched label selector '%s'", labelSelector)
+		}
+		log.Infof("found '%d' pods with label selector '%s'", n, labelSelector)
+
+		podListWithSelector, err := GetPodListWithLabelSelectorAndFieldSelector(kubeClientset, namespace, labelSelector, fieldSelector)
+		if err != nil {
+			return err
+		}
+		m := len(podListWithSelector.Items)
+		if m == 0 {
+			return fmt.Errorf("no pods matched label selector '%s' and field selector '%s'", labelSelector, fieldSelector)
+		}
+		log.Infof("found '%d' pods with label selector '%s' and field selector '%s'", m, labelSelector, fieldSelector)
+
+		message := fmt.Sprintf("'%d/%d' pod(s) with label selector '%s' converged to field selector '%s'", m, n, labelSelector, fieldSelector)
+		if n != m {
+			return errors.New(message)
+		}
+		podsUIDs := []string{}
+		podsWithSelectorUIDs := []string{}
+		for i := range podList.Items {
+			podsUIDs = append(podsUIDs, string(podList.Items[i].UID))
+			podsWithSelectorUIDs = append(podsWithSelectorUIDs, string(podListWithSelector.Items[i].UID))
+		}
+		if !reflect.DeepEqual(podsUIDs, podsWithSelectorUIDs) {
+			return fmt.Errorf("pods UIDs with label selector '%s' do not match pods UIDs with said label selector and field selector '%s': '%v' and '%v', respectively", labelSelector, fieldSelector, podsUIDs, podsWithSelectorUIDs)
+		}
+		log.Info(message)
+		return nil
+	})
 }
 
 func SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(kubeClientset kubernetes.Interface, expBackoff wait.Backoff, SomeOrAll, namespace, selector, searchKeyword string, since time.Time) error {

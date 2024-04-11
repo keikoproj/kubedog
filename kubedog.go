@@ -65,6 +65,7 @@ func (kdt *Test) SetScenario(scenario *godog.ScenarioContext) {
 	kdt.scenario.Step(`^some pods in namespace (\S+) with selector (\S+) don't have "([^"]*)" in logs since ([^"]*) time$`, kdt.KubeClientSet.SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime)
 	kdt.scenario.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) have no errors in logs since ([^"]*) time$`, kdt.KubeClientSet.PodsInNamespaceWithSelectorHaveNoErrorsInLogsSinceTime)
 	kdt.scenario.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) have some errors in logs since ([^"]*) time$`, kdt.KubeClientSet.PodsInNamespaceWithSelectorHaveSomeErrorsInLogsSinceTime)
+	kdt.scenario.Step(`^(?:all )?(?:the )?(?:pod|pods) in (?:the )?namespace (\S+) with (?:the )?label selector (\S+) (?:should )?(?:converge to|have) (?:the )?field selector (\S+)$`, kdt.KubeClientSet.PodsInNamespaceWithLabelSelectorConvergeToFieldSelector)
 	kdt.scenario.Step(`^(?:the )?pods in namespace (\S+) with selector (\S+) should have labels (\S+)$`, kdt.KubeClientSet.PodsInNamespaceWithSelectorShouldHaveLabels)
 	kdt.scenario.Step(`^(?:the )?pod (\S+) in namespace (\S+) should have labels (\S+)$`, kdt.KubeClientSet.PodInNamespaceShouldHaveLabels)
 	//syntax-generation:title-2:Others

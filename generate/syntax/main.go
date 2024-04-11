@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/keikoproj/kubedog/generate/syntax/replace"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -48,18 +49,37 @@ const (
 	destinationFileBeginning = "# Syntax" + newLine + "Below you will find the step syntax next to the name of the method it utilizes. Here GK stands for [Gherkin](https://cucumber.io/docs/gherkin/reference/#keywords) Keyword and words in brackets ([]) are optional:" + newLine
 )
 
-var replacers = []struct {
-	replacee string
-	replacer string
-}{
-	{`(?:`, `[`},
-	{` )?`, `] `},
-	{`)?`, `]`},
-	{`(\d+)`, `<digits>`},
-	{`(\S+)`, `<non-whitespace-characters>`},
-	{`([^"]*)`, `<any-characters-except-(")>`},
-	{`\(`, `(`},
-	{`\)`, `)`},
+var replacements = replace.Replacements{
+	{Replacee: `(\d+)`, Replacer: `<digits>`},
+	{Replacee: `(\S+)`, Replacer: `<non-whitespace-characters>`},
+	{Replacee: `([^"]*)`, Replacer: `<any-characters-except-(")>`},
+}
+
+var bracketsReplacements = replace.BracketsReplacements{
+	{
+		Opening: replace.Replacement{
+			Replacee: `(?:`, Replacer: `[`},
+		Closing: replace.Replacement{
+			Replacee: ` )?`, Replacer: `] `},
+	},
+	{
+		Opening: replace.Replacement{
+			Replacee: `(?:`, Replacer: `[`},
+		Closing: replace.Replacement{
+			Replacee: `)?`, Replacer: `]`},
+	},
+	{
+		Opening: replace.Replacement{
+			Replacee: `(?:`, Replacer: `(`},
+		Closing: replace.Replacement{
+			Replacee: `)`, Replacer: `)`},
+	},
+	{
+		Opening: replace.Replacement{
+			Replacee: `\(`, Replacer: `(`},
+		Closing: replace.Replacement{
+			Replacee: `\)`, Replacer: `)`},
+	},
 }
 
 func main() {
@@ -143,9 +163,8 @@ func processStep(rawStep string) string {
 	processedStep := rawStepSplit[1]
 	processedStep = strings.TrimPrefix(processedStep, stepPrefix)
 	processedStep = strings.TrimSuffix(processedStep, stepSuffix)
-	for _, r := range replacers {
-		processedStep = strings.ReplaceAll(processedStep, r.replacee, r.replacer)
-	}
+	processedStep = replacements.Replace(processedStep)
+	processedStep = bracketsReplacements.Replace(processedStep)
 	method := rawStepSplit[2]
 	method = strings.TrimPrefix(method, methodPrefix)
 	method = strings.TrimSuffix(method, methodSuffix)
