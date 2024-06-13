@@ -312,6 +312,10 @@ func (kc *ClientSet) DeploymentIsRunning(name, namespace string) error {
 	return structured.DeploymentIsRunning(kc.KubeInterface, name, namespace)
 }
 
+func (kc *ClientSet) ConfigMapExists(name, namespace string) error {
+	return structured.ConfigMapExists(kc.KubeInterface, name, namespace)
+}
+
 func (kc *ClientSet) PersistentVolExists(name, expectedPhase string) error {
 	return structured.PersistentVolExists(kc.KubeInterface, name, expectedPhase)
 }

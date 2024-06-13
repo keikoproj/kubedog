@@ -42,7 +42,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [I] (create|submit|update) [the] secret <non-whitespace-characters> in namespace <non-whitespace-characters> from [environment variable] <non-whitespace-characters>` kdt.KubeClientSet.SecretOperationFromEnvironmentVariable
 - `<GK> [I] delete [the] secret <non-whitespace-characters> in namespace <non-whitespace-characters>` kdt.KubeClientSet.SecretDelete
 - `<GK> <digits> node[s] with selector <non-whitespace-characters> should be (found|ready)` kdt.KubeClientSet.NodesWithSelectorShouldBe
-- `<GK> [the] (deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount) <any-characters-except-(")> (is|is not) in namespace <any-characters-except-(")>` kdt.KubeClientSet.ResourceInNamespace
+- `<GK> [the] (deployment|hpa|horizontalpodautoscaler|service|pdb|poddisruptionbudget|sa|serviceaccount|configmap) <any-characters-except-(")> (is|is not) in namespace <any-characters-except-(")>` kdt.KubeClientSet.ResourceInNamespace
 - `<GK> [I] scale [the] deployment <any-characters-except-(")> in namespace <any-characters-except-(")> to <digits>` kdt.KubeClientSet.ScaleDeployment
 - `<GK> [I] validate Prometheus Statefulset <any-characters-except-(")> in namespace <any-characters-except-(")> has volumeClaimTemplates name <any-characters-except-(")>` kdt.KubeClientSet.ValidatePrometheusVolumeClaimTemplatesName
 - `<GK> [I] get [the] nodes list` kdt.KubeClientSet.ListNodes
@@ -52,7 +52,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [the] (clusterrole|clusterrolebinding) with name <any-characters-except-(")> should be found` kdt.KubeClientSet.ClusterRbacIsFound
 - `<GK> [the] ingress <non-whitespace-characters> in [the] namespace <non-whitespace-characters> [is] [available] on port <digits> and path <any-characters-except-(")>` kdt.KubeClientSet.IngressAvailable
 - `<GK> [I] send <digits> tps to ingress <non-whitespace-characters> in [the] namespace <non-whitespace-characters> [available] on port <digits> and path <any-characters-except-(")> for <digits> (minutes|seconds) expecting up to <digits> error[s]` kdt.KubeClientSet.SendTrafficToIngress
-
+- `<GK> configmap <any-characters-except-(")> exists in namespace <any-characters-except-(")>` kdt.KubeClientSet.ConfigMapExists)
 ## AWS steps
 - `<GK> [there are] [valid] AWS Credentials` kdt.AwsClientSet.DiscoverClients
 - `<GK> an Auto Scaling Group named <any-characters-except-(")>` kdt.AwsClientSet.AnASGNamed
