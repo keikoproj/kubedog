@@ -48,11 +48,12 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [I] get [the] nodes list` kdt.KubeClientSet.ListNodes
 - `<GK> [the] daemonset <any-characters-except-(")> is running in namespace <any-characters-except-(")>` kdt.KubeClientSet.DaemonSetIsRunning
 - `<GK> [the] deployment <any-characters-except-(")> is running in namespace <any-characters-except-(")>` kdt.KubeClientSet.DeploymentIsRunning
+- `<GK> configmap <any-characters-except-(")> exists in namespace <any-characters-except-(")>` kdt.KubeClientSet.ConfigMapExists
 - `<GK> [the] persistentvolume <any-characters-except-(")> exists with status (Available|Bound|Released|Failed|Pending)` kdt.KubeClientSet.PersistentVolExists
 - `<GK> [the] (clusterrole|clusterrolebinding) with name <any-characters-except-(")> should be found` kdt.KubeClientSet.ClusterRbacIsFound
 - `<GK> [the] ingress <non-whitespace-characters> in [the] namespace <non-whitespace-characters> [is] [available] on port <digits> and path <any-characters-except-(")>` kdt.KubeClientSet.IngressAvailable
 - `<GK> [I] send <digits> tps to ingress <non-whitespace-characters> in [the] namespace <non-whitespace-characters> [available] on port <digits> and path <any-characters-except-(")> for <digits> (minutes|seconds) expecting up to <digits> error[s]` kdt.KubeClientSet.SendTrafficToIngress
-- `<GK> configmap <any-characters-except-(")> exists in namespace <any-characters-except-(")>` kdt.KubeClientSet.ConfigMapExists)
+
 ## AWS steps
 - `<GK> [there are] [valid] AWS Credentials` kdt.AwsClientSet.DiscoverClients
 - `<GK> an Auto Scaling Group named <any-characters-except-(")>` kdt.AwsClientSet.AnASGNamed
