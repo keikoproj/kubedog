@@ -36,6 +36,7 @@ import (
 )
 
 const (
+	configMapType          = "configmap"
 	deploymentType         = "deployment"
 	serviceType            = "service"
 	hpaType                = "horizontalpodautoscaler"
@@ -108,6 +109,7 @@ func TestResourceInNamespace(t *testing.T) {
 	hpaName := "horizontalpodautoscaler1"
 	pdbName := "poddisruptionbudget1"
 	saName := "serviceaccount1"
+	configMapName := "configmap1"
 
 	namespace := "namespace1"
 	tests := []struct {
@@ -124,6 +126,25 @@ func TestResourceInNamespace(t *testing.T) {
 				name:          deploymentName,
 				namespace:     namespace,
 			},
+		},
+		{
+			name: "Positive Test: configmap",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, configMapType, configMapName, namespace)),
+				resourceType:  configMapType,
+				name:          configMapName,
+				namespace:     namespace,
+			},
+		},
+		{
+			name: "Negative Test: Invalid resource type",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, configMapType, configMapName, namespace)),
+				resourceType:  "configmaps",
+				name:          configMapName,
+				namespace:     namespace,
+			},
+			wantErr: true,
 		},
 		{
 			name: "Positive Test: service",
@@ -678,6 +699,14 @@ func getResourceWithAll(t *testing.T, resourceType, name, namespace, label strin
 	switch resourceType {
 	case deploymentType:
 		return &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
+			},
+		}
+	case configMapType:
+		return &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: namespace,

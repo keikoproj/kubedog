@@ -407,6 +407,8 @@ func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name,
 		_, err = kubeClientset.PolicyV1().PodDisruptionBudgets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	case "sa", "serviceaccount":
 		_, err = kubeClientset.CoreV1().ServiceAccounts(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	case "configmap":
+		_, err = kubeClientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	default:
 		return errors.Errorf("Invalid resource type")
 	}
