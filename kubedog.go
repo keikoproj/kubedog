@@ -78,7 +78,6 @@ func (kdt *Test) SetScenario(scenario *godog.ScenarioContext) {
 	kdt.scenario.Step(`^(?:I )?get (?:the )?nodes list$`, kdt.KubeClientSet.ListNodes)
 	kdt.scenario.Step(`^(?:the )?daemonset ([^"]*) is running in namespace ([^"]*)$`, kdt.KubeClientSet.DaemonSetIsRunning)
 	kdt.scenario.Step(`^(?:the )?deployment ([^"]*) is running in namespace ([^"]*)$`, kdt.KubeClientSet.DeploymentIsRunning)
-	kdt.scenario.Step(`^configmap ([^"]*) exists in namespace ([^"]*)$`, kdt.KubeClientSet.ConfigMapExists)
 	kdt.scenario.Step(`^(?:the )?persistentvolume ([^"]*) exists with status (Available|Bound|Released|Failed|Pending)$`, kdt.KubeClientSet.PersistentVolExists)
 	kdt.scenario.Step(`^(?:the )?(clusterrole|clusterrolebinding) with name ([^"]*) should be found$`, kdt.KubeClientSet.ClusterRbacIsFound)
 	kdt.scenario.Step(`^(?:the )?ingress (\S+) in (?:the )?namespace (\S+) (?:is )?(?:available )?on port (\d+) and path ([^"]*)$`, kdt.KubeClientSet.IngressAvailable)

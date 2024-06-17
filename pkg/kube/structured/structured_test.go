@@ -401,47 +401,6 @@ func TestDeploymentIsRunning(t *testing.T) {
 	}
 }
 
-func TestConfigMapExists(t *testing.T) {
-	type args struct {
-		kubeClientset kubernetes.Interface
-		name          string
-		namespace     string
-	}
-	configMapName := "configMap1"
-	namespace := "namespace1"
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "Positive Test",
-			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, configMapType, configMapName, namespace)),
-				name:          configMapName,
-				namespace:     namespace,
-			},
-			wantErr: false,
-		},
-		{
-			name: "Negative Test",
-			args: args{
-				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, configMapType, "configMapName", namespace)),
-				name:          configMapName,
-				namespace:     namespace,
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := ConfigMapExists(tt.args.kubeClientset, tt.args.name, tt.args.namespace); (err != nil) != tt.wantErr {
-				t.Errorf("ConfigMapExists() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
 func TestPersistentVolExists(t *testing.T) {
 	type args struct {
 		kubeClientset kubernetes.Interface

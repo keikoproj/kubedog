@@ -210,15 +210,6 @@ func DeploymentIsRunning(kubeClientset kubernetes.Interface, name, namespace str
 	return nil
 }
 
-func ConfigMapExists(kubeClientset kubernetes.Interface, name, namespace string) error {
-	configMap, err := GetConfigMap(kubeClientset, name, namespace)
-	if err != nil || configMap.Name != name {
-		return fmt.Errorf("configMap %s/%s does not exist", namespace, name)
-	}
-
-	return nil
-}
-
 func PersistentVolExists(kubeClientset kubernetes.Interface, name, expectedPhase string) error {
 	vol, err := GetPersistentVolume(kubeClientset, name)
 	if err != nil {
