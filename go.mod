@@ -11,7 +11,7 @@ require (
 	github.com/tsenart/vegeta/v12 v12.11.1
 	golang.org/x/text v0.14.0
 	k8s.io/api v0.25.15
-	k8s.io/apimachinery v0.25.15
+	k8s.io/apimachinery v0.25.16
 	k8s.io/client-go v0.25.15
 	sigs.k8s.io/yaml v1.2.0
 )
