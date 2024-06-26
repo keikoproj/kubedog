@@ -210,6 +210,17 @@ func DeploymentIsRunning(kubeClientset kubernetes.Interface, name, namespace str
 	return nil
 }
 
+func ConfigMapDataExists(kubeClientset kubernetes.Interface, configMapName, namespace, key, value string) error {
+	currentData, err := GetConfigMap(kubeClientset, configMapName, namespace)
+	if err != nil {
+		return err
+	}
+	if currentData.Data[key] != value {
+		return fmt.Errorf("configMap %s/%s does not have the expected data", namespace, configMapName)
+	}
+	return nil
+}
+
 func PersistentVolExists(kubeClientset kubernetes.Interface, name, expectedPhase string) error {
 	vol, err := GetPersistentVolume(kubeClientset, name)
 	if err != nil {
@@ -407,6 +418,8 @@ func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name,
 		_, err = kubeClientset.PolicyV1().PodDisruptionBudgets(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	case "sa", "serviceaccount":
 		_, err = kubeClientset.CoreV1().ServiceAccounts(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	case "configmap":
+		_, err = kubeClientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	default:
 		return errors.Errorf("Invalid resource type")
 	}

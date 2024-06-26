@@ -73,6 +73,15 @@ func GetDeployment(kubeClientset kubernetes.Interface, name, namespace string) (
 	return deploy.(*appsv1.Deployment), nil
 }
 
+func GetConfigMap(kubeClientset kubernetes.Interface, name, namespace string) (*corev1.ConfigMap, error) {
+	configmaps, err := kubeClientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	if err != nil || configmaps.Name != name {
+		return nil, errors.Wrap(err, "failed to get configmap")
+	}
+
+	return configmaps, nil
+}
+
 func GetPersistentVolume(kubeClientset kubernetes.Interface, name string) (*corev1.PersistentVolume, error) {
 	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return nil, err
