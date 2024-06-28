@@ -312,7 +312,7 @@ func (kc *ClientSet) DeploymentIsRunning(name, namespace string) error {
 	return structured.DeploymentIsRunning(kc.KubeInterface, name, namespace)
 }
 
-func (kc *ClientSet) ValidateConfigMapData(name, namespace, key, value string) error {
+func (kc *ClientSet) ConfigMapDataHasKeyAndValue(name, namespace, key, value string) error {
 	return structured.ConfigMapDataHasKeyAndValue(kc.KubeInterface, name, namespace, key, value)
 }
 
