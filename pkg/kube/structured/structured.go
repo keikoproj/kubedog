@@ -211,6 +211,7 @@ func DeploymentIsRunning(kubeClientset kubernetes.Interface, name, namespace str
 }
 
 func ConfigMapDataHasKeyAndValue(kubeClientset kubernetes.Interface, configMapName, namespace, key, value string) error {
+
 	currentData, err := GetConfigMap(kubeClientset, configMapName, namespace)
 	if err != nil {
 		return err
