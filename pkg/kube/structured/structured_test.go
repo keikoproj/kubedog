@@ -441,8 +441,8 @@ func TestConfigMapExists(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ConfigMapDataExists(tt.args.kubeClientset, tt.args.name, tt.args.namespace, tt.args.key, tt.args.value); (err != nil) != tt.wantErr {
-				t.Errorf("ConfigMapDataExists() error = %v, wantErr %v", err, tt.wantErr)
+			if err := ConfigMapDataHasKeyAndValue(tt.args.kubeClientset, tt.args.name, tt.args.namespace, tt.args.key, tt.args.value); (err != nil) != tt.wantErr {
+				t.Errorf("ConfigMapDataHasKeyAndValue() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

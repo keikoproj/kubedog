@@ -78,7 +78,7 @@ func (kdt *Test) SetScenario(scenario *godog.ScenarioContext) {
 	kdt.scenario.Step(`^(?:I )?get (?:the )?nodes list$`, kdt.KubeClientSet.ListNodes)
 	kdt.scenario.Step(`^(?:the )?daemonset ([^"]*) is running in namespace ([^"]*)$`, kdt.KubeClientSet.DaemonSetIsRunning)
 	kdt.scenario.Step(`^(?:the )?deployment ([^"]*) is running in namespace ([^"]*)$`, kdt.KubeClientSet.DeploymentIsRunning)
-	kdt.scenario.Step(`^data in the ConfigMap "([^"]*)" in namespace "([^"]*)" has key "([^"]*)" with value "([^"]*)"$`, kdt.KubeClientSet.ValidateConfigMapData)
+	kdt.scenario.Step(`^(?:the )?data in (?:the )?ConfigMap "([^"]*)" in namespace "([^"]*)" has key "([^"]*)" with value "([^"]*)"$`, kdt.KubeClientSet.ValidateConfigMapData)
 	kdt.scenario.Step(`^(?:the )?persistentvolume ([^"]*) exists with status (Available|Bound|Released|Failed|Pending)$`, kdt.KubeClientSet.PersistentVolExists)
 	kdt.scenario.Step(`^(?:the )?(clusterrole|clusterrolebinding) with name ([^"]*) should be found$`, kdt.KubeClientSet.ClusterRbacIsFound)
 	kdt.scenario.Step(`^(?:the )?ingress (\S+) in (?:the )?namespace (\S+) (?:is )?(?:available )?on port (\d+) and path ([^"]*)$`, kdt.KubeClientSet.IngressAvailable)

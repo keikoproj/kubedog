@@ -210,7 +210,7 @@ func DeploymentIsRunning(kubeClientset kubernetes.Interface, name, namespace str
 	return nil
 }
 
-func ConfigMapDataExists(kubeClientset kubernetes.Interface, configMapName, namespace, key, value string) error {
+func ConfigMapDataHasKeyAndValue(kubeClientset kubernetes.Interface, configMapName, namespace, key, value string) error {
 	currentData, err := GetConfigMap(kubeClientset, configMapName, namespace)
 	if err != nil {
 		return err
