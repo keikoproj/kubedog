@@ -219,6 +219,7 @@ func ConfigMapDataHasKeyAndValue(kubeClientset kubernetes.Interface, configMapNa
 	if currentData.Data[key] != value {
 		return fmt.Errorf("configMap %s/%s does not have the expected data", namespace, configMapName)
 	}
+
 	return nil
 }
 
