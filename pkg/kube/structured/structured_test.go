@@ -401,6 +401,53 @@ func TestDeploymentIsRunning(t *testing.T) {
 	}
 }
 
+func TestConfigMapExists(t *testing.T) {
+	type args struct {
+		kubeClientset kubernetes.Interface
+		name          string
+		namespace     string
+		key           string
+		value         string
+	}
+	configMapName := "configmap1"
+	namespace := "namespace1"
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Positive Test",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, configMapType, configMapName, namespace)),
+				name:          configMapName,
+				namespace:     namespace,
+				key:           "key1",
+				value:         "value1",
+			},
+			wantErr: false,
+		},
+		{
+			name: "Negative Test",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResourceWithNamespace(t, configMapType, configMapName, namespace)),
+				name:          configMapName,
+				namespace:     namespace,
+				key:           "key1",
+				value:         "value2",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := ConfigMapDataHasKeyAndValue(tt.args.kubeClientset, tt.args.name, tt.args.namespace, tt.args.key, tt.args.value); (err != nil) != tt.wantErr {
+				t.Errorf("ConfigMapDataHasKeyAndValue() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestPersistentVolExists(t *testing.T) {
 	type args struct {
 		kubeClientset kubernetes.Interface
@@ -711,6 +758,9 @@ func getResourceWithAll(t *testing.T, resourceType, name, namespace, label strin
 				Name:      name,
 				Namespace: namespace,
 				Labels:    labels,
+			},
+			Data: map[string]string{
+				"key1": "value1",
 			},
 		}
 	case serviceType:

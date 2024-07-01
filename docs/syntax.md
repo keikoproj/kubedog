@@ -48,6 +48,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [I] get [the] nodes list` kdt.KubeClientSet.ListNodes
 - `<GK> [the] daemonset <any-characters-except-(")> is running in namespace <any-characters-except-(")>` kdt.KubeClientSet.DaemonSetIsRunning
 - `<GK> [the] deployment <any-characters-except-(")> is running in namespace <any-characters-except-(")>` kdt.KubeClientSet.DeploymentIsRunning
+- `<GK> [the] data in [the] ConfigMap "<any-characters-except-(")>" in namespace "<any-characters-except-(")>" has key "<any-characters-except-(")>" with value "<any-characters-except-(")>"` kdt.KubeClientSet.ConfigMapDataHasKeyAndValue
 - `<GK> [the] persistentvolume <any-characters-except-(")> exists with status (Available|Bound|Released|Failed|Pending)` kdt.KubeClientSet.PersistentVolExists
 - `<GK> [the] (clusterrole|clusterrolebinding) with name <any-characters-except-(")> should be found` kdt.KubeClientSet.ClusterRbacIsFound
 - `<GK> [the] ingress <non-whitespace-characters> in [the] namespace <non-whitespace-characters> [is] [available] on port <digits> and path <any-characters-except-(")>` kdt.KubeClientSet.IngressAvailable

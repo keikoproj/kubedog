@@ -210,6 +210,19 @@ func DeploymentIsRunning(kubeClientset kubernetes.Interface, name, namespace str
 	return nil
 }
 
+func ConfigMapDataHasKeyAndValue(kubeClientset kubernetes.Interface, configMapName, namespace, key, value string) error {
+
+	currentData, err := GetConfigMap(kubeClientset, configMapName, namespace)
+	if err != nil {
+		return err
+	}
+	if currentData.Data[key] != value {
+		return fmt.Errorf("configMap %s/%s does not have the expected data", namespace, configMapName)
+	}
+
+	return nil
+}
+
 func PersistentVolExists(kubeClientset kubernetes.Interface, name, expectedPhase string) error {
 	vol, err := GetPersistentVolume(kubeClientset, name)
 	if err != nil {
