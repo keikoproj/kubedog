@@ -29,7 +29,7 @@ func TestFeatures(t *testing.T) {
 
 func InitializeScenario(ctx *godog.ScenarioContext) {
 	// Required to populate templated Kubernetes yaml files
-	k.KubeClientSet.SetTemplateArguments(getTemplateArguments(t))
+	k.KubeClientSet.SetTemplateArguments(getTemplateArguments())
 	k.SetScenario(ctx)
 }
 
@@ -48,7 +48,7 @@ func InitializeTestSuite(ctx *godog.TestSuiteContext) {
 }
 
 // Using the generic package to get template arguments from environment variables
-func getTemplateArguments(t *testing.T) map[string]string {
+func getTemplateArguments() map[string]string {
 	templateArguments := []generic.TemplateArgument{
 		{
 			Key:                 "Namespace",
@@ -71,7 +71,7 @@ func getTemplateArguments(t *testing.T) map[string]string {
 	}
 	args, err := generic.TemplateArgumentsToMap(templateArguments...)
 	if err != nil {
-		t.Error(err)
+		panic(err)
 	}
 	return args
 }
