@@ -51,3 +51,18 @@ clean:
 	@rm -f ${BINARY}
 	@rm -f ${COVER_FILE}
 
+build-examples: build-example-templating-generic build-example-templating-kube build-example-usage
+
+.PHONY: build-example-templating-generic
+build-example-templating-generic:
+	cd examples/templating/generic && \
+	go build
+
+.PHONY: build-example-templating-kube
+build-example-templating-kube:
+	cd examples/templating/kube && \
+	go test -c
+.PHONY: build-example-usage
+build-example-usage:
+	cd examples/usage && \
+	go test -c

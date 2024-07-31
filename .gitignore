@@ -6,6 +6,7 @@ pkg/generic/test/generated_*
 pkg/kube/unstructured/test/templates/generated_*
 kubedog
 coverage.txt
+examples/templating/generic/generic
 
 # ignore edit files
 .*~
