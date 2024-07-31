@@ -683,10 +683,8 @@ func getIngressWithHostname(t *testing.T, name, namespace, hostname string) runt
 	if !ok {
 		t.Errorf("'runtime.Object' could not be cast to '*appsv1.StatefulSet': %v", ingressInterface)
 	}
-	ingress.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{
-		{
-			Hostname: hostname,
-		},
+	ingress.Status.LoadBalancer.Ingress = []networkingv1.IngressLoadBalancerIngress{
+		{Hostname: hostname},
 	}
 	return ingress
 }
