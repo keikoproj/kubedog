@@ -51,7 +51,7 @@ clean:
 	@rm -f ${BINARY}
 	@rm -f ${COVER_FILE}
 
-build-examples: build-example-templating-generic build-example-templating-kube build-example-usage
+build-examples: build-example-templating-generic build-example-templating-kube build-example-usage check-dirty-repo
 
 .PHONY: build-example-templating-generic
 build-example-templating-generic:
