@@ -114,7 +114,7 @@ func RetryOnError(backoff *wait.Backoff, retryExpected func(error) bool, fn Func
 			return false, ex
 		}
 	})
-	if err == wait.ErrWaitTimeout {
+	if wait.Interrupted(err) {
 		err = lastErr
 	}
 	return out, err
