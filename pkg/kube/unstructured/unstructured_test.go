@@ -957,6 +957,7 @@ func resourceToList(t *testing.T, resource unstructuredResource) *unstructured.U
 		"apiVersion": resource.Resource.GetAPIVersion(),
 		"kind":       resource.Resource.GetKind() + "List",
 		"metadata": map[string]interface{}{
+			"continue":        "",
 			"resourceVersion": "",
 		},
 	})
