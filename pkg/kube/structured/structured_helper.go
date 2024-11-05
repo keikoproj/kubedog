@@ -96,6 +96,20 @@ func GetPersistentVolume(kubeClientset kubernetes.Interface, name string) (*core
 	return pvs.(*corev1.PersistentVolume), nil
 }
 
+func GetPersistentVolumeClaim(kubeClientset kubernetes.Interface, name string, namespace string) (*corev1.PersistentVolumeClaim, error) {
+	if err := common.ValidateClientset(kubeClientset); err != nil {
+		return nil, err
+	}
+
+	pvc, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return kubeClientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get persistentvolumeclaim")
+	}
+	return pvc.(*corev1.PersistentVolumeClaim), nil
+}
+
 func GetStatefulSetList(kubeClientset kubernetes.Interface, namespace string) (*appsv1.StatefulSetList, error) {
 	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return nil, err

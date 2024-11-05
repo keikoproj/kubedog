@@ -235,6 +235,18 @@ func PersistentVolExists(kubeClientset kubernetes.Interface, name, expectedPhase
 	return nil
 }
 
+func PersistentVolClaimExists(kubeClientset kubernetes.Interface, name, expectedPhase string, namespace string) error {
+	vol, err := GetPersistentVolumeClaim(kubeClientset, name, namespace)
+	if err != nil {
+		return err
+	}
+	phase := string(vol.Status.Phase)
+	if phase != expectedPhase {
+		return fmt.Errorf("persistentvolumeclaim had unexpected phase %v, expected phase %v", phase, expectedPhase)
+	}
+	return nil
+}
+
 func ValidatePrometheusVolumeClaimTemplatesName(kubeClientset kubernetes.Interface, statefulsetName, namespace, volumeClaimTemplatesName string) error {
 	// Prometheus StatefulSets deployed, then validate volumeClaimTemplate name.
 	// Validation required:
