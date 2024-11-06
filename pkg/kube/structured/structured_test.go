@@ -501,7 +501,7 @@ func TestPersistentVolClaimExists(t *testing.T) {
 				kubeClientset: fake.NewSimpleClientset(getResource(t, persistentVolumeClaimType, persistentvolumeClaimName)),
 				name:          persistentvolumeClaimName,
 				namespace:     "",
-				expectedPhase: "",
+				expectedPhase: "Bound",
 			},
 			wantErr: false,
 		},
@@ -518,7 +518,7 @@ func TestPersistentVolClaimExists(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := PersistentVolClaimExists(tt.args.kubeClientset, tt.args.name, tt.args.namespace, tt.args.expectedPhase); (err != nil) != tt.wantErr {
+			if err := PersistentVolClaimExists(tt.args.kubeClientset, tt.args.name, tt.args.expectedPhase, tt.args.namespace); (err != nil) != tt.wantErr {
 				t.Errorf("PersistentVolClaimExists() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -884,6 +884,9 @@ func getResourceWithAll(t *testing.T, resourceType, name, namespace, label strin
 				Name:      name,
 				Namespace: namespace,
 				Labels:    labels,
+			},
+			Status: corev1.PersistentVolumeClaimStatus{
+				Phase: corev1.ClaimBound,
 			},
 		}
 	case statefulSetType:

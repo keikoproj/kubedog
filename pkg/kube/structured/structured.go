@@ -236,11 +236,13 @@ func PersistentVolExists(kubeClientset kubernetes.Interface, name, expectedPhase
 }
 
 func PersistentVolClaimExists(kubeClientset kubernetes.Interface, name, expectedPhase string, namespace string) error {
-	vol, err := GetPersistentVolumeClaim(kubeClientset, name, namespace)
+	vol, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return GetPersistentVolumeClaim(kubeClientset, name, namespace)
+	})
 	if err != nil {
 		return err
 	}
-	phase := string(vol.Status.Phase)
+	phase := string(vol.(*corev1.PersistentVolumeClaim).Status.Phase)
 	if phase != expectedPhase {
 		return fmt.Errorf("persistentvolumeclaim had unexpected phase %v, expected phase %v", phase, expectedPhase)
 	}
