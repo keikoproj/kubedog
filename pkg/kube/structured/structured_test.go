@@ -506,6 +506,16 @@ func TestPersistentVolClaimExists(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "pvc found with wrong phase",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, persistentVolumeClaimType, persistentvolumeClaimName)),
+				name:          persistentvolumeClaimName,
+				namespace:     "",
+				expectedPhase: "Released",
+			},
+			wantErr: true,
+		},
+		{
 			name: "pvc not found Test",
 			args: args{
 				kubeClientset: fake.NewSimpleClientset(getResource(t, persistentVolumeClaimType, "testabc")),

@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -236,17 +237,24 @@ func PersistentVolExists(kubeClientset kubernetes.Interface, name, expectedPhase
 }
 
 func PersistentVolClaimExists(kubeClientset kubernetes.Interface, name, expectedPhase string, namespace string) error {
-	vol, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
-		return GetPersistentVolumeClaim(kubeClientset, name, namespace)
-	})
-	if err != nil {
-		return err
-	}
-	phase := string(vol.(*corev1.PersistentVolumeClaim).Status.Phase)
-	if phase != expectedPhase {
-		return fmt.Errorf("persistentvolumeclaim had unexpected phase %v, expected phase %v", phase, expectedPhase)
-	}
-	return nil
+	_, err := util.RetryOnError(
+		&util.DefaultRetry,
+		func(err error) bool {
+			msg := fmt.Sprintf("persistentvolumeclaim had unexpected phase")
+			return util.IsRetriable(err) || strings.Contains(err.Error(), msg)
+		},
+		func() (interface{}, error) {
+			vol, err := GetPersistentVolumeClaim(kubeClientset, name, namespace)
+			if err != nil {
+				return nil, err
+			}
+			phase := string(vol.Status.Phase)
+			if phase != expectedPhase {
+				return nil, fmt.Errorf("persistentvolumeclaim had unexpected phase %v, expected phase %v", phase, expectedPhase)
+			}
+			return nil, nil
+		})
+	return err
 }
 
 func ValidatePrometheusVolumeClaimTemplatesName(kubeClientset kubernetes.Interface, statefulsetName, namespace, volumeClaimTemplatesName string) error {
