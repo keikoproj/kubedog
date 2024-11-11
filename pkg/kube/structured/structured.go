@@ -240,7 +240,7 @@ func PersistentVolClaimExists(kubeClientset kubernetes.Interface, name, expected
 	_, err := util.RetryOnError(
 		&util.DefaultRetry,
 		func(err error) bool {
-			msg := fmt.Sprintf("persistentvolumeclaim had unexpected phase")
+			msg := "persistentvolumeclaim had unexpected phase"
 			return util.IsRetriable(err) || strings.Contains(err.Error(), msg)
 		},
 		func() (interface{}, error) {
