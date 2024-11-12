@@ -320,6 +320,10 @@ func (kc *ClientSet) PersistentVolExists(name, expectedPhase string) error {
 	return structured.PersistentVolExists(kc.KubeInterface, name, expectedPhase)
 }
 
+func (kc *ClientSet) PersistentVolClaimExists(name, expectedPhase string, namespace string) error {
+	return structured.PersistentVolClaimExists(kc.KubeInterface, name, expectedPhase, namespace)
+}
+
 func (kc *ClientSet) ClusterRbacIsFound(resourceType, name string) error {
 	return structured.ClusterRbacIsFound(kc.KubeInterface, resourceType, name)
 }

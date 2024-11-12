@@ -36,20 +36,21 @@ import (
 )
 
 const (
-	configMapType          = "configmap"
-	deploymentType         = "deployment"
-	serviceType            = "service"
-	hpaType                = "horizontalpodautoscaler"
-	pdbType                = "poddisruptionbudget"
-	saType                 = "serviceaccount"
-	clusterRoleType        = "clusterrole"
-	clusterRoleBindingType = "clusterrolebinding"
-	nodeType               = "node"
-	daemonSetType          = "daemonset"
-	persistentVolumeType   = "persistentvolume"
-	statefulSetType        = "statefulset"
-	secretType             = "secret"
-	ingressType            = "ingress"
+	configMapType             = "configmap"
+	deploymentType            = "deployment"
+	serviceType               = "service"
+	hpaType                   = "horizontalpodautoscaler"
+	pdbType                   = "poddisruptionbudget"
+	saType                    = "serviceaccount"
+	clusterRoleType           = "clusterrole"
+	clusterRoleBindingType    = "clusterrolebinding"
+	nodeType                  = "node"
+	daemonSetType             = "daemonset"
+	persistentVolumeType      = "persistentvolume"
+	persistentVolumeClaimType = "persistentVolumeClaim"
+	statefulSetType           = "statefulset"
+	secretType                = "secret"
+	ingressType               = "ingress"
 )
 
 func TestNodesWithSelectorShouldBe(t *testing.T) {
@@ -480,6 +481,60 @@ func TestPersistentVolExists(t *testing.T) {
 	}
 }
 
+func TestPersistentVolClaimExists(t *testing.T) {
+	type args struct {
+		kubeClientset kubernetes.Interface
+		name          string
+		namespace     string
+		expectedPhase string
+	}
+	// expectedPhase: Available|Bound|Released|Failed|Pending
+	persistentvolumeClaimName := "persistentvolumeclaim1"
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "pvc found",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, persistentVolumeClaimType, persistentvolumeClaimName)),
+				name:          persistentvolumeClaimName,
+				namespace:     "",
+				expectedPhase: "Bound",
+			},
+			wantErr: false,
+		},
+		{
+			name: "pvc found with wrong phase",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, persistentVolumeClaimType, persistentvolumeClaimName)),
+				name:          persistentvolumeClaimName,
+				namespace:     "",
+				expectedPhase: "Released",
+			},
+			wantErr: true,
+		},
+		{
+			name: "pvc not found Test",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(getResource(t, persistentVolumeClaimType, "testabc")),
+				name:          persistentvolumeClaimName,
+				namespace:     "",
+				expectedPhase: "",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := PersistentVolClaimExists(tt.args.kubeClientset, tt.args.name, tt.args.expectedPhase, tt.args.namespace); (err != nil) != tt.wantErr {
+				t.Errorf("PersistentVolClaimExists() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestValidatePrometheusVolumeClaimTemplatesName(t *testing.T) {
 	type args struct {
 		kubeClientset            kubernetes.Interface
@@ -831,6 +886,17 @@ func getResourceWithAll(t *testing.T, resourceType, name, namespace, label strin
 				Name:      name,
 				Namespace: namespace,
 				Labels:    labels,
+			},
+		}
+	case persistentVolumeClaimType:
+		return &corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
+			},
+			Status: corev1.PersistentVolumeClaimStatus{
+				Phase: corev1.ClaimBound,
 			},
 		}
 	case statefulSetType:
