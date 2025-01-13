@@ -54,7 +54,9 @@ func countStringInPodLogs(kubeClientset kubernetes.Interface, pod corev1.Pod, si
 		return foundCount, err
 	}
 	var sinceTime metav1.Time = metav1.NewTime(since)
+	log.Infof("DEBUG: In countStringInPodLogs, sinceTime = %v", sinceTime)
 	for _, container := range pod.Spec.Containers {
+		log.Infof("DEBUG: In countStringInPodLogs, container = %v", container)
 		podLogOpts := corev1.PodLogOptions{
 			SinceTime: &sinceTime,
 			Container: container.Name,
@@ -63,9 +65,10 @@ func countStringInPodLogs(kubeClientset kubernetes.Interface, pod corev1.Pod, si
 		req := kubeClientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &podLogOpts)
 		podLogs, err := req.Stream(context.Background())
 		if err != nil {
+			log.Info("DEBUG: Error in opening stream for pod")
 			return 0, errors.Errorf("Error in opening stream for pod '%s', container '%s' : '%s'", pod.Name, container.Name, string(err.Error()))
 		}
-
+		log.Infof("DEBUG: In countStringInPodLogs, podLogs = %v", podLogs)
 		scanner := bufio.NewScanner(podLogs)
 		for scanner.Scan() {
 			line := scanner.Text()

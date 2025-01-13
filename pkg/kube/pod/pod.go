@@ -142,6 +142,7 @@ func SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime(kubeClientset
 		)
 		var podsCount int
 		for _, pod := range pods.Items {
+			log.Infof("DEBUG: pod name = %s", pod.Name)
 			podCount, err := countStringInPodLogs(kubeClientset, pod, since, searchKeyword)
 			if err != nil {
 				return err
