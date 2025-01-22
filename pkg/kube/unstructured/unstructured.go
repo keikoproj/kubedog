@@ -196,7 +196,7 @@ func ResourceShouldBe(dynamicClient dynamic.Interface, resource unstructuredReso
 	}
 }
 
-func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, resource unstructuredResource, w common.WaiterConfig, selector string) error {
+func ResourceShouldConvergeToField(dynamicClient dynamic.Interface, resource unstructuredResource, w common.WaiterConfig, selector string) error {
 	var counter int
 
 	if err := validateDynamicClient(dynamicClient); err != nil {
@@ -254,7 +254,7 @@ func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, resource 
 	return nil
 }
 
-func ResourceShouldConvergeToField(dynamicClient dynamic.Interface, resource unstructuredResource, w common.WaiterConfig, selector string) error {
+func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, resource unstructuredResource, w common.WaiterConfig, selector string) error {
 	var counter int
 
 	if err := validateDynamicClient(dynamicClient); err != nil {
