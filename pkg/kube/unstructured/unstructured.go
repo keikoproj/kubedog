@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -196,6 +197,64 @@ func ResourceShouldBe(dynamicClient dynamic.Interface, resource unstructuredReso
 }
 
 func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, resource unstructuredResource, w common.WaiterConfig, selector string) error {
+	var counter int
+
+	if err := validateDynamicClient(dynamicClient); err != nil {
+		return err
+	}
+
+	split := util.DeleteEmpty(strings.Split(selector, "="))
+	if len(split) != 2 {
+		return errors.Errorf("Selector '%s' should meet format '<key>=<value>'", selector)
+	}
+
+	key := split[0]
+	value := split[1]
+
+	keySlice := util.DeleteEmpty(strings.Split(key, "."))
+	if len(keySlice) < 1 {
+		return errors.Errorf("Found empty 'key' in selector '%s' of form '<key>=<value>'", selector)
+	}
+
+	gvr, unstruct := resource.GVR, resource.Resource
+
+	for {
+		if counter >= w.GetTries() {
+			return errors.New("waiter timed out waiting for resource")
+		}
+		log.Infof("waiting for resource %v/%v to converge to %v=%v", unstruct.GetNamespace(), unstruct.GetName(), key, value)
+		retResource, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		val, err := util.ExtractField(retResource.UnstructuredContent(), keySlice)
+		if err != nil {
+			return err
+		}
+		var convertedValue any
+		switch val.(type) {
+		case int, int64:
+			convertedValue, err = strconv.ParseInt(value, 10, 64)
+			if err != nil {
+				return err
+			}
+		case string:
+			convertedValue = value
+		default:
+			return errors.New("unknown type")
+		}
+		if reflect.DeepEqual(val, convertedValue) {
+			break
+		}
+		counter++
+		time.Sleep(w.GetInterval())
+	}
+
+	return nil
+}
+
+func ResourceShouldConvergeToField(dynamicClient dynamic.Interface, resource unstructuredResource, w common.WaiterConfig, selector string) error {
 	var counter int
 
 	if err := validateDynamicClient(dynamicClient); err != nil {

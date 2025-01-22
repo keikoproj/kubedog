@@ -457,6 +457,30 @@ func TestResourceShouldConvergeToSelector(t *testing.T) {
 			},
 		},
 		{
+			name: "Positive Test: array",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(resource),
+				resource:      resource,
+				selector:      ".spec.template.containers[0].image=test-image",
+			},
+		},
+		{
+			name: "Positive Test: non-string value",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(resource),
+				resource:      resource,
+				selector:      ".status.replicaCount=2",
+			},
+		},
+		{
+			name: "Positive Test: array and non-string value",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(resource),
+				resource:      resource,
+				selector:      ".spec.template.containers[0].version=1.0.0",
+			},
+		},
+		{
 			name: "Negative Test: invalid client",
 			args: args{
 				dynamicClient: nil,
