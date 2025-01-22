@@ -136,38 +136,28 @@ func StructToPrettyString(st interface{}) string {
 }
 
 func ExtractField(data any, path []string) (any, error) {
-	// base case
 	if len(path) == 0 || data == nil {
 		return data, nil
 	}
 
-	v := reflect.ValueOf(data)
-	key := path[0]
+	currKey := path[0]
 
-	// ie. containers[10] -> [ containers[, 10] ]
-	maybeArr := strings.Split(key, "[")
+	maybeArr := strings.Split(currKey, "[")
 	if len(maybeArr) >= 2 {
-		// [10]] -> [ 10, ] ] -> strconv.Atoi(10)
-		i, err := strconv.Atoi(strings.Split(maybeArr[1], "]")[0])
+		indexStr := strings.TrimSuffix(maybeArr[1], "]")
+		i, err := strconv.Atoi(indexStr)
 		if err != nil {
 			return nil, err
 		}
-		v = reflect.ValueOf(data.(map[string]any)[maybeArr[0]])
-		data, err := ExtractField(v.Index(i).Interface(), path[1:])
-		if err != nil {
-			return nil, err
-		}
-		return data, nil
-	} else {
-		for _, k := range v.MapKeys() {
-			if k.String() == key {
-				data, err := ExtractField(v.MapIndex(k).Interface(), path[1:])
-				if err != nil {
-					return nil, err
-				}
-				return data, nil
-			}
-		}
-		return data, nil
+		arr := data.(map[string]any)[maybeArr[0]].([]any)
+		return ExtractField(arr[i], path[1:])
 	}
+
+	for key, val := range data.(map[string]any) {
+		if key == currKey {
+			return ExtractField(val, path[1:])
+		}
+	}
+
+	return nil, nil
 }
