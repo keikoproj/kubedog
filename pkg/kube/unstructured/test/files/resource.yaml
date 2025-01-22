@@ -13,6 +13,6 @@ status:
 spec:
   template:
     containers:
-    - name: "test"
-      image: "test-image"
+    - name: someContainer
+      image: someImage
       version: 1.0.0

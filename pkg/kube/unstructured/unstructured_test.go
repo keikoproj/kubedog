@@ -546,7 +546,7 @@ func TestResourceShouldConvergeToField(t *testing.T) {
 			args: args{
 				dynamicClient: newFakeDynamicClientWithResource(resource),
 				resource:      resource,
-				selector:      ".spec.template.containers[0].image=test-image",
+				selector:      ".spec.template.containers[0].image=someImage",
 			},
 		},
 		{
