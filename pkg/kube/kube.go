@@ -190,6 +190,14 @@ func (kc *ClientSet) ResourceShouldConvergeToSelector(resourceFileName, selector
 	return unstruct.ResourceShouldConvergeToSelector(kc.DynamicInterface, resource, kc.getWaiterConfig(), selector)
 }
 
+func (kc *ClientSet) ResourceShouldConvergeToField(resourceFileName, selector string) error {
+	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
+	if err != nil {
+		return err
+	}
+	return unstruct.ResourceShouldConvergeToField(kc.DynamicInterface, resource, kc.getWaiterConfig(), selector)
+}
+
 func (kc *ClientSet) ResourceConditionShouldBe(resourceFileName, conditionType, conditionValue string) error {
 	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
 	if err != nil {

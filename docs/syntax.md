@@ -20,6 +20,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [I] (create|submit|delete|update|upsert) [the] resource <non-whitespace-characters> in [the] <any-characters-except-(")> namespace, the operation should (succeed|fail)` kdt.KubeClientSet.ResourceOperationWithResultInNamespace
 - `<GK> [the] resource <any-characters-except-(")> should be (created|deleted)` kdt.KubeClientSet.ResourceShouldBe
 - `<GK> [the] resource <non-whitespace-characters> [should] converge to selector <non-whitespace-characters>` kdt.KubeClientSet.ResourceShouldConvergeToSelector
+- `<GK> [the] resource <non-whitespace-characters> [should] converge to field <non-whitespace-characters>` kdt.KubeClientSet.ResourceShouldConvergeToField
 - `<GK> [the] resource <any-characters-except-(")> condition <any-characters-except-(")> should be <any-characters-except-(")>` kdt.KubeClientSet.ResourceConditionShouldBe
 - `<GK> [I] update [the] resource <any-characters-except-(")> with <any-characters-except-(")> set to <any-characters-except-(")>` kdt.KubeClientSet.UpdateResourceWithField
 - `<GK> [I] verify InstanceGroups [are] in "ready" state` kdt.KubeClientSet.VerifyInstanceGroups

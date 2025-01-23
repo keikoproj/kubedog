@@ -519,6 +519,89 @@ func TestResourceShouldConvergeToSelector(t *testing.T) {
 	}
 }
 
+func TestResourceShouldConvergeToField(t *testing.T) {
+	type args struct {
+		dynamicClient dynamic.Interface
+		resource      unstructuredResource
+		w             common.WaiterConfig
+		selector      string
+	}
+	resource := getResourceFromYaml(t, getFilePath("resource.yaml"))
+	labelKey, labelValue := getOneLabel(t, *resource.Resource)
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Positive Test",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(resource),
+				resource:      resource,
+				selector:      ".metadata.labels." + labelKey + "=" + labelValue,
+			},
+		},
+		{
+			name: "Positive Test: array",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(resource),
+				resource:      resource,
+				selector:      ".spec.template.containers[0].image=someImage",
+			},
+		},
+		{
+			name: "Positive Test: non-string value",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(resource),
+				resource:      resource,
+				selector:      ".status.replicaCount=2",
+			},
+		},
+		{
+			name: "Positive Test: array and non-string value",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(resource),
+				resource:      resource,
+				selector:      ".spec.template.containers[0].version=1.0.0",
+			},
+		},
+		{
+			name: "Positive Test: array of array",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(resource),
+				resource:      resource,
+				selector:      ".spec.template.containers[0].ports[1].containerPort=8940",
+			},
+		},
+		{
+			name: "Negative Test: invalid selector",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(resource),
+				resource:      resource,
+				selector:      ".invalid.selector.",
+			},
+			wantErr: true,
+		},
+		{
+			name: "Negative Test: invalid key",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(resource),
+				resource:      resource,
+				selector:      ".=invalid-key",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args.w = common.NewWaiterConfig(1, time.Second)
+			if err := ResourceShouldConvergeToField(tt.args.dynamicClient, tt.args.resource, tt.args.w, tt.args.selector); (err != nil) != tt.wantErr {
+				t.Errorf("ResourceShouldConvergeToSelector() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestResourceConditionShouldBe(t *testing.T) {
 	type args struct {
 		dynamicClient  dynamic.Interface
