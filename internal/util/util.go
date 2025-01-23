@@ -149,8 +149,14 @@ func ExtractField(data any, path []string) (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		arr := data.(map[string]any)[maybeArr[0]].([]any)
-		return ExtractField(arr[i], path[1:])
+
+		dataAtIdx := data.(map[string]any)[maybeArr[0]]
+		switch dataAtIdx := dataAtIdx.(type) {
+		case []interface{}:
+			return ExtractField(dataAtIdx[i], path[1:])
+		default:
+			return ExtractField(dataAtIdx.([]map[string]any)[i], path[1:])
+		}
 	}
 
 	for key, val := range data.(map[string]any) {
@@ -159,5 +165,5 @@ func ExtractField(data any, path []string) (any, error) {
 		}
 	}
 
-	return nil, nil
+	return nil, errors.New("field not found")
 }

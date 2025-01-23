@@ -566,6 +566,14 @@ func TestResourceShouldConvergeToField(t *testing.T) {
 			},
 		},
 		{
+			name: "Positive Test: array of array",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(resource),
+				resource:      resource,
+				selector:      ".spec.template.containers[0].ports[1].containerPort=8940",
+			},
+		},
+		{
 			name: "Negative Test: invalid selector",
 			args: args{
 				dynamicClient: newFakeDynamicClientWithResource(resource),
