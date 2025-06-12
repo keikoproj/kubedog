@@ -191,3 +191,48 @@ func TestPodsInNamespaceWithLabelSelectorConvergeToFieldSelector(t *testing.T) {
 		})
 	}
 }
+
+func TestDeletePodListWithLabelSelectorAndFieldSelector(t *testing.T) {
+	namespaceName := "test-ns"
+	ns := v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespaceName}}
+	podSucceeded := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "pod-xhhxj",
+			Namespace: "test-ns",
+			Labels: map[string]string{
+				"app": "test-service",
+			},
+		},
+		Status: v1.PodStatus{
+			Phase: v1.PodSucceeded,
+		},
+	}
+	type args struct {
+		kubeClientset kubernetes.Interface
+		namespace     string
+		labelSelector string
+		fieldSelector string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Positive Test",
+			args: args{
+				kubeClientset: fake.NewSimpleClientset(&ns, &podSucceeded),
+				namespace:     namespaceName,
+				labelSelector: "app=test-service",
+				fieldSelector: "status.phase=Succeeded",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := DeletePodListWithLabelSelectorAndFieldSelector(tt.args.kubeClientset, tt.args.namespace, tt.args.labelSelector, tt.args.fieldSelector); (err != nil) != tt.wantErr {
+				t.Errorf("DeletePodListWithLabelSelectorAndFieldSelector() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
