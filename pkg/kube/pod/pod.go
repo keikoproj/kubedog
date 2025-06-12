@@ -35,6 +35,17 @@ func ListPods(kubeClientset kubernetes.Interface, namespace string) error {
 	return ListPodsWithSelector(kubeClientset, namespace, "")
 }
 
+func PodOperationWithSelector(kubeClientset kubernetes.Interface, operation, namespace, selector string) error {
+	switch operation {
+	case "list", "get":
+		return ListPodsWithSelector(kubeClientset, namespace, selector)
+	case "delete":
+		return DeletePodsWithSelector(kubeClientset, namespace, selector)
+	default:
+		return errors.Errorf("Unknown pod operation '%s'", operation)
+	}
+}
+
 func ListPodsWithSelector(kubeClientset kubernetes.Interface, namespace, selector string) error {
 	var readyCountFn = func(conditions []corev1.ContainerStatus) string {
 		var readyCount = 0
@@ -59,6 +70,17 @@ func ListPodsWithSelector(kubeClientset kubernetes.Interface, namespace, selecto
 	for _, pod := range pods.Items {
 		log.Infof(tableFormat, pod.Name, readyCountFn(pod.Status.ContainerStatuses), pod.Status.Phase)
 	}
+	return nil
+}
+
+func DeletePodsWithSelector(kubeClientset kubernetes.Interface, namespace, selector string) error {
+	err := kubeClientset.CoreV1().Pods(namespace).DeleteCollection(context.Background(), metav1.DeleteOptions{}, metav1.ListOptions{
+		LabelSelector: selector,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to delete pods with selector '%s' in namespace '%s'", selector, namespace)
+	}
+	log.Infof("Deleted pods with selector '%s' in namespace '%s'", selector, namespace)
 	return nil
 }
 

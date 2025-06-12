@@ -223,8 +223,8 @@ func (kc *ClientSet) ListPods(namespace string) error {
 	return pod.ListPods(kc.KubeInterface, namespace)
 }
 
-func (kc *ClientSet) ListPodsWithSelector(namespace, selector string) error {
-	return pod.ListPodsWithSelector(kc.KubeInterface, namespace, selector)
+func (kc *ClientSet) PodOperationWithSelector(operation, namespace, selector string) error {
+	return pod.PodOperationWithSelector(kc.KubeInterface, operation, namespace, selector)
 }
 
 func (kc *ClientSet) PodsWithSelectorHaveRestartCountLessThan(namespace, selector string, restartCount int) error {
