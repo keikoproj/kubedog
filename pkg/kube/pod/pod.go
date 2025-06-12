@@ -32,14 +32,7 @@ import (
 )
 
 func PodOperation(kubeClientset kubernetes.Interface, operation, namespace string) error {
-	switch operation {
-	case "list", "get":
-		return ListPodsWithSelector(kubeClientset, namespace, "")
-	case "delete":
-		return DeletePodsWithSelector(kubeClientset, namespace, "")
-	default:
-		return errors.Errorf("Unknown pod operation '%s'", operation)
-	}
+	return PodOperationWithSelector(kubeClientset, operation, namespace, "")
 }
 
 func PodOperationWithSelector(kubeClientset kubernetes.Interface, operation, namespace, selector string) error {
