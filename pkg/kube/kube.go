@@ -226,6 +226,10 @@ func (kc *ClientSet) PodOperationWithSelector(operation, namespace, selector str
 	return pod.PodOperationWithSelector(kc.KubeInterface, operation, namespace, selector)
 }
 
+func (kc *ClientSet) DeletePodWithFieldSelector(namespace, fieldSelector string) error {
+	return pod.DeletePodsWithFieldSelector(kc.KubeInterface, namespace, fieldSelector)
+}
+
 func (kc *ClientSet) PodsWithSelectorHaveRestartCountLessThan(namespace, selector string, restartCount int) error {
 	return pod.PodsWithSelectorHaveRestartCountLessThan(kc.KubeInterface, namespace, selector, restartCount)
 }

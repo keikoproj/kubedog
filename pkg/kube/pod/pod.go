@@ -86,6 +86,15 @@ func DeletePodsWithSelector(kubeClientset kubernetes.Interface, namespace, selec
 	return nil
 }
 
+func DeletePodsWithFieldSelector(kubeClientset kubernetes.Interface, namespace, fieldSelector string) error {
+	err := DeletePodListWithLabelSelectorAndFieldSelector(kubeClientset, namespace, "", fieldSelector)
+	if err != nil {
+		return err
+	}
+	log.Infof("Deleted pods with field selector '%s' in namespace '%s'", fieldSelector, namespace)
+	return nil
+}
+
 func PodsWithSelectorHaveRestartCountLessThan(kubeClientset kubernetes.Interface, namespace string, selector string, restartCount int) error {
 	pods, err := GetPodListWithLabelSelector(kubeClientset, namespace, selector)
 	if err != nil {
