@@ -30,6 +30,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 #### Pods
 - `<GK> [I] (get|list|delete) [the] pods in namespace <any-characters-except-(")>` kdt.KubeClientSet.PodOperation
 - `<GK> [I] (get|list|delete) [the] pods in namespace <any-characters-except-(")> with selector <non-whitespace-characters>` kdt.KubeClientSet.PodOperationWithSelector
+- `<GK> [I] delete [the] pods in namespace <any-characters-except-(")> with field selector <non-whitespace-characters>` kdt.KubeClientSet.DeletePodWithFieldSelector
 - `<GK> [the] pods in namespace <any-characters-except-(")> with selector <non-whitespace-characters> have restart count less than <digits>` kdt.KubeClientSet.PodsWithSelectorHaveRestartCountLessThan
 - `<GK> (some|all) pods in namespace <non-whitespace-characters> with selector <non-whitespace-characters> have "<any-characters-except-(")>" in logs since <any-characters-except-(")> time` kdt.KubeClientSet.SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime
 - `<GK> some pods in namespace <non-whitespace-characters> with selector <non-whitespace-characters> don't have "<any-characters-except-(")>" in logs since <any-characters-except-(")> time` kdt.KubeClientSet.SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime
