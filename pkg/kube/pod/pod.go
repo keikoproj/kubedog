@@ -31,8 +31,15 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func ListPods(kubeClientset kubernetes.Interface, namespace string) error {
-	return ListPodsWithSelector(kubeClientset, namespace, "")
+func PodOperation(kubeClientset kubernetes.Interface, operation, namespace string) error {
+	switch operation {
+	case "list", "get":
+		return ListPodsWithSelector(kubeClientset, namespace, "")
+	case "delete":
+		return DeletePodsWithSelector(kubeClientset, namespace, "")
+	default:
+		return errors.Errorf("Unknown pod operation '%s'", operation)
+	}
 }
 
 func PodOperationWithSelector(kubeClientset kubernetes.Interface, operation, namespace, selector string) error {
@@ -44,6 +51,10 @@ func PodOperationWithSelector(kubeClientset kubernetes.Interface, operation, nam
 	default:
 		return errors.Errorf("Unknown pod operation '%s'", operation)
 	}
+}
+
+func ListPods(kubeClientset kubernetes.Interface, namespace string) error {
+	return ListPodsWithSelector(kubeClientset, namespace, "")
 }
 
 func ListPodsWithSelector(kubeClientset kubernetes.Interface, namespace, selector string) error {
@@ -73,12 +84,14 @@ func ListPodsWithSelector(kubeClientset kubernetes.Interface, namespace, selecto
 	return nil
 }
 
+func DeletePods(kubeClientset kubernetes.Interface, namespace string) error {
+	return DeletePodsWithSelector(kubeClientset, namespace, "")
+}
+
 func DeletePodsWithSelector(kubeClientset kubernetes.Interface, namespace, selector string) error {
-	err := kubeClientset.CoreV1().Pods(namespace).DeleteCollection(context.Background(), metav1.DeleteOptions{}, metav1.ListOptions{
-		LabelSelector: selector,
-	})
+	err := DeletePodListWithLabelSelector(kubeClientset, namespace, selector)
 	if err != nil {
-		return errors.Wrapf(err, "failed to delete pods with selector '%s' in namespace '%s'", selector, namespace)
+		return err
 	}
 	log.Infof("Deleted pods with selector '%s' in namespace '%s'", selector, namespace)
 	return nil

@@ -218,9 +218,8 @@ func (kc *ClientSet) VerifyInstanceGroups() error {
 	return unstruct.VerifyInstanceGroups(kc.DynamicInterface)
 }
 
-func (kc *ClientSet) ListPods(namespace string) error {
-	// TODO: use ListPodsWithSelector like ListPods does, ListPods is redundant
-	return pod.ListPods(kc.KubeInterface, namespace)
+func (kc *ClientSet) PodOperation(operation, namespace string) error {
+	return pod.PodOperation(kc.KubeInterface, operation, namespace)
 }
 
 func (kc *ClientSet) PodOperationWithSelector(operation, namespace, selector string) error {
