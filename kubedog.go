@@ -59,8 +59,9 @@ func (kdt *Test) SetScenario(scenario *godog.ScenarioContext) {
 	kdt.scenario.Step(`^(?:I )?verify InstanceGroups (?:are )?in "ready" state$`, kdt.KubeClientSet.VerifyInstanceGroups)
 	//syntax-generation:title-1:Structured Resources
 	//syntax-generation:title-2:Pods
-	kdt.scenario.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*)$`, kdt.KubeClientSet.ListPods)
-	kdt.scenario.Step(`^(?:I )?get (?:the )?pods in namespace ([^"]*) with selector (\S+)$`, kdt.KubeClientSet.ListPodsWithSelector)
+	kdt.scenario.Step(`^(?:I )?(get|list|delete) (?:the )?pods in namespace ([^"]*)$`, kdt.KubeClientSet.PodOperation)
+	kdt.scenario.Step(`^(?:I )?(get|list|delete) (?:the )?pods in namespace ([^"]*) with selector (\S+)$`, kdt.KubeClientSet.PodOperationWithSelector)
+	kdt.scenario.Step(`^(?:I )?delete (?:the )?pods in namespace ([^"]*) with field selector (\S+)$`, kdt.KubeClientSet.DeletePodWithFieldSelector)
 	kdt.scenario.Step(`^(?:the )?pods in namespace ([^"]*) with selector (\S+) have restart count less than (\d+)$`, kdt.KubeClientSet.PodsWithSelectorHaveRestartCountLessThan)
 	kdt.scenario.Step(`^(some|all) pods in namespace (\S+) with selector (\S+) have "([^"]*)" in logs since ([^"]*) time$`, kdt.KubeClientSet.SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime)
 	kdt.scenario.Step(`^some pods in namespace (\S+) with selector (\S+) don't have "([^"]*)" in logs since ([^"]*) time$`, kdt.KubeClientSet.SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime)

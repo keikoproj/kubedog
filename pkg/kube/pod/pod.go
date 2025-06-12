@@ -31,6 +31,21 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+func PodOperation(kubeClientset kubernetes.Interface, operation, namespace string) error {
+	return PodOperationWithSelector(kubeClientset, operation, namespace, "")
+}
+
+func PodOperationWithSelector(kubeClientset kubernetes.Interface, operation, namespace, selector string) error {
+	switch operation {
+	case "list", "get":
+		return ListPodsWithSelector(kubeClientset, namespace, selector)
+	case "delete":
+		return DeletePodsWithSelector(kubeClientset, namespace, selector)
+	default:
+		return errors.Errorf("Unknown pod operation '%s'", operation)
+	}
+}
+
 func ListPods(kubeClientset kubernetes.Interface, namespace string) error {
 	return ListPodsWithSelector(kubeClientset, namespace, "")
 }
@@ -59,6 +74,24 @@ func ListPodsWithSelector(kubeClientset kubernetes.Interface, namespace, selecto
 	for _, pod := range pods.Items {
 		log.Infof(tableFormat, pod.Name, readyCountFn(pod.Status.ContainerStatuses), pod.Status.Phase)
 	}
+	return nil
+}
+
+func DeletePodsWithSelector(kubeClientset kubernetes.Interface, namespace, selector string) error {
+	err := DeletePodListWithLabelSelector(kubeClientset, namespace, selector)
+	if err != nil {
+		return err
+	}
+	log.Infof("Deleted pods with selector '%s' in namespace '%s'", selector, namespace)
+	return nil
+}
+
+func DeletePodsWithFieldSelector(kubeClientset kubernetes.Interface, namespace, fieldSelector string) error {
+	err := DeletePodListWithLabelSelectorAndFieldSelector(kubeClientset, namespace, "", fieldSelector)
+	if err != nil {
+		return err
+	}
+	log.Infof("Deleted pods with field selector '%s' in namespace '%s'", fieldSelector, namespace)
 	return nil
 }
 
