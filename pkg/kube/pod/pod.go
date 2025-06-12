@@ -77,10 +77,6 @@ func ListPodsWithSelector(kubeClientset kubernetes.Interface, namespace, selecto
 	return nil
 }
 
-func DeletePods(kubeClientset kubernetes.Interface, namespace string) error {
-	return DeletePodsWithSelector(kubeClientset, namespace, "")
-}
-
 func DeletePodsWithSelector(kubeClientset kubernetes.Interface, namespace, selector string) error {
 	err := DeletePodListWithLabelSelector(kubeClientset, namespace, selector)
 	if err != nil {
