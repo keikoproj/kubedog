@@ -48,6 +48,25 @@ func GetPodListWithLabelSelectorAndFieldSelector(kubeClientset kubernetes.Interf
 	return pods.(*corev1.PodList), nil
 }
 
+func DeletePodListWithLabelSelector(kubeClientset kubernetes.Interface, namespace, labelSelector string) error {
+	return DeletePodListWithLabelSelectorAndFieldSelector(kubeClientset, namespace, labelSelector, "")
+}
+
+func DeletePodListWithLabelSelectorAndFieldSelector(kubeClientset kubernetes.Interface, namespace, labelSelector, fieldSelector string) error {
+	if err := common.ValidateClientset(kubeClientset); err != nil {
+		return err
+	}
+
+	err := kubeClientset.CoreV1().Pods(namespace).DeleteCollection(context.Background(), metav1.DeleteOptions{}, metav1.ListOptions{
+		LabelSelector: labelSelector,
+		FieldSelector: fieldSelector,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to delete pods with label selector %s and field selector %s in namespace %s", labelSelector, fieldSelector, namespace)
+	}
+	return nil
+}
+
 func countStringInPodLogs(kubeClientset kubernetes.Interface, pod corev1.Pod, since time.Time, stringsToFind ...string) (int, error) {
 	foundCount := 0
 	if err := common.ValidateClientset(kubeClientset); err != nil {

@@ -218,13 +218,16 @@ func (kc *ClientSet) VerifyInstanceGroups() error {
 	return unstruct.VerifyInstanceGroups(kc.DynamicInterface)
 }
 
-func (kc *ClientSet) ListPods(namespace string) error {
-	// TODO: use ListPodsWithSelector like ListPods does, ListPods is redundant
-	return pod.ListPods(kc.KubeInterface, namespace)
+func (kc *ClientSet) PodOperation(operation, namespace string) error {
+	return pod.PodOperation(kc.KubeInterface, operation, namespace)
 }
 
-func (kc *ClientSet) ListPodsWithSelector(namespace, selector string) error {
-	return pod.ListPodsWithSelector(kc.KubeInterface, namespace, selector)
+func (kc *ClientSet) PodOperationWithSelector(operation, namespace, selector string) error {
+	return pod.PodOperationWithSelector(kc.KubeInterface, operation, namespace, selector)
+}
+
+func (kc *ClientSet) DeletePodWithFieldSelector(namespace, fieldSelector string) error {
+	return pod.DeletePodsWithFieldSelector(kc.KubeInterface, namespace, fieldSelector)
 }
 
 func (kc *ClientSet) PodsWithSelectorHaveRestartCountLessThan(namespace, selector string, restartCount int) error {
