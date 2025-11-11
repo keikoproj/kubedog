@@ -602,6 +602,92 @@ func TestResourceShouldConvergeToField(t *testing.T) {
 	}
 }
 
+func TestResourceShouldBeReady(t *testing.T) {
+	type args struct {
+		dynamicClient dynamic.Interface
+		resource      unstructuredResource
+		w             common.WaiterConfig
+	}
+
+	readyResource := getResourceFromYaml(t, getFilePath("resource-ready.yaml"))
+	healthyResource := getResourceFromBytes(t, []byte(`
+apiVersion: someGroup.apiVersion/SomeVersion
+kind: SomeKind
+metadata:
+  name: someHealthyResource
+  namespace: someTestNamespace
+status:
+  conditions:
+    - type: Healthy
+      status: "True"
+`))
+	notReadyResource := getResourceFromBytes(t, []byte(`
+apiVersion: someGroup.apiVersion/SomeVersion
+kind: SomeKind
+metadata:
+  name: notReadyResource
+  namespace: someTestNamespace
+status:
+  conditions:
+    - type: Ready
+      status: "False"
+`))
+	noConditionsResource := getResourceFromBytes(t, []byte(`
+apiVersion: someGroup.apiVersion/SomeVersion
+kind: SomeKind
+metadata:
+  name: noCondResource
+  namespace: someTestNamespace
+status: {}
+`))
+
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Positive Test: Ready=True",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(readyResource),
+				resource:      readyResource,
+			},
+		},
+		{
+			name: "Positive Test: Healthy=True",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(healthyResource),
+				resource:      healthyResource,
+			},
+		},
+		{
+			name: "Negative Test: Ready=False",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(notReadyResource),
+				resource:      notReadyResource,
+			},
+			wantErr: true,
+		},
+		{
+			name: "Negative Test: no conditions",
+			args: args{
+				dynamicClient: newFakeDynamicClientWithResource(noConditionsResource),
+				resource:      noConditionsResource,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// use one try so negative tests fail fast
+			tt.args.w = common.NewWaiterConfig(1, time.Millisecond*10)
+			if err := ResourceShouldBeReady(tt.args.dynamicClient, tt.args.resource, tt.args.w); (err != nil) != tt.wantErr {
+				t.Errorf("ResourceShouldBeReady() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestResourceConditionShouldBe(t *testing.T) {
 	type args struct {
 		dynamicClient  dynamic.Interface
