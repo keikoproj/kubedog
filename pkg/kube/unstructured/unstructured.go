@@ -478,6 +478,67 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 	return nil
 }
 
+func ResourceShouldBeReady(dynamicClient dynamic.Interface, resource unstructuredResource, w common.WaiterConfig) error {
+	var counter int
+
+	if err := validateDynamicClient(dynamicClient); err != nil {
+		return err
+	}
+
+	gvr, unstruct := resource.GVR, resource.Resource
+
+	for {
+		if counter >= w.GetTries() {
+			return errors.New("waiter timed out waiting for resource ready/healthy condition")
+		}
+		log.Infof("waiting for resource %v/%v to be ready/healthy", unstruct.GetNamespace(), unstruct.GetName())
+		cr, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if conditions, ok, err := unstructured.NestedSlice(cr.UnstructuredContent(), "status", "conditions"); ok {
+			if err != nil {
+				return err
+			}
+
+			for _, c := range conditions {
+				cond, ok := c.(map[string]interface{})
+				if !ok {
+					continue
+				}
+
+				var ctype, cstatus, creason, cmessage string
+				if v, ok := cond["type"].(string); ok {
+					ctype = v
+				}
+				if v, ok := cond["status"].(string); ok {
+					cstatus = v
+				}
+				if v, ok := cond["reason"].(string); ok {
+					creason = v
+				}
+				if v, ok := cond["message"].(string); ok {
+					cmessage = v
+				}
+
+				// Primary check: condition type Ready/Healthy and status True
+				if (strings.EqualFold(ctype, "Ready") || strings.EqualFold(ctype, "Healthy")) && strings.EqualFold(cstatus, string(corev1.ConditionTrue)) {
+					return nil
+				}
+
+				// Fallback: any condition field contains keywords ready/healthy, and status is True or unspecified
+				combined := strings.ToLower(strings.TrimSpace(ctype + " " + cstatus + " " + creason + " " + cmessage))
+				if (strings.Contains(combined, "ready") || strings.Contains(combined, "healthy")) && (cstatus == "" || strings.EqualFold(cstatus, string(corev1.ConditionTrue))) {
+					return nil
+				}
+			}
+		}
+		counter++
+		time.Sleep(w.GetInterval())
+	}
+}
+
 func VerifyInstanceGroups(dynamicClient dynamic.Interface) error {
 	igs, err := GetInstanceGroupList(dynamicClient)
 	if err != nil {

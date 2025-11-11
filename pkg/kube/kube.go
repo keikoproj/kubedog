@@ -175,11 +175,19 @@ func (kc *ClientSet) ResourceOperationWithResultInNamespace(operation, resourceF
 }
 
 func (kc *ClientSet) ResourceShouldBe(resourceFileName, state string) error {
-	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
-	if err != nil {
-		return err
-	}
-	return unstruct.ResourceShouldBe(kc.DynamicInterface, resource, kc.getWaiterConfig(), state)
+resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
+if err != nil {
+return err
+}
+return unstruct.ResourceShouldBe(kc.DynamicInterface, resource, kc.getWaiterConfig(), state)
+}
+
+func (kc *ClientSet) ResourceShouldBeReady(resourceFileName string) error {
+resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
+if err != nil {
+return err
+}
+return unstruct.ResourceShouldBeReady(kc.DynamicInterface, resource, kc.getWaiterConfig())
 }
 
 func (kc *ClientSet) ResourceShouldConvergeToSelector(resourceFileName, selector string) error {
