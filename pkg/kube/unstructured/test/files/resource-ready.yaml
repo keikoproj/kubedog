@@ -1,5 +1,5 @@
 apiVersion: someGroup.apiVersion/SomeVersion
-kind: SomeKind
+kind: SomeOtherKind
 metadata:
   name: someReadyResource
   namespace: someTestNamespace
