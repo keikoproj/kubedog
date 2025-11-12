@@ -7,7 +7,7 @@ metadata:
     someTestKey: someTestValue
 status:
   conditions:
-    - type: someConditionType
+    - type: Ready
       status: "True"
   replicaCount: 2
 spec:

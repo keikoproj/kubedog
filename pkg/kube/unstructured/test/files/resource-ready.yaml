@@ -1,9 +1,0 @@
-apiVersion: someGroup.apiVersion/SomeVersion
-kind: SomeOtherKind
-metadata:
-  name: someReadyResource
-  namespace: someTestNamespace
-status:
-  conditions:
-    - type: Ready
-      status: "True"

@@ -609,10 +609,10 @@ func TestResourceShouldBeReady(t *testing.T) {
 		w             common.WaiterConfig
 	}
 
-	readyResource := getResourceFromYaml(t, getFilePath("resource-ready.yaml"))
+	readyResource := getResourceFromYaml(t, getFilePath("resource.yaml"))
 	healthyResource := getResourceFromBytes(t, []byte(`
 apiVersion: someGroup.apiVersion/SomeVersion
-kind: SomeKind
+kind: SomeOtherKind
 metadata:
   name: someHealthyResource
   namespace: someTestNamespace
@@ -623,7 +623,7 @@ status:
 `))
 	notReadyResource := getResourceFromBytes(t, []byte(`
 apiVersion: someGroup.apiVersion/SomeVersion
-kind: SomeKind
+kind: SomeSomeOtherKindKind
 metadata:
   name: notReadyResource
   namespace: someTestNamespace
@@ -634,7 +634,7 @@ status:
 `))
 	noConditionsResource := getResourceFromBytes(t, []byte(`
 apiVersion: someGroup.apiVersion/SomeVersion
-kind: SomeKind
+kind: SomeSomeOtherKindKind
 metadata:
   name: noCondResource
   namespace: someTestNamespace
