@@ -66,7 +66,10 @@ func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.Wait
 		if err != nil {
 			return errors.Wrap(err, "failed to list nodes")
 		}
-		nodes := nodeList.(*corev1.NodeList)
+		nodes, ok := nodeList.(*corev1.NodeList)
+		if !ok {
+			return errors.Errorf("failed to list nodes: unexpected type '%T'", nodeList)
+		}
 
 		switch state {
 		case common.StateFound:
@@ -350,7 +353,10 @@ func SecretOperationFromEnvironmentVariable(kubeClientset kubernetes.Interface, 
 		if err != nil {
 			return err
 		}
-		currentSecret := result.(*corev1.Secret)
+		currentSecret, ok := result.(*corev1.Secret)
+		if !ok {
+			return errors.Errorf("failed to get secret: unexpected type '%T'", result)
+		}
 		secret := currentSecret.DeepCopy()
 		if len(secret.Data) == 0 {
 			secret.Data = map[string][]byte{}

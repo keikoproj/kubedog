@@ -264,7 +264,10 @@ func PodInNamespaceShouldHaveLabels(kubeClientset kubernetes.Interface, name, na
 	if err != nil {
 		return errors.New("Error fetching pod: " + err.Error())
 	}
-	pod := result.(*corev1.Pod)
+	pod, ok := result.(*corev1.Pod)
+	if !ok {
+		return errors.Errorf("failed to get pod: unexpected type '%T'", result)
+	}
 
 	inputLabels := make(map[string]string)
 	slc := strings.Split(labels, ",")

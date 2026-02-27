@@ -90,7 +90,11 @@ func GetInstanceGroupList(dynamicClient dynamic.Interface) (*unstructured.Unstru
 	if err != nil {
 		return nil, err
 	}
-	return result.(*unstructured.UnstructuredList), nil
+	list, ok := result.(*unstructured.UnstructuredList)
+	if !ok {
+		return nil, errors.Errorf("failed to list instance groups: unexpected type '%T'", result)
+	}
+	return list, nil
 }
 
 func validateDynamicClient(dynamicClient dynamic.Interface) error {

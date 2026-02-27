@@ -93,7 +93,10 @@ func ResourceOperationInNamespace(dynamicClient dynamic.Interface, resource unst
 		if err != nil {
 			return err
 		}
-		currentResourceVersion := result.(*unstructured.Unstructured)
+		currentResourceVersion, ok := result.(*unstructured.Unstructured)
+		if !ok {
+			return errors.Errorf("failed to get resource: unexpected type '%T'", result)
+		}
 
 		unstruct.SetResourceVersion(currentResourceVersion.DeepCopy().GetResourceVersion())
 
@@ -124,7 +127,10 @@ func ResourceOperationInNamespace(dynamicClient dynamic.Interface, resource unst
 				return err
 			}
 		}
-		currentResourceVersion := result.(*unstructured.Unstructured)
+		currentResourceVersion, ok := result.(*unstructured.Unstructured)
+		if !ok {
+			return errors.Errorf("failed to get resource: unexpected type '%T'", result)
+		}
 
 		unstruct.SetResourceVersion(currentResourceVersion.DeepCopy().GetResourceVersion())
 
@@ -247,7 +253,10 @@ func ResourceShouldConvergeToField(dynamicClient dynamic.Interface, resource uns
 		if err != nil {
 			return err
 		}
-		retResource := result.(*unstructured.Unstructured)
+		retResource, ok := result.(*unstructured.Unstructured)
+		if !ok {
+			return errors.Errorf("failed to get resource: unexpected type '%T'", result)
+		}
 
 		val, err := util.ExtractField(retResource.UnstructuredContent(), keySlice)
 		if err != nil {
@@ -308,7 +317,10 @@ func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, resource 
 		if err != nil {
 			return err
 		}
-		retResource := result.(*unstructured.Unstructured)
+		retResource, ok := result.(*unstructured.Unstructured)
+		if !ok {
+			return errors.Errorf("failed to get resource: unexpected type '%T'", result)
+		}
 
 		if val, ok, err := unstructured.NestedString(retResource.UnstructuredContent(), keySlice...); ok {
 			if err != nil {
@@ -348,7 +360,10 @@ func ResourceConditionShouldBe(dynamicClient dynamic.Interface, resource unstruc
 		if err != nil {
 			return err
 		}
-		cr := result.(*unstructured.Unstructured)
+		cr, ok := result.(*unstructured.Unstructured)
+		if !ok {
+			return errors.Errorf("failed to get resource: unexpected type '%T'", result)
+		}
 
 		if conditions, ok, err := unstructured.NestedSlice(cr.UnstructuredContent(), "status", "conditions"); ok {
 			if err != nil {
@@ -407,7 +422,10 @@ func UpdateResourceWithField(dynamicClient dynamic.Interface, resource unstructu
 	if err != nil {
 		return err
 	}
-	updateTarget := result.(*unstructured.Unstructured)
+	updateTarget, ok := result.(*unstructured.Unstructured)
+	if !ok {
+		return errors.Errorf("failed to get resource: unexpected type '%T'", result)
+	}
 
 	switch overrideType {
 	case true:

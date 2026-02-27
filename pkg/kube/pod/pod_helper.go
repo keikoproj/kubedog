@@ -45,7 +45,11 @@ func GetPodListWithLabelSelectorAndFieldSelector(kubeClientset kubernetes.Interf
 		return nil, errors.Wrap(err, "failed to list pods")
 	}
 
-	return pods.(*corev1.PodList), nil
+	result, ok := pods.(*corev1.PodList)
+	if !ok {
+		return nil, errors.Errorf("failed to list pods: unexpected type '%T'", pods)
+	}
+	return result, nil
 }
 
 func DeletePodListWithLabelSelector(kubeClientset kubernetes.Interface, namespace, labelSelector string) error {
