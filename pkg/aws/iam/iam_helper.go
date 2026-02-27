@@ -34,17 +34,25 @@ func getManagedPolicy(policyARN string, iamClient iamiface.IAMAPI) (*iam.Policy,
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get managed policy %q. %v", policyARN, err)
 	}
+	getPolicyOut, ok := out.(*iam.GetPolicyOutput)
+	if !ok {
+		return nil, nil, fmt.Errorf("failed to get managed policy %q: unexpected type '%T'", policyARN, out)
+	}
 	policyVersionParams := &iam.GetPolicyVersionInput{
 		PolicyArn: aws.String(policyARN),
-		VersionId: out.(*iam.GetPolicyOutput).Policy.DefaultVersionId,
+		VersionId: getPolicyOut.Policy.DefaultVersionId,
 	}
 	policyVersionOut, err := util.RetryOnError(&util.DefaultRetry, isThrottling, func() (interface{}, error) {
 		return iamClient.GetPolicyVersion(policyVersionParams)
 	})
 	if err != nil {
-		return out.(*iam.GetPolicyOutput).Policy, nil, fmt.Errorf("failed to get managed policy version %q. %v", policyARN, err)
+		return getPolicyOut.Policy, nil, fmt.Errorf("failed to get managed policy version %q. %v", policyARN, err)
 	}
-	return out.(*iam.GetPolicyOutput).Policy, policyVersionOut.(*iam.GetPolicyVersionOutput).PolicyVersion, nil
+	getPolicyVersionOut, ok := policyVersionOut.(*iam.GetPolicyVersionOutput)
+	if !ok {
+		return getPolicyOut.Policy, nil, fmt.Errorf("failed to get managed policy version %q: unexpected type '%T'", policyARN, policyVersionOut)
+	}
+	return getPolicyOut.Policy, getPolicyVersionOut.PolicyVersion, nil
 }
 
 func updateManagedPolicy(arn string, policyJSON []byte, iamClient iamiface.IAMAPI) (*iam.PolicyVersion, error) {
@@ -82,7 +90,11 @@ func createManagedPolicyVersion(arn string, policyJSON []byte, isDefault bool, i
 	if err != nil {
 		return nil, fmt.Errorf("faild to create managed policy version %q. %v", arn, err)
 	}
-	return out.(*iam.CreatePolicyVersionOutput).PolicyVersion, nil
+	result, ok := out.(*iam.CreatePolicyVersionOutput)
+	if !ok {
+		return nil, fmt.Errorf("failed to create managed policy version %q: unexpected type '%T'", arn, out)
+	}
+	return result.PolicyVersion, nil
 }
 
 func createManagedPolicy(name, description string, policyJSON []byte, iamClient iamiface.IAMAPI) (*iam.Policy, error) {
@@ -100,7 +112,11 @@ func createManagedPolicy(name, description string, policyJSON []byte, iamClient 
 		return nil, fmt.Errorf("failed to create managed policy %q. %v", name, err)
 	}
 
-	return out.(*iam.CreatePolicyOutput).Policy, nil
+	result, ok := out.(*iam.CreatePolicyOutput)
+	if !ok {
+		return nil, fmt.Errorf("failed to create managed policy %q: unexpected type '%T'", name, out)
+	}
+	return result.Policy, nil
 }
 
 func listManagedPolicyVersions(arn string, iamClient iamiface.IAMAPI) ([]*iam.PolicyVersion, error) {
@@ -113,7 +129,11 @@ func listManagedPolicyVersions(arn string, iamClient iamiface.IAMAPI) ([]*iam.Po
 	if err != nil {
 		return nil, fmt.Errorf("failed to list managed policy versions %q. %v", arn, err)
 	}
-	return listVersionsOutput.(*iam.ListPolicyVersionsOutput).Versions, nil
+	result, ok := listVersionsOutput.(*iam.ListPolicyVersionsOutput)
+	if !ok {
+		return nil, fmt.Errorf("failed to list managed policy versions %q: unexpected type '%T'", arn, listVersionsOutput)
+	}
+	return result.Versions, nil
 }
 
 func getOldestVersionID(versions []*iam.PolicyVersion) string {
@@ -169,5 +189,9 @@ func createIAMRole(name, description string, policyJSON []byte, iamClient iamifa
 		return nil, fmt.Errorf("failed to create iam role with policy %q. %v", name, err)
 	}
 
-	return out.(*iam.CreateRoleOutput).Role, nil
+	result, ok := out.(*iam.CreateRoleOutput)
+	if !ok {
+		return nil, fmt.Errorf("failed to create iam role %q: unexpected type '%T'", name, out)
+	}
+	return result.Role, nil
 }

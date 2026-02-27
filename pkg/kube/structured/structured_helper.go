@@ -42,7 +42,11 @@ func GetNodeList(kubeClientset kubernetes.Interface) (*corev1.NodeList, error) {
 		return nil, errors.Wrap(err, "failed to list nodes")
 	}
 
-	return nodes.(*corev1.NodeList), nil
+	result, ok := nodes.(*corev1.NodeList)
+	if !ok {
+		return nil, errors.Errorf("failed to list nodes: unexpected type '%T'", nodes)
+	}
+	return result, nil
 }
 
 func GetDaemonSet(kubeClientset kubernetes.Interface, name, namespace string) (*appsv1.DaemonSet, error) {
@@ -56,7 +60,11 @@ func GetDaemonSet(kubeClientset kubernetes.Interface, name, namespace string) (*
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get daemonset")
 	}
-	return ds.(*appsv1.DaemonSet), nil
+	result, ok := ds.(*appsv1.DaemonSet)
+	if !ok {
+		return nil, errors.Errorf("failed to get daemonset: unexpected type '%T'", ds)
+	}
+	return result, nil
 }
 
 func GetDeployment(kubeClientset kubernetes.Interface, name, namespace string) (*appsv1.Deployment, error) {
@@ -70,16 +78,32 @@ func GetDeployment(kubeClientset kubernetes.Interface, name, namespace string) (
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get deployment")
 	}
-	return deploy.(*appsv1.Deployment), nil
+	result, ok := deploy.(*appsv1.Deployment)
+	if !ok {
+		return nil, errors.Errorf("failed to get deployment: unexpected type '%T'", deploy)
+	}
+	return result, nil
 }
 
 func GetConfigMap(kubeClientset kubernetes.Interface, name, namespace string) (*corev1.ConfigMap, error) {
-	configmaps, err := kubeClientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
-	if err != nil || configmaps.Name != name {
-		return nil, errors.Wrap(err, "failed to get configmap")
+	if err := common.ValidateClientset(kubeClientset); err != nil {
+		return nil, err
 	}
 
-	return configmaps, nil
+	result, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return kubeClientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get configmap")
+	}
+	configmap, ok := result.(*corev1.ConfigMap)
+	if !ok {
+		return nil, errors.Errorf("failed to get configmap: expected type '*corev1.ConfigMap' but got '%T'", result)
+	}
+	if configmap.Name != name {
+		return nil, errors.Errorf("failed to get configmap: expected name '%s' but got '%s'", name, configmap.Name)
+	}
+	return configmap, nil
 }
 
 func GetPersistentVolume(kubeClientset kubernetes.Interface, name string) (*corev1.PersistentVolume, error) {
@@ -93,7 +117,11 @@ func GetPersistentVolume(kubeClientset kubernetes.Interface, name string) (*core
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get persistentvolume")
 	}
-	return pvs.(*corev1.PersistentVolume), nil
+	result, ok := pvs.(*corev1.PersistentVolume)
+	if !ok {
+		return nil, errors.Errorf("failed to get persistentvolume: unexpected type '%T'", pvs)
+	}
+	return result, nil
 }
 
 func GetPersistentVolumeClaim(kubeClientset kubernetes.Interface, name string, namespace string) (*corev1.PersistentVolumeClaim, error) {
@@ -107,7 +135,11 @@ func GetPersistentVolumeClaim(kubeClientset kubernetes.Interface, name string, n
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get persistentvolumeclaim")
 	}
-	return pvc.(*corev1.PersistentVolumeClaim), nil
+	result, ok := pvc.(*corev1.PersistentVolumeClaim)
+	if !ok {
+		return nil, errors.Errorf("failed to get persistentvolumeclaim: unexpected type '%T'", pvc)
+	}
+	return result, nil
 }
 
 func GetStatefulSetList(kubeClientset kubernetes.Interface, namespace string) (*appsv1.StatefulSetList, error) {
@@ -121,7 +153,11 @@ func GetStatefulSetList(kubeClientset kubernetes.Interface, namespace string) (*
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list statefulsets")
 	}
-	return sts.(*appsv1.StatefulSetList), nil
+	result, ok := sts.(*appsv1.StatefulSetList)
+	if !ok {
+		return nil, errors.Errorf("failed to list statefulsets: unexpected type '%T'", sts)
+	}
+	return result, nil
 }
 
 func GetPersistentVolumeList(kubeClientset kubernetes.Interface) (*corev1.PersistentVolumeList, error) {
@@ -135,7 +171,11 @@ func GetPersistentVolumeList(kubeClientset kubernetes.Interface) (*corev1.Persis
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list persistentvolumes")
 	}
-	return pvs.(*corev1.PersistentVolumeList), nil
+	result, ok := pvs.(*corev1.PersistentVolumeList)
+	if !ok {
+		return nil, errors.Errorf("failed to list persistentvolumes: unexpected type '%T'", pvs)
+	}
+	return result, nil
 }
 
 func GetIngress(kubeClientset kubernetes.Interface, name, namespace string) (*networkingv1.Ingress, error) {
@@ -149,7 +189,11 @@ func GetIngress(kubeClientset kubernetes.Interface, name, namespace string) (*ne
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get ingress '%v'", name)
 	}
-	return ingress.(*networkingv1.Ingress), nil
+	result, ok := ingress.(*networkingv1.Ingress)
+	if !ok {
+		return nil, errors.Errorf("failed to get ingress '%v': unexpected type '%T'", name, ingress)
+	}
+	return result, nil
 }
 
 // TODO: remove use of service.beta.kubernetes.io/aws-load-balancer-subnets or make generic

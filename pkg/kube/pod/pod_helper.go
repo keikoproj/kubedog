@@ -45,7 +45,11 @@ func GetPodListWithLabelSelectorAndFieldSelector(kubeClientset kubernetes.Interf
 		return nil, errors.Wrap(err, "failed to list pods")
 	}
 
-	return pods.(*corev1.PodList), nil
+	result, ok := pods.(*corev1.PodList)
+	if !ok {
+		return nil, errors.Errorf("failed to list pods: unexpected type '%T'", pods)
+	}
+	return result, nil
 }
 
 func DeletePodListWithLabelSelector(kubeClientset kubernetes.Interface, namespace, labelSelector string) error {
@@ -57,9 +61,11 @@ func DeletePodListWithLabelSelectorAndFieldSelector(kubeClientset kubernetes.Int
 		return err
 	}
 
-	err := kubeClientset.CoreV1().Pods(namespace).DeleteCollection(context.Background(), metav1.DeleteOptions{}, metav1.ListOptions{
-		LabelSelector: labelSelector,
-		FieldSelector: fieldSelector,
+	_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return nil, kubeClientset.CoreV1().Pods(namespace).DeleteCollection(context.Background(), metav1.DeleteOptions{}, metav1.ListOptions{
+			LabelSelector: labelSelector,
+			FieldSelector: fieldSelector,
+		})
 	})
 	if err != nil {
 		return errors.Wrapf(err, "failed to delete pods with label selector %s and field selector %s in namespace %s", labelSelector, fieldSelector, namespace)

@@ -75,7 +75,9 @@ func ResourceOperationInNamespace(dynamicClient dynamic.Interface, resource unst
 
 	switch operation {
 	case common.OperationCreate, common.OperationSubmit:
-		_, err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Create(context.Background(), unstruct, metav1.CreateOptions{})
+		_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return dynamicClient.Resource(gvr.Resource).Namespace(namespace).Create(context.Background(), unstruct, metav1.CreateOptions{})
+		})
 		if err != nil {
 			if kerrors.IsAlreadyExists(err) {
 				log.Infof("%s %s already created", unstruct.GetKind(), unstruct.GetName())
@@ -85,23 +87,35 @@ func ResourceOperationInNamespace(dynamicClient dynamic.Interface, resource unst
 		}
 		log.Infof("%s %s has been created in namespace %s", unstruct.GetKind(), unstruct.GetName(), namespace)
 	case common.OperationUpdate:
-		currentResourceVersion, err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		result, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return dynamicClient.Resource(gvr.Resource).Namespace(namespace).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		})
 		if err != nil {
 			return err
+		}
+		currentResourceVersion, ok := result.(*unstructured.Unstructured)
+		if !ok {
+			return errors.Errorf("failed to get resource: unexpected type '%T'", result)
 		}
 
 		unstruct.SetResourceVersion(currentResourceVersion.DeepCopy().GetResourceVersion())
 
-		_, err = dynamicClient.Resource(gvr.Resource).Namespace(namespace).Update(context.Background(), unstruct, metav1.UpdateOptions{})
+		_, err = util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return dynamicClient.Resource(gvr.Resource).Namespace(namespace).Update(context.Background(), unstruct, metav1.UpdateOptions{})
+		})
 		if err != nil {
 			return err
 		}
 		log.Infof("%s %s has been updated in namespace %s", unstruct.GetKind(), unstruct.GetName(), namespace)
 	case common.OperationUpsert:
-		currentResourceVersion, err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		result, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return dynamicClient.Resource(gvr.Resource).Namespace(namespace).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
-				_, err = dynamicClient.Resource(gvr.Resource).Namespace(namespace).Create(context.Background(), unstruct, metav1.CreateOptions{})
+				_, err = util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+					return dynamicClient.Resource(gvr.Resource).Namespace(namespace).Create(context.Background(), unstruct, metav1.CreateOptions{})
+				})
 				if err != nil {
 					return err
 				}
@@ -113,16 +127,24 @@ func ResourceOperationInNamespace(dynamicClient dynamic.Interface, resource unst
 				return err
 			}
 		}
+		currentResourceVersion, ok := result.(*unstructured.Unstructured)
+		if !ok {
+			return errors.Errorf("failed to get resource: unexpected type '%T'", result)
+		}
 
 		unstruct.SetResourceVersion(currentResourceVersion.DeepCopy().GetResourceVersion())
 
-		_, err = dynamicClient.Resource(gvr.Resource).Namespace(namespace).Update(context.Background(), unstruct, metav1.UpdateOptions{})
+		_, err = util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return dynamicClient.Resource(gvr.Resource).Namespace(namespace).Update(context.Background(), unstruct, metav1.UpdateOptions{})
+		})
 		if err != nil {
 			return err
 		}
 		log.Infof("%s %s has been updated in namespace %s", unstruct.GetKind(), unstruct.GetName(), namespace)
 	case common.OperationDelete:
-		err := dynamicClient.Resource(gvr.Resource).Namespace(namespace).Delete(context.Background(), unstruct.GetName(), metav1.DeleteOptions{})
+		_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return nil, dynamicClient.Resource(gvr.Resource).Namespace(namespace).Delete(context.Background(), unstruct.GetName(), metav1.DeleteOptions{})
+		})
 		if err != nil {
 			if kerrors.IsNotFound(err) {
 				log.Infof("%s %s already deleted", unstruct.GetKind(), unstruct.GetName())
@@ -170,7 +192,9 @@ func ResourceShouldBe(dynamicClient dynamic.Interface, resource unstructuredReso
 		}
 		log.Infof("waiting for resource %v/%v to become %v", unstruct.GetNamespace(), unstruct.GetName(), state)
 
-		_, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		})
 		if err != nil {
 			if !kerrors.IsNotFound(err) {
 				return err
@@ -223,9 +247,15 @@ func ResourceShouldConvergeToField(dynamicClient dynamic.Interface, resource uns
 			return errors.New("waiter timed out waiting for resource")
 		}
 		log.Infof("waiting for resource %v/%v to converge to %v=%v", unstruct.GetNamespace(), unstruct.GetName(), key, value)
-		retResource, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		result, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		})
 		if err != nil {
 			return err
+		}
+		retResource, ok := result.(*unstructured.Unstructured)
+		if !ok {
+			return errors.Errorf("failed to get resource: unexpected type '%T'", result)
 		}
 
 		val, err := util.ExtractField(retResource.UnstructuredContent(), keySlice)
@@ -281,9 +311,15 @@ func ResourceShouldConvergeToSelector(dynamicClient dynamic.Interface, resource 
 			return errors.New("waiter timed out waiting for resource")
 		}
 		log.Infof("waiting for resource %v/%v to converge to %v=%v", unstruct.GetNamespace(), unstruct.GetName(), key, value)
-		retResource, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		result, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		})
 		if err != nil {
 			return err
+		}
+		retResource, ok := result.(*unstructured.Unstructured)
+		if !ok {
+			return errors.Errorf("failed to get resource: unexpected type '%T'", result)
 		}
 
 		if val, ok, err := unstructured.NestedString(retResource.UnstructuredContent(), keySlice...); ok {
@@ -318,9 +354,15 @@ func ResourceConditionShouldBe(dynamicClient dynamic.Interface, resource unstruc
 			return errors.New("waiter timed out waiting for resource state")
 		}
 		log.Infof("waiting for resource %v/%v to meet condition %v=%v", unstruct.GetNamespace(), unstruct.GetName(), conditionType, expectedStatus)
-		cr, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		result, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+		})
 		if err != nil {
 			return err
+		}
+		cr, ok := result.(*unstructured.Unstructured)
+		if !ok {
+			return errors.Errorf("failed to get resource: unexpected type '%T'", result)
 		}
 
 		if conditions, ok, err := unstructured.NestedSlice(cr.UnstructuredContent(), "status", "conditions"); ok {
@@ -374,9 +416,15 @@ func UpdateResourceWithField(dynamicClient dynamic.Interface, resource unstructu
 		intValue = n
 	}
 
-	updateTarget, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+	result, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+	})
 	if err != nil {
 		return err
+	}
+	updateTarget, ok := result.(*unstructured.Unstructured)
+	if !ok {
+		return errors.Errorf("failed to get resource: unexpected type '%T'", result)
 	}
 
 	switch overrideType {
@@ -390,7 +438,9 @@ func UpdateResourceWithField(dynamicClient dynamic.Interface, resource unstructu
 		}
 	}
 
-	_, err = dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Update(context.Background(), updateTarget, metav1.UpdateOptions{})
+	_, err = util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Update(context.Background(), updateTarget, metav1.UpdateOptions{})
+	})
 	if err != nil {
 		return err
 	}
@@ -418,7 +468,9 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 		}
 		for _, resource := range resources {
 			gvr, unstruct := resource.GVR, resource.Resource
-			err = dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Delete(context.Background(), unstruct.GetName(), metav1.DeleteOptions{})
+			_, err = util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+				return nil, dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Delete(context.Background(), unstruct.GetName(), metav1.DeleteOptions{})
+			})
 			if err != nil {
 				if kerrors.IsNotFound(err) {
 					log.Infof("resource %v/%v already deleted", unstruct.GetNamespace(), unstruct.GetName())
@@ -455,7 +507,9 @@ func DeleteResourcesAtPath(dynamicClient dynamic.Interface, dc discovery.Discove
 					return errors.New("waiter timed out waiting for deletion")
 				}
 				log.Infof("waiting for resource deletion of %v/%v", unstruct.GetNamespace(), unstruct.GetName())
-				_, err := dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+				_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+					return dynamicClient.Resource(gvr.Resource).Namespace(unstruct.GetNamespace()).Get(context.Background(), unstruct.GetName(), metav1.GetOptions{})
+				})
 				if err != nil {
 					if kerrors.IsNotFound(err) {
 						log.Infof("resource %v/%v already deleted", unstruct.GetNamespace(), unstruct.GetName())
