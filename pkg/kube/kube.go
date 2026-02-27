@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/keikoproj/kubedog/internal/util"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"github.com/keikoproj/kubedog/pkg/kube/pod"
 	"github.com/keikoproj/kubedog/pkg/kube/structured"
@@ -72,6 +73,9 @@ func (kc *ClientSet) DiscoverClients() error {
 		return err
 	}
 
+	config.QPS = 50
+	config.Burst = 100
+
 	dynClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		log.Fatal("Unable to construct dynamic client", err)
@@ -80,9 +84,11 @@ func (kc *ClientSet) DiscoverClients() error {
 	if err != nil {
 		return err
 	}
-	_, err = client.Discovery().ServerVersion()
+	_, err = util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return client.Discovery().ServerVersion()
+	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to discover server version")
 	}
 
 	kc.DynamicInterface = dynClient

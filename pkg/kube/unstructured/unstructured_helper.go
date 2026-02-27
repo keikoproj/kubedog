@@ -21,6 +21,7 @@ import (
 	"html/template"
 	"os"
 
+	"github.com/keikoproj/kubedog/internal/util"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -83,11 +84,13 @@ func GetInstanceGroupList(dynamicClient dynamic.Interface) (*unstructured.Unstru
 		customResourceName    = fmt.Sprintf("%v.%v", customResourceGroup, customeResourceDomain)
 		instanceGroupResource = schema.GroupVersionResource{Group: customResourceName, Version: customResourceAPIVersion, Resource: customResourceKind}
 	)
-	igs, err := dynamicClient.Resource(instanceGroupResource).Namespace(instanceGroupNamespace).List(context.Background(), metav1.ListOptions{})
+	result, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return dynamicClient.Resource(instanceGroupResource).Namespace(instanceGroupNamespace).List(context.Background(), metav1.ListOptions{})
+	})
 	if err != nil {
 		return nil, err
 	}
-	return igs, nil
+	return result.(*unstructured.UnstructuredList), nil
 }
 
 func validateDynamicClient(dynamicClient dynamic.Interface) error {

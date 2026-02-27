@@ -258,10 +258,13 @@ func PodInNamespaceShouldHaveLabels(kubeClientset kubernetes.Interface, name, na
 		return err
 	}
 
-	pod, err := kubeClientset.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	result, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return kubeClientset.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	})
 	if err != nil {
 		return errors.New("Error fetching pod: " + err.Error())
 	}
+	pod := result.(*corev1.Pod)
 
 	inputLabels := make(map[string]string)
 	slc := strings.Split(labels, ",")

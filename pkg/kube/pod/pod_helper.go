@@ -57,9 +57,11 @@ func DeletePodListWithLabelSelectorAndFieldSelector(kubeClientset kubernetes.Int
 		return err
 	}
 
-	err := kubeClientset.CoreV1().Pods(namespace).DeleteCollection(context.Background(), metav1.DeleteOptions{}, metav1.ListOptions{
-		LabelSelector: labelSelector,
-		FieldSelector: fieldSelector,
+	_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return nil, kubeClientset.CoreV1().Pods(namespace).DeleteCollection(context.Background(), metav1.DeleteOptions{}, metav1.ListOptions{
+			LabelSelector: labelSelector,
+			FieldSelector: fieldSelector,
+		})
 	})
 	if err != nil {
 		return errors.Wrapf(err, "failed to delete pods with label selector %s and field selector %s in namespace %s", labelSelector, fieldSelector, namespace)
