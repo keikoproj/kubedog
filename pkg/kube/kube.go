@@ -20,11 +20,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/keikoproj/kubedog/internal/util"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"github.com/keikoproj/kubedog/pkg/kube/pod"
 	"github.com/keikoproj/kubedog/pkg/kube/structured"
 	unstruct "github.com/keikoproj/kubedog/pkg/kube/unstructured"
+	"github.com/keikoproj/kubedog/pkg/util"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,8 +73,8 @@ func (kc *ClientSet) DiscoverClients() error {
 		return err
 	}
 
-	config.QPS = 50
-	config.Burst = 100
+	config.QPS = 100
+	config.Burst = 200
 
 	dynClient, err := dynamic.NewForConfig(config)
 	if err != nil {
