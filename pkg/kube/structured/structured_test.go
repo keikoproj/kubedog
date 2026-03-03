@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/keikoproj/kubedog/internal/util"
+	"github.com/keikoproj/kubedog/pkg/util"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	appsv1 "k8s.io/api/apps/v1"
 	v2 "k8s.io/api/autoscaling/v2"

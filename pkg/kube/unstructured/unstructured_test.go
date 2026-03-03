@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/keikoproj/kubedog/internal/util"
+	"github.com/keikoproj/kubedog/pkg/util"
 	"github.com/keikoproj/kubedog/pkg/generic"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"k8s.io/apimachinery/pkg/api/meta"

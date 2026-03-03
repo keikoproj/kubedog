@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/keikoproj/kubedog/internal/util"
+	"github.com/keikoproj/kubedog/pkg/util"
 	log "github.com/sirupsen/logrus"
 )
 
