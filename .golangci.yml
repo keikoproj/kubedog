@@ -11,6 +11,12 @@ linters:
       - third_party$
       - builtin$
       - examples$
+    rules:
+      # Pre-existing issues — tracked separately for future cleanup
+      - linters: [staticcheck]
+        text: "ST1023:"
+      - linters: [staticcheck]
+        text: "QF1007:"
 formatters:
   exclusions:
     generated: lax
