@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/autoscaling/autoscalingiface"
@@ -38,6 +39,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type AssumeRoleConfig struct {
+	RoleARN     string
+	SessionName string
+	ExternalID  string
+}
+
 type ClientSet struct {
 	ASClient         autoscalingiface.AutoScalingAPI
 	EKSClient        eksiface.EKSAPI
@@ -46,6 +53,7 @@ type ClientSet struct {
 	STSClient        stsiface.STSAPI
 	asgName          string
 	launchConfigName string
+	AssumeRoleConfig *AssumeRoleConfig
 }
 
 func (c *ClientSet) DiscoverClients() error {
@@ -57,6 +65,25 @@ func (c *ClientSet) DiscoverClients() error {
 
 	if sess, err = session.NewSession(); err != nil {
 		return err
+	}
+
+	if c.AssumeRoleConfig != nil && c.AssumeRoleConfig.RoleARN != "" {
+		creds := stscreds.NewCredentials(sess, c.AssumeRoleConfig.RoleARN, func(p *stscreds.AssumeRoleProvider) {
+			if c.AssumeRoleConfig.SessionName != "" {
+				p.RoleSessionName = c.AssumeRoleConfig.SessionName
+			}
+			if c.AssumeRoleConfig.ExternalID != "" {
+				p.ExternalID = aws.String(c.AssumeRoleConfig.ExternalID)
+			}
+		})
+		sess, err = session.NewSession(&aws.Config{
+			Credentials: creds,
+			Region:      sess.Config.Region,
+		})
+		if err != nil {
+			return err
+		}
+		log.Infof("AWS clients configured with AssumeRole: %s", c.AssumeRoleConfig.RoleARN)
 	}
 
 	svc := sts.New(sess)

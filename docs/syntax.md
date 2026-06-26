@@ -20,6 +20,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [I] (create|submit|delete|update|upsert) [the] resource <non-whitespace-characters> in [the] <any-characters-except-(")> namespace, the operation should (succeed|fail)` kdt.KubeClientSet.ResourceOperationWithResultInNamespace
 - `<GK> [the] resource <any-characters-except-(")> should be (created|deleted)` kdt.KubeClientSet.ResourceShouldBe
 - `<GK> [the] resource <non-whitespace-characters> [should] converge to selector <non-whitespace-characters>` kdt.KubeClientSet.ResourceShouldConvergeToSelector
+- `<GK> [the] resource <non-whitespace-characters> [should] converge to field <non-whitespace-characters>` kdt.KubeClientSet.ResourceShouldConvergeToField
 - `<GK> [the] resource <any-characters-except-(")> condition <any-characters-except-(")> should be <any-characters-except-(")>` kdt.KubeClientSet.ResourceConditionShouldBe
 - `<GK> [I] update [the] resource <any-characters-except-(")> with <any-characters-except-(")> set to <any-characters-except-(")>` kdt.KubeClientSet.UpdateResourceWithField
 - `<GK> [I] verify InstanceGroups [are] in "ready" state` kdt.KubeClientSet.VerifyInstanceGroups
@@ -27,8 +28,9 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 ### Structured Resources
 
 #### Pods
-- `<GK> [I] get [the] pods in namespace <any-characters-except-(")>` kdt.KubeClientSet.ListPods
-- `<GK> [I] get [the] pods in namespace <any-characters-except-(")> with selector <non-whitespace-characters>` kdt.KubeClientSet.ListPodsWithSelector
+- `<GK> [I] (get|list|delete) [the] pods in namespace <any-characters-except-(")>` kdt.KubeClientSet.PodOperation
+- `<GK> [I] (get|list|delete) [the] pods in namespace <any-characters-except-(")> with selector <non-whitespace-characters>` kdt.KubeClientSet.PodOperationWithSelector
+- `<GK> [I] delete [the] pods in namespace <any-characters-except-(")> with field selector <non-whitespace-characters>` kdt.KubeClientSet.DeletePodWithFieldSelector
 - `<GK> [the] pods in namespace <any-characters-except-(")> with selector <non-whitespace-characters> have restart count less than <digits>` kdt.KubeClientSet.PodsWithSelectorHaveRestartCountLessThan
 - `<GK> (some|all) pods in namespace <non-whitespace-characters> with selector <non-whitespace-characters> have "<any-characters-except-(")>" in logs since <any-characters-except-(")> time` kdt.KubeClientSet.SomeOrAllPodsInNamespaceWithSelectorHaveStringInLogsSinceTime
 - `<GK> some pods in namespace <non-whitespace-characters> with selector <non-whitespace-characters> don't have "<any-characters-except-(")>" in logs since <any-characters-except-(")> time` kdt.KubeClientSet.SomePodsInNamespaceWithSelectorDontHaveStringInLogsSinceTime
@@ -50,6 +52,7 @@ Below you will find the step syntax next to the name of the method it utilizes. 
 - `<GK> [the] deployment <any-characters-except-(")> is running in namespace <any-characters-except-(")>` kdt.KubeClientSet.DeploymentIsRunning
 - `<GK> [the] data in [the] ConfigMap "<any-characters-except-(")>" in namespace "<any-characters-except-(")>" has key "<any-characters-except-(")>" with value "<any-characters-except-(")>"` kdt.KubeClientSet.ConfigMapDataHasKeyAndValue
 - `<GK> [the] persistentvolume <any-characters-except-(")> exists with status (Available|Bound|Released|Failed|Pending)` kdt.KubeClientSet.PersistentVolExists
+- `<GK> [the] persistentvolumeclaim <any-characters-except-(")> exists with status (Available|Bound|Released|Failed|Pending) in namespace <any-characters-except-(")>` kdt.KubeClientSet.PersistentVolClaimExists
 - `<GK> [the] (clusterrole|clusterrolebinding) with name <any-characters-except-(")> should be found` kdt.KubeClientSet.ClusterRbacIsFound
 - `<GK> [the] ingress <non-whitespace-characters> in [the] namespace <non-whitespace-characters> [is] [available] on port <digits> and path <any-characters-except-(")>` kdt.KubeClientSet.IngressAvailable
 - `<GK> [I] send <digits> tps to ingress <non-whitespace-characters> in [the] namespace <non-whitespace-characters> [available] on port <digits> and path <any-characters-except-(")> for <digits> (minutes|seconds) expecting up to <digits> error[s]` kdt.KubeClientSet.SendTrafficToIngress

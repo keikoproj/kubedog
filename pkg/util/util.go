@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -132,4 +133,37 @@ func RetryOnAnyError(backoff *wait.Backoff, fn FuncToRetry) error {
 func StructToPrettyString(st interface{}) string {
 	s, _ := json.MarshalIndent(st, "", "\t")
 	return string(s)
+}
+
+func ExtractField(data any, path []string) (any, error) {
+	if len(path) == 0 || data == nil {
+		return data, nil
+	}
+
+	currKey := path[0]
+
+	maybeArr := strings.Split(currKey, "[")
+	if len(maybeArr) >= 2 {
+		indexStr := strings.TrimSuffix(maybeArr[1], "]")
+		i, err := strconv.Atoi(indexStr)
+		if err != nil {
+			return nil, err
+		}
+
+		dataAtIdx := data.(map[string]any)[maybeArr[0]]
+		switch dataAtIdx := dataAtIdx.(type) {
+		case []interface{}:
+			return ExtractField(dataAtIdx[i], path[1:])
+		default:
+			return ExtractField(dataAtIdx.([]map[string]any)[i], path[1:])
+		}
+	}
+
+	for key, val := range data.(map[string]any) {
+		if key == currKey {
+			return ExtractField(val, path[1:])
+		}
+	}
+
+	return nil, errors.New("field not found")
 }

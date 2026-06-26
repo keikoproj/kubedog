@@ -24,7 +24,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/keikoproj/kubedog/internal/util"
+	"github.com/keikoproj/kubedog/pkg/util"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -39,7 +39,11 @@ func GetIamRole(roleName string, iamClient iamiface.IAMAPI) (*iam.Role, error) {
 		return nil, fmt.Errorf("failed to get iam role %q. %v", roleName, err)
 	}
 
-	return out.(*iam.GetRoleOutput).Role, nil
+	result, ok := out.(*iam.GetRoleOutput)
+	if !ok {
+		return nil, fmt.Errorf("failed to get iam role %q: unexpected type '%T'", roleName, out)
+	}
+	return result.Role, nil
 }
 
 func PutIAMRole(name, description string, policyJSON []byte, iamClient iamiface.IAMAPI, tags ...*iam.Tag) (*iam.Role, error) {
@@ -72,7 +76,11 @@ func UpdateIAMAssumeRole(roleName string, policyJSON []byte, iamClient iamiface.
 		return nil, fmt.Errorf("failed to update assume role policy for %q .%v", roleName, err)
 	}
 
-	return out.(*iam.UpdateAssumeRolePolicyOutput), nil
+	result, ok := out.(*iam.UpdateAssumeRolePolicyOutput)
+	if !ok {
+		return nil, fmt.Errorf("failed to update assume role policy for %q: unexpected type '%T'", roleName, out)
+	}
+	return result, nil
 }
 
 func PutManagedPolicy(name, arn, description string, policyJSON []byte, iamClient iamiface.IAMAPI) (*iam.Policy, error) {

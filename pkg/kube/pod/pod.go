@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/keikoproj/kubedog/internal/util"
+	"github.com/keikoproj/kubedog/pkg/util"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -30,6 +30,21 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 )
+
+func PodOperation(kubeClientset kubernetes.Interface, operation, namespace string) error {
+	return PodOperationWithSelector(kubeClientset, operation, namespace, "")
+}
+
+func PodOperationWithSelector(kubeClientset kubernetes.Interface, operation, namespace, selector string) error {
+	switch operation {
+	case "list", "get":
+		return ListPodsWithSelector(kubeClientset, namespace, selector)
+	case "delete":
+		return DeletePodsWithSelector(kubeClientset, namespace, selector)
+	default:
+		return errors.Errorf("Unknown pod operation '%s'", operation)
+	}
+}
 
 func ListPods(kubeClientset kubernetes.Interface, namespace string) error {
 	return ListPodsWithSelector(kubeClientset, namespace, "")
@@ -59,6 +74,24 @@ func ListPodsWithSelector(kubeClientset kubernetes.Interface, namespace, selecto
 	for _, pod := range pods.Items {
 		log.Infof(tableFormat, pod.Name, readyCountFn(pod.Status.ContainerStatuses), pod.Status.Phase)
 	}
+	return nil
+}
+
+func DeletePodsWithSelector(kubeClientset kubernetes.Interface, namespace, selector string) error {
+	err := DeletePodListWithLabelSelector(kubeClientset, namespace, selector)
+	if err != nil {
+		return err
+	}
+	log.Infof("Deleted pods with selector '%s' in namespace '%s'", selector, namespace)
+	return nil
+}
+
+func DeletePodsWithFieldSelector(kubeClientset kubernetes.Interface, namespace, fieldSelector string) error {
+	err := DeletePodListWithLabelSelectorAndFieldSelector(kubeClientset, namespace, "", fieldSelector)
+	if err != nil {
+		return err
+	}
+	log.Infof("Deleted pods with field selector '%s' in namespace '%s'", fieldSelector, namespace)
 	return nil
 }
 
@@ -225,9 +258,15 @@ func PodInNamespaceShouldHaveLabels(kubeClientset kubernetes.Interface, name, na
 		return err
 	}
 
-	pod, err := kubeClientset.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	result, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return kubeClientset.CoreV1().Pods(namespace).Get(context.Background(), name, metav1.GetOptions{})
+	})
 	if err != nil {
 		return errors.New("Error fetching pod: " + err.Error())
+	}
+	pod, ok := result.(*corev1.Pod)
+	if !ok {
+		return errors.Errorf("failed to get pod: unexpected type '%T'", result)
 	}
 
 	inputLabels := make(map[string]string)

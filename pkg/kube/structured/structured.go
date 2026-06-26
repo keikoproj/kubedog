@@ -20,11 +20,12 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/keikoproj/kubedog/internal/util"
+	"github.com/keikoproj/kubedog/pkg/util"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"github.com/keikoproj/kubedog/pkg/kube/pod"
 	"github.com/pkg/errors"
@@ -59,9 +60,15 @@ func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.Wait
 			return errors.New("waiter timed out waiting for nodes")
 		}
 
-		nodes, err := kubeClientset.CoreV1().Nodes().List(context.Background(), opts)
+		nodeList, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return kubeClientset.CoreV1().Nodes().List(context.Background(), opts)
+		})
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to list nodes")
+		}
+		nodes, ok := nodeList.(*corev1.NodeList)
+		if !ok {
+			return errors.Errorf("failed to list nodes: unexpected type '%T'", nodeList)
 		}
 
 		switch state {
@@ -110,32 +117,36 @@ func ScaleDeployment(kubeClientset kubernetes.Interface, name, namespace string,
 		},
 	}
 
-	_, err := kubeClientset.AppsV1().Deployments(namespace).UpdateScale(context.Background(), name, scale, metav1.UpdateOptions{})
+	_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return kubeClientset.AppsV1().Deployments(namespace).UpdateScale(context.Background(), name, scale, metav1.UpdateOptions{})
+	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to scale deployment")
 	}
 	return nil
 }
 
 func ClusterRbacIsFound(kubeClientset kubernetes.Interface, resourceType, name string) error {
-	var err error
 	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return err
 	}
 
+	var fn func() (interface{}, error)
 	switch resourceType {
 	case "clusterrole":
-		_, err = kubeClientset.RbacV1().ClusterRoles().Get(context.Background(), name, metav1.GetOptions{})
+		fn = func() (interface{}, error) {
+			return kubeClientset.RbacV1().ClusterRoles().Get(context.Background(), name, metav1.GetOptions{})
+		}
 	case "clusterrolebinding":
-		_, err = kubeClientset.RbacV1().ClusterRoleBindings().Get(context.Background(), name, metav1.GetOptions{})
+		fn = func() (interface{}, error) {
+			return kubeClientset.RbacV1().ClusterRoleBindings().Get(context.Background(), name, metav1.GetOptions{})
+		}
 	default:
 		return errors.Errorf("Invalid resource type")
 	}
 
-	if err != nil {
-		return err
-	}
-	return nil
+	_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, fn)
+	return err
 }
 
 func ListNodes(kubeClientset kubernetes.Interface) error {
@@ -235,6 +246,27 @@ func PersistentVolExists(kubeClientset kubernetes.Interface, name, expectedPhase
 	return nil
 }
 
+func PersistentVolClaimExists(kubeClientset kubernetes.Interface, name, expectedPhase string, namespace string) error {
+	_, err := util.RetryOnError(
+		&util.DefaultRetry,
+		func(err error) bool {
+			msg := "persistentvolumeclaim had unexpected phase"
+			return util.IsRetriable(err) || strings.Contains(err.Error(), msg)
+		},
+		func() (interface{}, error) {
+			vol, err := GetPersistentVolumeClaim(kubeClientset, name, namespace)
+			if err != nil {
+				return nil, err
+			}
+			phase := string(vol.Status.Phase)
+			if phase != expectedPhase {
+				return nil, fmt.Errorf("persistentvolumeclaim had unexpected phase %v, expected phase %v", phase, expectedPhase)
+			}
+			return nil, nil
+		})
+	return err
+}
+
 func ValidatePrometheusVolumeClaimTemplatesName(kubeClientset kubernetes.Interface, statefulsetName, namespace, volumeClaimTemplatesName string) error {
 	// Prometheus StatefulSets deployed, then validate volumeClaimTemplate name.
 	// Validation required:
@@ -307,25 +339,37 @@ func SecretOperationFromEnvironmentVariable(kubeClientset kubernetes.Interface, 
 				environmentVariable: []byte(secretValue),
 			},
 		}
-		_, err := kubeClientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+		_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return kubeClientset.CoreV1().Secrets(namespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+		})
 		if kerrors.IsAlreadyExists(err) {
 			return fmt.Errorf("secret '%s' already created", name)
 		}
 		return err
 	case common.OperationUpdate:
-		currentSecret, err := kubeClientset.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		result, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return kubeClientset.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+		})
 		if err != nil {
 			return err
+		}
+		currentSecret, ok := result.(*corev1.Secret)
+		if !ok {
+			return errors.Errorf("failed to get secret: unexpected type '%T'", result)
 		}
 		secret := currentSecret.DeepCopy()
 		if len(secret.Data) == 0 {
 			secret.Data = map[string][]byte{}
 		}
 		secret.Data[environmentVariable] = []byte(secretValue)
-		_, err = kubeClientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+		_, err = util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return kubeClientset.CoreV1().Secrets(namespace).Update(context.TODO(), secret, metav1.UpdateOptions{})
+		})
 		return err
 	case common.OperationDelete:
-		err := kubeClientset.CoreV1().Secrets(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+		_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+			return nil, kubeClientset.CoreV1().Secrets(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
+		})
 		if kerrors.IsNotFound(err) {
 			log.Infof("secret '%s' was not found", name)
 			return nil
@@ -404,29 +448,42 @@ func SendTrafficToIngress(kubeClientset kubernetes.Interface, w common.WaiterCon
 }
 
 func ResourceInNamespace(kubeClientset kubernetes.Interface, resourceType, name, namespace string) error {
-	var err error
 	if err := common.ValidateClientset(kubeClientset); err != nil {
 		return err
 	}
 
+	var fn func() (interface{}, error)
 	switch resourceType {
 	case "deployment":
-		_, err = kubeClientset.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		fn = func() (interface{}, error) {
+			return kubeClientset.AppsV1().Deployments(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		}
 	case "service":
-		_, err = kubeClientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		fn = func() (interface{}, error) {
+			return kubeClientset.CoreV1().Services(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		}
 	case "hpa", "horizontalpodautoscaler":
-		_, err = kubeClientset.AutoscalingV2().HorizontalPodAutoscalers(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		fn = func() (interface{}, error) {
+			return kubeClientset.AutoscalingV2().HorizontalPodAutoscalers(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		}
 	case "pdb", "poddisruptionbudget":
-		_, err = kubeClientset.PolicyV1().PodDisruptionBudgets(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		fn = func() (interface{}, error) {
+			return kubeClientset.PolicyV1().PodDisruptionBudgets(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		}
 	case "sa", "serviceaccount":
-		_, err = kubeClientset.CoreV1().ServiceAccounts(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		fn = func() (interface{}, error) {
+			return kubeClientset.CoreV1().ServiceAccounts(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		}
 	case "configmap":
-		_, err = kubeClientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		fn = func() (interface{}, error) {
+			return kubeClientset.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, metav1.GetOptions{})
+		}
 	default:
 		return errors.Errorf("Invalid resource type")
 	}
-	return err
 
+	_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, fn)
+	return err
 }
 
 func ResourceNotInNamespace(kubeClientset kubernetes.Interface, resourceType, name, namespace string) error {

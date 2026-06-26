@@ -19,7 +19,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/keikoproj/kubedog/internal/util"
+	"github.com/keikoproj/kubedog/pkg/util"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"

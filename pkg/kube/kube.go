@@ -24,6 +24,7 @@ import (
 	"github.com/keikoproj/kubedog/pkg/kube/pod"
 	"github.com/keikoproj/kubedog/pkg/kube/structured"
 	unstruct "github.com/keikoproj/kubedog/pkg/kube/unstructured"
+	"github.com/keikoproj/kubedog/pkg/util"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,6 +73,9 @@ func (kc *ClientSet) DiscoverClients() error {
 		return err
 	}
 
+	config.QPS = 100
+	config.Burst = 200
+
 	dynClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		log.Fatal("Unable to construct dynamic client", err)
@@ -80,9 +84,11 @@ func (kc *ClientSet) DiscoverClients() error {
 	if err != nil {
 		return err
 	}
-	_, err = client.Discovery().ServerVersion()
+	_, err = util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return client.Discovery().ServerVersion()
+	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to discover server version")
 	}
 
 	kc.DynamicInterface = dynClient
@@ -190,6 +196,14 @@ func (kc *ClientSet) ResourceShouldConvergeToSelector(resourceFileName, selector
 	return unstruct.ResourceShouldConvergeToSelector(kc.DynamicInterface, resource, kc.getWaiterConfig(), selector)
 }
 
+func (kc *ClientSet) ResourceShouldConvergeToField(resourceFileName, selector string) error {
+	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
+	if err != nil {
+		return err
+	}
+	return unstruct.ResourceShouldConvergeToField(kc.DynamicInterface, resource, kc.getWaiterConfig(), selector)
+}
+
 func (kc *ClientSet) ResourceConditionShouldBe(resourceFileName, conditionType, conditionValue string) error {
 	resource, err := unstruct.GetResource(kc.getDiscoveryClient(), kc.config.templateArguments, kc.getResourcePath(resourceFileName))
 	if err != nil {
@@ -210,13 +224,16 @@ func (kc *ClientSet) VerifyInstanceGroups() error {
 	return unstruct.VerifyInstanceGroups(kc.DynamicInterface)
 }
 
-func (kc *ClientSet) ListPods(namespace string) error {
-	// TODO: use ListPodsWithSelector like ListPods does, ListPods is redundant
-	return pod.ListPods(kc.KubeInterface, namespace)
+func (kc *ClientSet) PodOperation(operation, namespace string) error {
+	return pod.PodOperation(kc.KubeInterface, operation, namespace)
 }
 
-func (kc *ClientSet) ListPodsWithSelector(namespace, selector string) error {
-	return pod.ListPodsWithSelector(kc.KubeInterface, namespace, selector)
+func (kc *ClientSet) PodOperationWithSelector(operation, namespace, selector string) error {
+	return pod.PodOperationWithSelector(kc.KubeInterface, operation, namespace, selector)
+}
+
+func (kc *ClientSet) DeletePodWithFieldSelector(namespace, fieldSelector string) error {
+	return pod.DeletePodsWithFieldSelector(kc.KubeInterface, namespace, fieldSelector)
 }
 
 func (kc *ClientSet) PodsWithSelectorHaveRestartCountLessThan(namespace, selector string, restartCount int) error {
@@ -318,6 +335,10 @@ func (kc *ClientSet) ConfigMapDataHasKeyAndValue(name, namespace, key, value str
 
 func (kc *ClientSet) PersistentVolExists(name, expectedPhase string) error {
 	return structured.PersistentVolExists(kc.KubeInterface, name, expectedPhase)
+}
+
+func (kc *ClientSet) PersistentVolClaimExists(name, expectedPhase string, namespace string) error {
+	return structured.PersistentVolClaimExists(kc.KubeInterface, name, expectedPhase, namespace)
 }
 
 func (kc *ClientSet) ClusterRbacIsFound(resourceType, name string) error {

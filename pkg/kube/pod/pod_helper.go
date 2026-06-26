@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/keikoproj/kubedog/internal/util"
+	"github.com/keikoproj/kubedog/pkg/util"
 	"github.com/keikoproj/kubedog/pkg/kube/common"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -45,7 +45,32 @@ func GetPodListWithLabelSelectorAndFieldSelector(kubeClientset kubernetes.Interf
 		return nil, errors.Wrap(err, "failed to list pods")
 	}
 
-	return pods.(*corev1.PodList), nil
+	result, ok := pods.(*corev1.PodList)
+	if !ok {
+		return nil, errors.Errorf("failed to list pods: unexpected type '%T'", pods)
+	}
+	return result, nil
+}
+
+func DeletePodListWithLabelSelector(kubeClientset kubernetes.Interface, namespace, labelSelector string) error {
+	return DeletePodListWithLabelSelectorAndFieldSelector(kubeClientset, namespace, labelSelector, "")
+}
+
+func DeletePodListWithLabelSelectorAndFieldSelector(kubeClientset kubernetes.Interface, namespace, labelSelector, fieldSelector string) error {
+	if err := common.ValidateClientset(kubeClientset); err != nil {
+		return err
+	}
+
+	_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return nil, kubeClientset.CoreV1().Pods(namespace).DeleteCollection(context.Background(), metav1.DeleteOptions{}, metav1.ListOptions{
+			LabelSelector: labelSelector,
+			FieldSelector: fieldSelector,
+		})
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed to delete pods with label selector %s and field selector %s in namespace %s", labelSelector, fieldSelector, namespace)
+	}
+	return nil
 }
 
 func countStringInPodLogs(kubeClientset kubernetes.Interface, pod corev1.Pod, since time.Time, stringsToFind ...string) (int, error) {
