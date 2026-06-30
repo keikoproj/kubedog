@@ -139,11 +139,21 @@ func getGVR(gvk *schema.GroupVersionKind, dc discovery.DiscoveryInterface) (*met
 		return nil, errors.Errorf("'k8s.io/client-go/discovery.DiscoveryInterface' is nil.")
 	}
 
-	CachedDiscoveryInterface := memory.NewMemCacheClient(dc)
-	DeferredDiscoveryRESTMapper := restmapper.NewDeferredDiscoveryRESTMapper(CachedDiscoveryInterface)
-	RESTMapping, err := DeferredDiscoveryRESTMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	// The REST mapping triggers discovery calls (e.g. GET /api, /apis) that can
+	// hit transient failures like EOF, so retry it the same way as resource ops.
+	// The cache and mapper are rebuilt each attempt to avoid reusing a partially
+	// populated discovery cache from a failed attempt.
+	result, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		CachedDiscoveryInterface := memory.NewMemCacheClient(dc)
+		DeferredDiscoveryRESTMapper := restmapper.NewDeferredDiscoveryRESTMapper(CachedDiscoveryInterface)
+		return DeferredDiscoveryRESTMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	})
 	if err != nil {
 		return nil, err
+	}
+	RESTMapping, ok := result.(*meta.RESTMapping)
+	if !ok {
+		return nil, errors.Errorf("failed to get REST mapping: unexpected type '%T'", result)
 	}
 	return RESTMapping, nil
 }
