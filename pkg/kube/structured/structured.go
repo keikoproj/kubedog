@@ -64,6 +64,15 @@ func NodesWithSelectorShouldBe(kubeClientset kubernetes.Interface, w common.Wait
 			return kubeClientset.CoreV1().Nodes().List(context.Background(), opts)
 		})
 		if err != nil {
+			// The inner RetryOnError only smooths over brief API blips (~6s).
+			// If a transient/retriable error (e.g. EOF) outlasts it, let the
+			// outer waiter loop absorb it instead of failing the whole step.
+			if util.IsRetriable(err) {
+				log.Warnf("transient error listing nodes with selector %v, will retry: %v", labelSelector, err)
+				counter++
+				time.Sleep(w.GetInterval())
+				continue
+			}
 			return errors.Wrap(err, "failed to list nodes")
 		}
 		nodes, ok := nodeList.(*corev1.NodeList)
