@@ -15,7 +15,7 @@ jobs:
       with:
         go-version: ^1.21
       id: go
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - run: make build
     
     - name: Upload coverage reports to Codecov
