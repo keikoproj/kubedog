@@ -67,6 +67,13 @@ func ResourceOperationInNamespace(dynamicClient dynamic.Interface, resource unst
 		return err
 	}
 
+	_, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		return nil, resourceOperationInNamespace(dynamicClient, resource, operation, namespace)
+	})
+	return err
+}
+
+func resourceOperationInNamespace(dynamicClient dynamic.Interface, resource unstructuredResource, operation, namespace string) error {
 	gvr, unstruct := resource.GVR, resource.Resource
 
 	if namespace == "" {

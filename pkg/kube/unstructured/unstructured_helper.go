@@ -21,6 +21,7 @@ import (
 	"html/template"
 	"os"
 
+	"github.com/keikoproj/kubedog/internal/util"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -132,11 +133,13 @@ func getGVR(gvk *schema.GroupVersionKind, dc discovery.DiscoveryInterface) (*met
 		return nil, errors.Errorf("'k8s.io/client-go/discovery.DiscoveryInterface' is nil.")
 	}
 
-	CachedDiscoveryInterface := memory.NewMemCacheClient(dc)
-	DeferredDiscoveryRESTMapper := restmapper.NewDeferredDiscoveryRESTMapper(CachedDiscoveryInterface)
-	RESTMapping, err := DeferredDiscoveryRESTMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	out, err := util.RetryOnError(&util.DefaultRetry, util.IsRetriable, func() (interface{}, error) {
+		cachedDiscoveryInterface := memory.NewMemCacheClient(dc)
+		deferredDiscoveryRESTMapper := restmapper.NewDeferredDiscoveryRESTMapper(cachedDiscoveryInterface)
+		return deferredDiscoveryRESTMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+	})
 	if err != nil {
 		return nil, err
 	}
-	return RESTMapping, nil
+	return out.(*meta.RESTMapping), nil
 }
